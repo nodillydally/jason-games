@@ -89,6 +89,21 @@ const levelForXp = (xp) => 1 + Math.floor(Math.sqrt(xp / 100));
 const xpAtLevel = (lv) => 100 * (lv - 1) * (lv - 1);
 
 // ---------------------------------------------------------------------------
+// Flags
+// ---------------------------------------------------------------------------
+
+// Flag emoji are not usable here: Windows ships no flag-emoji font, so 🇵🇪
+// renders as the bare letters "PE" in Chrome/Edge — which in flag-guessing mode
+// spells out the answer. Vendored PNGs render identically everywhere.
+// See tools/fetch-flags.mjs.
+const flagImg = (c, cls, alt = '') =>
+  `<img class="${cls}" src="data/flags/${c.cca2.toLowerCase()}.png" alt="${esc(alt)}" draggable="false">`;
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]
+));
+
+// ---------------------------------------------------------------------------
 // Country pools & adaptive selection
 // ---------------------------------------------------------------------------
 
@@ -513,7 +528,7 @@ function renderStats() {
     ? '<h3>Your trouble spots</h3><div class="chips">' +
       weakest.map((c) => {
         const s = store.stats[c.id];
-        return `<span class="chip">${c.flag} ${c.name} · ${s.correct}/${s.seen}</span>`;
+        return `<span class="chip">${flagImg(c, 'flag-inline')} ${c.name} · ${s.correct}/${s.seen}</span>`;
       }).join('') + '</div>'
     : store.answered
       ? '<h3>No trouble spots — everything you\'ve seen, you\'ve nailed 🎉</h3>'
@@ -756,7 +771,7 @@ function nextRound() {
     $('zoom-toggle').classList.add('hidden');
     animateCamera(regionCamera(g.pool));
     $('prompt').innerHTML =
-      `<span class="flag-big">${g.target.flag}</span>Which country's flag is this?`;
+      `${flagImg(g.target, 'flag-big', 'Flag to identify')}Which country's flag is this?`;
   } else if (g.qtype === 'capital') {
     markCountry(g.target.id, 'target');
     $('zoom-toggle').classList.remove('hidden');
@@ -789,7 +804,7 @@ function renderFindPrompt() {
   const dots = '●'.repeat(g.attemptsLeft) + '○'.repeat(g.difficulty.attempts - g.attemptsLeft);
   const ask =
     g.qtype === 'capital' ? `Find the country whose capital is <b>${g.target.capital}</b>`
-      : g.qtype === 'flag' ? `Find this flag's country: <span class="flag-mid">${g.target.flag}</span>`
+      : g.qtype === 'flag' ? `Find this flag's country: ${flagImg(g.target, 'flag-mid', 'Flag to find')}`
       : `Find on the map: <b>${g.target.name}</b>`;
   $('prompt').innerHTML = `${ask}<span class="attempts" title="attempts left">${dots}</span>`;
 }
@@ -814,8 +829,8 @@ function renderChoices() {
 // What the player was asked to produce, for feedback lines.
 function answerLabel(c) {
   return g.qtype === 'capital'
-    ? `${c.capital} — the capital of ${c.flag} ${c.name}`
-    : `${c.flag} ${c.name}`;
+    ? `${c.capital} — the capital of ${flagImg(c, 'flag-inline')} ${c.name}`
+    : `${flagImg(c, 'flag-inline')} ${c.name}`;
 }
 
 // After any quiz-like answer, make sure the target is visible and marked —
@@ -845,9 +860,11 @@ function finishRound(delayMs) {
   }
 }
 
-function showFeedback(good, text) {
+// `html` may contain markup (flag images), so anything player-typed that reaches
+// here must be run through esc() by the caller.
+function showFeedback(good, html) {
   const el = $('feedback');
-  el.textContent = text;
+  el.innerHTML = html;
   el.className = good ? 'good' : 'bad';
 }
 
@@ -899,7 +916,7 @@ function submitTyped() {
     showFeedback(true, `✓ ${answerLabel(g.target)}!`);
     finishRound(900);
   } else {
-    showFeedback(false, `✗ It's ${answerLabel(g.target)} — you typed “${guess.trim()}”`);
+    showFeedback(false, `✗ It's ${answerLabel(g.target)} — you typed “${esc(guess.trim())}”`);
     finishRound(0);
   }
 }
@@ -931,7 +948,7 @@ function handleFindClick(clicked) {
     }
     markCountry(g.target.id, 'correct');
     animateCamera(countryCamera(g.target));
-    showFeedback(true, `✓ That's ${g.target.flag} ${g.target.name}!`);
+    showFeedback(true, `✓ That's ${flagImg(g.target, 'flag-inline')} ${g.target.name}!`);
     finishRound(900);
     return;
   }
@@ -947,7 +964,7 @@ function handleFindClick(clicked) {
     recordAnswer(g.target, false);
     markCountry(g.target.id, 'correct');
     animateCamera(countryCamera(g.target));
-    showFeedback(false, `That was ${clicked.name}. ${g.target.flag} ${g.target.name} is here.`);
+    showFeedback(false, `That was ${clicked.name}. ${flagImg(g.target, 'flag-inline')} ${g.target.name} is here.`);
     finishRound(0);
   } else {
     renderFindPrompt();
@@ -968,7 +985,7 @@ function handleExploreClick(country) {
   const info = $('explore-info');
   info.classList.remove('hidden');
   info.innerHTML =
-    `<h3>${country.flag} ${country.name}</h3>` +
+    `<h3>${flagImg(country, 'flag-inline')} ${country.name}</h3>` +
     `<p>Capital: ${country.capital} · ${country.continent} · ${seen}</p>`;
   setZoomToggle(false);
 }
