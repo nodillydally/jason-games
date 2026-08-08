@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mapmaster — Learn the World Map</title>
+  <title>Numbers — Mental Math Practice</title>
   <link rel="stylesheet" href="../../lib/sync.css">
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔢</text></svg>">
 </head>
 <body>
 <div id="app">
@@ -14,8 +14,8 @@
   <!-- ============================= Menu ============================= -->
   <section id="screen-menu" class="screen active">
     <header class="title">
-      <h1>🌍 Mapmaster</h1>
-      <p>Learn the map of the world, one country at a time.</p>
+      <h1>🔢 Numbers</h1>
+      <p>Mental math under pressure. No scratch paper.</p>
     </header>
 
     <div class="card profile-card">
@@ -32,13 +32,10 @@
       <h2>Mode</h2>
       <div class="opt-grid" id="mode-options"></div>
 
-      <h2 id="question-heading">Quiz on</h2>
-      <div class="opt-grid" id="question-options"></div>
+      <h2>Topic</h2>
+      <div class="opt-grid" id="topic-options"></div>
 
-      <h2>Region</h2>
-      <div class="opt-grid" id="continent-options"></div>
-
-      <h2 id="difficulty-heading">Difficulty</h2>
+      <h2>Difficulty</h2>
       <div class="opt-grid" id="difficulty-options"></div>
 
       <div id="setup-hint" class="setup-hint"></div>
@@ -65,66 +62,60 @@
   <!-- ============================= Game ============================= -->
   <section id="screen-game" class="screen">
     <div class="hud">
-      <button id="quit-btn" title="Quit to menu">✕</button>
-      <div id="hud-progress"></div>
-      <div id="hud-timer" class="hidden"></div>
-      <div class="hud-right">
-        <div id="hud-streak"></div>
-        <div id="hud-score"></div>
-      </div>
+      <button id="quit-btn" title="Back to menu">✕</button>
+      <span id="hud-progress"></span>
+      <span id="hud-clock" class="hidden"></span>
+      <span class="hud-spacer"></span>
+      <span id="hud-lives" class="hidden"></span>
+      <span id="hud-streak"></span>
+      <b id="hud-score">0 pts</b>
     </div>
 
-    <div class="map-wrap">
-      <svg id="map" role="img" aria-label="World map"></svg>
-      <button id="zoom-toggle" class="hidden">🌐 Zoom out</button>
-      <div id="map-tip" class="hidden"></div>
-    </div>
+    <div class="timer-track"><div id="timer-fill"></div></div>
 
-    <div class="panel">
-      <div id="prompt"></div>
+    <div class="card question-card">
+      <div id="topic-tag" class="topic-tag"></div>
+      <div id="question"></div>
       <div id="choices"></div>
-      <form id="type-form" class="hidden">
-        <input id="type-input" autocomplete="off" spellcheck="false"
-               placeholder="Type the country name…">
-        <button type="submit" class="primary">Guess</button>
-        <button type="button" id="reveal-btn">Reveal</button>
+      <form id="type-form" class="hidden" autocomplete="off">
+        <input id="type-input" type="text" inputmode="numeric" placeholder="Your answer…" spellcheck="false">
+        <button type="submit" class="primary">Check</button>
       </form>
       <div id="feedback"></div>
-      <div id="explore-info" class="hidden"></div>
-      <button id="next-btn" class="primary hidden">Next →</button>
-      <button id="explore-done" class="primary hidden">Done exploring</button>
+      <button id="next-btn" class="primary hidden">Next</button>
     </div>
   </section>
 
-  <!-- ============================ Results =========================== -->
+  <!-- ============================ Results ============================ -->
   <section id="screen-results" class="screen">
     <div class="card results-card">
-      <h2 id="results-title">Round over!</h2>
+      <h2 id="results-title"></h2>
       <div id="results-score"></div>
-      <div id="results-best" class="hidden">🏆 New personal best!</div>
-      <div id="results-levelup" class="hidden"></div>
-      <div class="results-stats" id="results-stats"></div>
+      <div id="results-stats" class="results-stats"></div>
+      <div id="results-xp" class="results-xp"></div>
       <div id="results-missed"></div>
       <div class="results-actions">
-        <button id="again-btn" class="primary">Play again</button>
-        <button id="menu-btn">Change settings</button>
+        <button id="again-btn" class="primary big">Play again</button>
+        <button id="menu-btn">Menu</button>
       </div>
     </div>
   </section>
 
-  <!-- ============================= Stats ============================ -->
+  <!-- ============================= Stats ============================= -->
   <section id="screen-stats" class="screen">
     <div class="card stats-card">
-      <h2>📊 Your world</h2>
-      <div id="stats-continents"></div>
+      <h2>Your numbers</h2>
+      <div id="stats-summary" class="profile-stats"></div>
+      <div id="stats-topics"></div>
       <div id="stats-weakest"></div>
-      <button id="stats-back" class="primary">Back to menu</button>
+      <button id="stats-back" class="primary">Back</button>
     </div>
   </section>
 
 </div>
-<script src="data/countries.js"></script>
+
 <script src="../../lib/sync.js"></script>
+<script src="questions.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

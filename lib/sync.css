@@ -1,0 +1,42 @@
+/* lib/sync.css — styles for the shared Cloud sync card.
+ *
+ * Deliberately palette-agnostic: it consumes the CSS custom properties each
+ * game defines on :root (--card, --card-edge, --text, --text-dim, --primary,
+ * --good, --bad, --bg), so it picks up whatever theme the game is wearing.
+ */
+
+.sync-card { margin-top: 14px; }
+
+.sync-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sync-status { color: var(--text-dim); font-size: .88rem; }
+.sync-status.ok { color: var(--good); }
+.sync-status.bad { color: var(--bad); }
+.sync-status.busy { color: var(--accent); }
+
+.sync-btn { padding: 6px 14px; font-size: .85rem; }
+
+.sync-panel { margin-top: 14px; }
+.sync-panel p {
+  color: var(--text-dim);
+  font-size: .85rem;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.sync-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.sync-form input {
+  flex: 1 1 200px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--card-edge);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.sync-form input:focus { outline: none; border-color: var(--primary); }

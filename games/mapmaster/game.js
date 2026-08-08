@@ -1134,58 +1134,9 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// Cloud sync UI
-// ---------------------------------------------------------------------------
-
-function renderSyncStatus({ status, pending, message } = {}) {
-  const el = $('sync-status');
-  const enabled = Sync.isEnabled();
-  const queued = pending ?? Sync.pending();
-
-  const view = !enabled ? { text: '☁ Cloud sync off', cls: '' }
-    : status === 'syncing' ? { text: `☁ Syncing${queued ? ` (${queued})` : ''}…`, cls: 'busy' }
-    : status === 'unauthorized' ? { text: `⚠ ${message}`, cls: 'bad' }
-    : status === 'error' ? { text: `⚠ ${message} — ${queued} waiting`, cls: 'bad' }
-    : queued ? { text: `☁ ${queued} session${queued === 1 ? '' : 's'} waiting to sync`, cls: 'busy' }
-    : { text: '☁ Cloud sync on', cls: 'ok' };
-
-  el.textContent = view.text;
-  el.className = `sync-status ${view.cls}`;
-  $('sync-btn').textContent = enabled ? 'Change' : 'Set up';
-}
-
-Sync.onChange(renderSyncStatus);
-
-$('sync-btn').addEventListener('click', () => {
-  const panel = $('sync-panel');
-  panel.classList.toggle('hidden');
-  if (!panel.classList.contains('hidden')) $('sync-input').focus();
-});
-
-$('sync-save').addEventListener('click', () => {
-  Sync.setToken($('sync-input').value);
-  $('sync-input').value = '';
-  $('sync-panel').classList.add('hidden');
-  renderSyncStatus();
-});
-
-$('sync-input').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') $('sync-save').click();
-});
-
-$('sync-clear').addEventListener('click', () => {
-  Sync.clearToken();
-  $('sync-input').value = '';
-  $('sync-panel').classList.add('hidden');
-  renderSyncStatus();
-});
-
-// ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
 
 buildMap();
 renderMenu();
-renderSyncStatus();
-// Retry anything stranded by a closed tab or a dead connection last time.
-Sync.flush();
+Sync.mountUI();
