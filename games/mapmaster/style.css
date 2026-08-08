@@ -72,7 +72,16 @@ button.primary:disabled:hover { background: var(--primary); border-color: var(--
 
 /* ------------------------------ Menu ------------------------------ */
 
-.title { text-align: center; margin: 18px 0 26px; }
+.hub-link {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: .85rem;
+}
+.hub-link:hover { color: var(--primary); }
+
+.title { text-align: center; margin: 10px 0 26px; }
 .title h1 { font-size: 2.4rem; letter-spacing: .5px; }
 .title p { color: var(--text-dim); margin-top: 6px; }
 
