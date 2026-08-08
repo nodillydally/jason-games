@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jason's Learning Games</title>
+<style>
+  :root {
+    --bg: #0e1726;
+    --bg-soft: #16213a;
+    --card: #1a2742;
+    --card-edge: #2a3b61;
+    --text: #e8eefc;
+    --text-dim: #93a3c4;
+    --accent: #ffb84d;
+    --primary: #4d9fff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: radial-gradient(120% 100% at 50% 0%, var(--bg-soft) 0%, var(--bg) 60%);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  main { max-width: 860px; margin: 0 auto; padding: 56px 20px 64px; }
+
+  h1 { font-size: 2rem; letter-spacing: -.02em; }
+  .tagline { color: var(--text-dim); margin-top: 8px; line-height: 1.5; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 36px;
+  }
+
+  .game {
+    display: block;
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: 14px;
+    padding: 20px;
+    text-decoration: none;
+    color: inherit;
+    transition: background .15s, border-color .15s, transform .06s;
+  }
+  .game:hover { background: #22335a; border-color: var(--primary); }
+  .game:active { transform: scale(.99); }
+
+  .game .icon { font-size: 1.9rem; line-height: 1; }
+  .game h2 { font-size: 1.1rem; margin-top: 12px; }
+  .game p { color: var(--text-dim); font-size: .9rem; margin-top: 6px; line-height: 1.45; }
+
+  .game.soon { opacity: .5; pointer-events: none; }
+  .game.soon h2::after {
+    content: "soon";
+    font-size: .65rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    padding: 2px 7px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  footer { margin-top: 48px; color: var(--text-dim); font-size: .85rem; }
+  footer a { color: var(--primary); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Jason's Learning Games</h1>
+  <p class="tagline">Custom games for deliberate practice. Pick something and play for ten minutes.</p>
+
+  <div class="grid">
+    <a class="game" href="games/mapmaster/">
+      <div class="icon">🌍</div>
+      <h2>Mapmaster</h2>
+      <p>World geography — name the country, find it on the map, drill the ones you keep missing.</p>
+    </a>
+
+    <a class="game soon" href="#">
+      <div class="icon">🔢</div>
+      <h2>Numbers</h2>
+      <p>Mental math under time pressure.</p>
+    </a>
+
+    <a class="game soon" href="#">
+      <div class="icon">🗣️</div>
+      <h2>Lexicon</h2>
+      <p>Vocabulary and language drills.</p>
+    </a>
+
+    <a class="game soon" href="#">
+      <div class="icon">📚</div>
+      <h2>Bookshelf</h2>
+      <p>Facts and ideas from what you've been reading.</p>
+    </a>
+
+    <a class="game soon" href="#">
+      <div class="icon">♟️</div>
+      <h2>Chess</h2>
+      <p>Tactics puzzles and pattern recognition.</p>
+    </a>
+  </div>
+
+  <footer>
+    Source on <a href="https://github.com/nodillydally/jason-games">GitHub</a>.
+  </footer>
+</main>
+</body>
+</html>
