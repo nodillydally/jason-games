@@ -552,6 +552,11 @@ function startGame() {
   }
   const endless = sel.mode === 'blitz' || sel.mode === 'marathon';
   g = {
+    // Client-generated so a retried sync can't double-count this session.
+    id: (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`),
+    startedAt: Date.now(),
+    roundStartedAt: Date.now(),
+    log: [],
     mode: sel.mode,
     continent: sel.continent,
     difficulty,
@@ -614,12 +619,40 @@ function startGame() {
   nextRound();
 }
 
+// Ship the finished session to Atlas, if cloud sync is switched on. Abandoned
+// runs are sent too — those answers were real practice and already count toward
+// local mastery — but flagged so half-finished runs don't distort score and
+// accuracy trends.
+function syncSession(aborted, xpGain) {
+  if (!g || !g.log.length) return;
+  Sync.record({
+    game: 'mapmaster',
+    session: {
+      client_session_id: g.id,
+      mode: g.mode,
+      continent: g.continent,
+      difficulty: g.difficulty.id,
+      question_type: g.question,
+      score: aborted ? 0 : g.score,
+      answered: g.answered,
+      correct: g.correct,
+      best_streak: g.bestStreak,
+      duration_ms: Date.now() - g.startedAt,
+      xp_gained: xpGain,
+      aborted,
+      played_at: new Date(g.startedAt).toISOString(),
+    },
+    answers: g.log,
+  });
+}
+
 function endGame(aborted = false) {
   clearInterval(blitzInterval);
   blitzInterval = null;
   clearTimeout(autoNextTimer);
 
   if (aborted || g.mode === 'explore') {
+    syncSession(true, 0);
     showScreen('menu');
     renderMenu();
     g = null;
@@ -636,6 +669,7 @@ function endGame(aborted = false) {
   const isBest = g.score > 0 && g.score > (store.best[bestKey] || 0);
   if (isBest) store.best[bestKey] = g.score;
   saveStore();
+  syncSession(false, xpGain);
 
   const levelAfter = levelForXp(store.xp);
   $('results-title').textContent =
@@ -669,6 +703,15 @@ function endGame(aborted = false) {
 function recordAnswer(country, wasCorrect) {
   g.answered += 1;
   store.answered += 1;
+  // Per-answer detail is what makes "am I actually getting better at Central
+  // Asia?" answerable later; session totals alone can't show that.
+  g.log.push({
+    item_id: country.cca2,
+    item_name: country.name,
+    correct: wasCorrect,
+    ms: Math.max(0, Date.now() - g.roundStartedAt),
+    answered_at: new Date().toISOString(),
+  });
   const s = store.stats[country.id] || (store.stats[country.id] = { seen: 0, correct: 0 });
   s.seen += 1;
   if (wasCorrect) {
@@ -747,6 +790,7 @@ function nextRound() {
     ? ['location', 'capital', 'flag'][Math.floor(Math.random() * 3)]
     : g.question;
   g.attemptsLeft = g.difficulty.attempts;
+  g.roundStartedAt = Date.now();
   $('feedback').textContent = '';
   $('feedback').className = '';
   $('next-btn').classList.add('hidden');
@@ -1090,8 +1134,58 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ---------------------------------------------------------------------------
+// Cloud sync UI
+// ---------------------------------------------------------------------------
+
+function renderSyncStatus({ status, pending, message } = {}) {
+  const el = $('sync-status');
+  const enabled = Sync.isEnabled();
+  const queued = pending ?? Sync.pending();
+
+  const view = !enabled ? { text: '☁ Cloud sync off', cls: '' }
+    : status === 'syncing' ? { text: `☁ Syncing${queued ? ` (${queued})` : ''}…`, cls: 'busy' }
+    : status === 'unauthorized' ? { text: `⚠ ${message}`, cls: 'bad' }
+    : status === 'error' ? { text: `⚠ ${message} — ${queued} waiting`, cls: 'bad' }
+    : queued ? { text: `☁ ${queued} session${queued === 1 ? '' : 's'} waiting to sync`, cls: 'busy' }
+    : { text: '☁ Cloud sync on', cls: 'ok' };
+
+  el.textContent = view.text;
+  el.className = `sync-status ${view.cls}`;
+  $('sync-btn').textContent = enabled ? 'Change' : 'Set up';
+}
+
+Sync.onChange(renderSyncStatus);
+
+$('sync-btn').addEventListener('click', () => {
+  const panel = $('sync-panel');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) $('sync-input').focus();
+});
+
+$('sync-save').addEventListener('click', () => {
+  Sync.setToken($('sync-input').value);
+  $('sync-input').value = '';
+  $('sync-panel').classList.add('hidden');
+  renderSyncStatus();
+});
+
+$('sync-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $('sync-save').click();
+});
+
+$('sync-clear').addEventListener('click', () => {
+  Sync.clearToken();
+  $('sync-input').value = '';
+  $('sync-panel').classList.add('hidden');
+  renderSyncStatus();
+});
+
+// ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
 
 buildMap();
 renderMenu();
+renderSyncStatus();
+// Retry anything stranded by a closed tab or a dead connection last time.
+Sync.flush();

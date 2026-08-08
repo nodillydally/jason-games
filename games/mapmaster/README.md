@@ -63,10 +63,33 @@ world-map-game/
 ├── index.html            # markup, screen structure
 ├── style.css             # all styling (dark theme)
 ├── game.js               # game logic, map camera, persistence
+├── sync.js               # optional cloud sync (see below)
 ├── data/countries.js     # generated country data (SVG paths + metadata)
+├── data/flags/           # 172 flag PNGs, one per country
 └── tools/
-    └── generate-map-data.mjs   # regenerates data/countries.js
+    ├── generate-map-data.mjs   # regenerates data/countries.js
+    └── fetch-flags.mjs         # re-downloads data/flags/
 ```
+
+## Cloud sync (optional)
+
+By default everything lives in `localStorage` and never leaves the browser.
+Switching sync on additionally posts each finished session — and every
+individual answer — to Atlas, which stores it in Supabase so progress is
+trackable over time: accuracy by country, by continent, by week.
+
+Turn it on with the **Cloud sync** card on the menu: paste the sync code and
+it's saved to that browser only. It is deliberately not in this repo, because
+this repo is public. Sessions are queued before sending, so playing offline or
+with a flaky connection just means they upload on the next launch.
+
+## Why flags are images, not emoji
+
+Windows has no flag-emoji font, so `🇵🇪` renders as the literal letters "PE" in
+Chrome and Edge — which, in flag-guessing mode, printed the answer next to the
+question. `data/flags/` holds a PNG per country instead (580KB for the set, from
+[flagcdn](https://flagcdn.com)), so flags look the same everywhere and still
+work offline. Run `node tools/fetch-flags.mjs` to refetch them.
 
 ## Regenerating the map data
 
