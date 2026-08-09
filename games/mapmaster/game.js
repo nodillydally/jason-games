@@ -115,11 +115,21 @@ function poolFor(continent) {
   return COUNTRIES.filter((c) => c.continent === continent);
 }
 
-// Countries you've never seen or often miss get a higher weight.
+// Learned/unlearned: three right in a row marks a country learned; two wrong
+// in a row takes it back. Runs, not lifetime accuracy — a country you missed
+// ten times in June but nail now IS learned, and one you aced early but keep
+// fumbling now is NOT.
+const LEARN_RUN = 3;
+const UNLEARN_RUN = 2;
+const learnedCount = () => Object.values(store.stats).filter((s) => s.learned).length;
+
+// Countries you've never seen or often miss get a higher weight. Learned ones
+// still appear occasionally — a claim you never have to defend isn't held.
 function weightFor(c) {
   const s = store.stats[c.id];
   if (!s || !s.seen) return 2;
-  return 1 + 3 * (1 - s.correct / s.seen);
+  if (s.learned) return 0.4;
+  return 1 + 3 * (1 - s.correct / s.seen) + (s.run < 0 ? 1 : 0);
 }
 
 function weightedSample(pool, n) {
@@ -420,11 +430,14 @@ function markCountry(id, cls) {
 
 const sel = { mode: 'quiz', continent: 'World', difficulty: 'easy', question: 'location' };
 
-// Countries you've missed and haven't yet mastered (accuracy < 85%).
+// Countries you've missed and haven't yet mastered: accuracy < 85%, or ones
+// that flipped back to unlearned — lost ground is exactly what Review is for.
 function reviewPool(pool) {
   return pool.filter((c) => {
     const s = store.stats[c.id];
-    return s && s.seen > 0 && s.correct < s.seen && s.correct / s.seen < 0.85;
+    if (!s || !s.seen) return false;
+    if (s.learned === false) return true;
+    return !s.learned && s.correct < s.seen && s.correct / s.seen < 0.85;
   });
 }
 
@@ -453,7 +466,7 @@ function renderMenu() {
   const acc = store.answered ? Math.round((store.correct / store.answered) * 100) : 0;
   $('profile-stats').innerHTML =
     `<span><b>${store.games}</b> games</span>` +
-    `<span><b>${store.correct}</b> correct</span>` +
+    `<span><b>${learnedCount()}</b> learned</span>` +
     `<span><b>${acc}%</b> accuracy</span>`;
 
   renderOptionGroup($('mode-options'), MODES, sel.mode, (id) => { sel.mode = id; renderMenu(); });
@@ -506,6 +519,7 @@ function renderStats() {
   const rows = realContinents.map((name) => {
     const pool = poolFor(name);
     const seen = pool.filter((c) => store.stats[c.id] && store.stats[c.id].seen).length;
+    const learned = pool.filter((c) => store.stats[c.id] && store.stats[c.id].learned).length;
     const mastery = Math.round(
       (pool.reduce((sum, c) => sum + masteryOf(c), 0) / pool.length) * 100
     );
@@ -514,7 +528,7 @@ function renderStats() {
         <div class="ring" style="--p:${mastery}"><span>${mastery}%</span></div>
         <div class="continent-info">
           <b>${badgeFor(mastery)} ${name}</b>
-          <span>${seen}/${pool.length} countries seen</span>
+          <span>${learned} learned · ${seen}/${pool.length} seen</span>
         </div>
       </div>`;
   });
@@ -687,7 +701,9 @@ function endGame(aborted = false) {
     `<div class="stat"><b>${g.correct}/${g.answered}</b><span>correct</span></div>` +
     `<div class="stat"><b>${acc}%</b><span>accuracy</span></div>` +
     `<div class="stat"><b>${g.bestStreak}</b><span>best streak</span></div>` +
-    `<div class="stat"><b>${store.best[bestKey] || 0}</b><span>best score</span></div>`;
+    `<div class="stat"><b>${store.best[bestKey] || 0}</b><span>best score</span></div>` +
+    (g.newlyLearned ? `<div class="stat"><b>+${g.newlyLearned}</b><span>learned 🎉</span></div>` : '') +
+    (g.newlyLost ? `<div class="stat"><b>−${g.newlyLost}</b><span>slipped — review them</span></div>` : '');
 
   const missedEl = $('results-missed');
   if (g.missed.length) {
@@ -720,7 +736,7 @@ function recordAnswer(country, wasCorrect) {
     ms: Math.max(0, Date.now() - g.roundStartedAt),
     answered_at: new Date().toISOString(),
   });
-  const s = store.stats[country.id] || (store.stats[country.id] = { seen: 0, correct: 0 });
+  const s = store.stats[country.id] || (store.stats[country.id] = { seen: 0, correct: 0, run: 0 });
   s.seen += 1;
   if (wasCorrect) {
     g.correct += 1;
@@ -728,9 +744,21 @@ function recordAnswer(country, wasCorrect) {
     s.correct += 1;
     g.streak += 1;
     g.bestStreak = Math.max(g.bestStreak, g.streak);
+    s.run = (s.run || 0) > 0 ? s.run + 1 : 1;
+    if (!s.learned && s.run >= LEARN_RUN) {
+      s.learned = true;
+      g.newlyLearned = (g.newlyLearned || 0) + 1;
+      // The flip is the reward moment — name it the instant it happens.
+      if (window.Juice) Juice.toast(`✓ ${country.name} learned — ${learnedCount()} total`);
+    }
   } else {
     g.streak = 0;
     g.missed.push(country);
+    s.run = (s.run || 0) < 0 ? s.run - 1 : -1;
+    if (s.learned && -s.run >= UNLEARN_RUN) {
+      s.learned = false;
+      g.newlyLost = (g.newlyLost || 0) + 1;
+    }
   }
   saveStore();
   updateHud();
