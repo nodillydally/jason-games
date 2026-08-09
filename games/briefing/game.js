@@ -310,8 +310,25 @@ function promptBlock(prompts, state, cta, extra = '') {
     <p class="take-prompts">${prompts.map((p) => `<span>${esc(p)}</span>`).join('')}</p>
     ${extra}
     <textarea id="take-input" rows="5" placeholder="">${esc(state.text)}</textarea>
-    <button id="grade-btn" class="primary big">${state.error ? 'Retry grade' : cta}</button>
+    <div class="btn-row">
+      <button id="grade-btn" class="primary big">${state.error ? 'Retry grade' : cta}</button>
+      <button id="done-btn" class="ghost" title="Finish the day — ungraded stories stay ungraded">✓ Done for the day</button>
+    </div>
     <div id="grade-error" class="grade-error">${state.error ? esc(state.error) : ''}</div>`;
+}
+
+// End the day from anywhere — not every day has time for every story.
+function doneForDay() {
+  if (!g) return;
+  saveDraft();
+  const pending = tabKeys().filter((k) => g.tabs[k].pending).length;
+  if (pending) {
+    const err = $('grade-error');
+    if (err) err.textContent = `Still grading ${pending} in the background — a few seconds.`;
+    return;
+  }
+  if (gradedCount() === 0) return leaveDay();  // nothing graded — just leave, drafts kept
+  endGame(false);
 }
 
 // Bold the load-bearing specifics — figures, magnitudes, acronyms — which are
@@ -424,6 +441,8 @@ function wirePanel() {
   if (ta) ta.addEventListener('input', () => { g.tabs[g.active].text = ta.value; });
   const btn = $('grade-btn');
   if (btn) btn.addEventListener('click', submitTake);
+  const done = $('done-btn');
+  if (done) done.addEventListener('click', doneForDay);
   const hint = $('hint-btn');
   if (hint) hint.addEventListener('click', () => {
     saveDraft();

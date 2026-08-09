@@ -209,8 +209,15 @@
   margin-bottom: 12px;
 }
 
-#grade-btn { width: 100%; }
+.btn-row { display: flex; gap: 8px; align-items: stretch; }
+.btn-row #grade-btn { flex: 1; }
+#done-btn { flex: none; font-size: 13px; white-space: nowrap; padding: 0 18px; }
 .grade-error { color: var(--bad); font-size: 13px; margin-top: 8px; min-height: 1.2em; }
+
+@media (max-width: 460px) {
+  .btn-row { flex-direction: column; }
+  #done-btn { padding: 12px 18px; }
+}
 
 /* ------------------------------ the grade ------------------------------ */
 
