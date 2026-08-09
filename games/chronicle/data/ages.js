@@ -1,23 +1,28 @@
 /* Chronicle — the study syllabus.
  *
- * Two things live here, both feeding the Study loop (read a passage → get
- * quizzed on that passage → next passage). The old Learn screen put all the
- * reading up front and the quiz at the end, which is how you get a page that
- * feels like homework and teaches almost nothing: by question four you're
- * recalling paragraph one from ten minutes ago.
+ * Everything here feeds the Study loop (read a passage → get quizzed on that
+ * passage → next passage). Passages are built the way Briefing builds a story,
+ * because that shape is far easier to take in on a phone than prose:
+ *
+ *     headline · one-line lead · a short list of key/value bullets
+ *
+ * Bullets are always { k, v } — k is the hook you scan for (a year, or the
+ * question the bullet answers) and v is the sentence. Era passages don't spell
+ * their bullets out at all: they name events, and game.js builds the bullets
+ * straight from the event bank, so the passage and the quiz can never drift
+ * apart.
  *
  * 1. AGES — the overview course. Not events: the *ages themselves*. What the
- *    Ancient World is, why the Middle Ages start in 500 and end in 1450, what
+ *    Ancient World is, why the Middle Ages start in 500 and stop in 1450, what
  *    on earth the Age of Discovery was. This is the map you need before any
- *    individual date means anything, so it's the first thing offered.
- *    Its questions are written by hand, because they test the shape of the
- *    story rather than any single fact in it.
+ *    individual date means anything, so it's offered first. Its questions are
+ *    hand-written, because they test the shape of the story rather than a fact
+ *    inside it.
  *
- * 2. ERA_SECTION_IDS — which events each paragraph of an era's story mentions.
- *    The prose isn't duplicated here; game.js splits `era.story` on blank lines
- *    and zips it against these lists. That keeps the promise the old Learn
- *    screen made: a study question can only ask about something the passage
- *    you just read actually taught.
+ * 2. ERA_SECTIONS — each era in three passages: a headline, a lead, and the
+ *    events that passage covers. A study question can only ask about events
+ *    listed here, which keeps the promise that you're never quizzed on
+ *    something you weren't just shown.
  */
 
 const AGES = {
@@ -26,8 +31,14 @@ const AGES = {
   blurb: 'The eight ages, what each one is, and why they start and stop where they do. Start here.',
   sections: [
     {
-      title: 'Eight ages',
-      text: `History gets cut into eight rough ages. They aren't natural facts — they're bookmarks, and they sit where the rules of life changed: villages into cities, cities into empires, empires into kingdoms, kingdoms into oceans, muscle into steam, steam into industry, industry into total war, and war into networks.\n\nRoughly: the Ancient World up to 500 BC, the Classical Age to AD 500, the Middle Ages to 1450, Discovery to 1700, Revolutions to 1850, Industry to 1914, the Wars to 1991, and the Information Age since. Notice the shape — the first two ages cover three thousand years, and the last four cover three hundred. The clock speeds up.`,
+      title: 'The shape of history · part 1 of 9',
+      headline: 'Eight ages',
+      lead: 'The ages aren\'t natural facts — they\'re bookmarks, and they sit where the rules of life changed.',
+      bullets: [
+        { k: 'The cuts', v: 'Villages into cities, cities into empires, empires into kingdoms, kingdoms into oceans, muscle into steam, steam into industry, industry into total war, war into networks.' },
+        { k: 'The eight', v: 'Ancient World to 500 BC · Classical to AD 500 · Middle Ages to 1450 · Discovery to 1700 · Revolutions to 1850 · Industry to 1914 · the Wars to 1991 · Information since.' },
+        { k: 'The shape', v: 'The first two ages cover three thousand years. The last four cover three hundred. The clock speeds up.' },
+      ],
       questions: [
         { q: 'What actually marks the boundary between two ages?',
           options: ['A change in the rules of life', 'The death of a famous ruler', 'A round-numbered year', 'The end of a major war'],
@@ -41,7 +52,14 @@ const AGES = {
     },
     {
       title: 'Ancient World · 3200 – 500 BC',
-      text: `The age of first drafts. Everything a state needs gets invented from scratch, with nothing to copy: cities on flood plains, kings, writing, written law, standing armies, coins. Egypt unifies under one pharaoh around 3100 BC. Mesopotamia works out that the rules should be written down where everyone can see them.\n\nIt doesn't end with a conquest. It ends with an idea — inside a single century you get the Buddha in India, Confucius in China, Jewish thought reforged in exile, and democracy in Athens. Humans stop only asking how to survive and start arguing about how one ought to live.`,
+      headline: 'The age of first drafts',
+      lead: 'Everything a state needs gets invented from scratch, with nothing to copy.',
+      bullets: [
+        { k: 'What gets built', v: 'Cities on flood plains, kings, writing, written law, standing armies, coins — every basic component of a state, invented for the first time.' },
+        { k: 'Where', v: 'The Nile and Mesopotamia first: Egypt unifies under one pharaoh around 3100 BC, and Mesopotamia works out that the rules should be posted where everyone can see them.' },
+        { k: 'How it ends', v: 'Not with a conquest — with an idea. Inside one century: the Buddha, Confucius, Jewish thought reforged in exile, and democracy in Athens.' },
+        { k: 'Why that matters', v: 'Humans stop only asking how to survive and start arguing about how one ought to live.' },
+      ],
       questions: [
         { q: 'What is the Ancient World the age of?',
           options: ['Inventing the state from scratch', 'Global trade and exploration', 'Religious war in Europe', 'The first machines'],
@@ -55,7 +73,14 @@ const AGES = {
     },
     {
       title: 'Classical Age · 500 BC – AD 500',
-      text: `The age of the first superpowers. Greece invents the argument — philosophy, drama, history, democracy — and Alexander exports it at spear-point as far as India. Rome then does the harder thing: it holds a Mediterranean-wide state together for centuries using roads, law and citizenship rather than terror alone. At the far end of Eurasia, Han China runs the same play on the same scale.\n\nIt ends in 476, when the western Roman Empire simply stops. Nothing replaces it for a thousand years, which is exactly why the next age looks the way it does.`,
+      headline: 'The first superpowers',
+      lead: 'Two empires at opposite ends of Eurasia work out how to run a continent.',
+      bullets: [
+        { k: 'Greece', v: 'Invents the argument — philosophy, drama, history, democracy — and Alexander exports it at spear-point as far as India.' },
+        { k: 'Rome', v: 'Does the harder thing: holds a Mediterranean-wide state together for centuries using roads, law and extendable citizenship rather than terror alone.' },
+        { k: 'China', v: 'Runs the same play on the same scale at the other end of the landmass, under the Qin and then the Han.' },
+        { k: 'How it ends', v: 'In 476 the western Roman Empire simply stops — and nothing replaces it for a thousand years.' },
+      ],
       questions: [
         { q: 'What separates Rome from the empires before it?',
           options: ['It held a huge state together with law and citizenship', 'It was the first to use cavalry', 'It never lost a battle', 'It was a democracy throughout'],
@@ -64,18 +89,24 @@ const AGES = {
         { q: 'The Classical Age ends in 476 with —',
           options: ['The western Roman Empire ceasing to exist', 'The death of Alexander', 'The founding of Constantinople', 'The Black Death'],
           answer: 0,
-          why: 'And crucially, nothing takes its place. The vacuum is the story of the next thousand years.' },
+          why: 'And crucially, nothing takes its place. That vacuum is the story of the next thousand years.' },
       ],
     },
     {
       title: 'Middle Ages · 500 – 1450',
-      text: `Not a blank thousand years — a reshuffle. Rome's world splits three ways: Byzantium keeps the empire running in the east, Islam spreads across Arabia, North Africa and Spain, and western Europe fragments into small, local, land-based power. If you want a one-word summary, it's *decentralised*: power sits with whoever holds the nearest castle.\n\nThe connectors are religion and, briefly and violently, the Mongols. It ends around 1450 with two machines that make the next age possible — the printing press, which makes ideas cheap to copy, and the ocean-going ship, which makes distance survivable.`,
+      headline: 'Not blank — reshuffled',
+      lead: 'Rome\'s world splits three ways, and power drops to the local level.',
+      bullets: [
+        { k: 'The three heirs', v: 'Byzantium keeps the empire running in the east; Islam spreads across Arabia, North Africa and Spain; western Europe fragments.' },
+        { k: 'In one word', v: 'Decentralised. Power sits with whoever holds the nearest castle — local, land-based and personal.' },
+        { k: 'The connectors', v: 'Religion, trade routes, and briefly and violently the Mongols, who reconnect Eurasia end to end.' },
+        { k: 'How it ends', v: 'Two machines: the printing press, which makes ideas cheap to copy, and the ocean-going ship, which makes distance survivable.' },
+      ],
       questions: [
         { q: 'The best one-word description of medieval power is —',
           options: ['Decentralised', 'Industrial', 'Democratic', 'Global'],
           answer: 0,
-          why: 'No Rome-scale state in the west. Power is local, land-based and personal.',
-        },
+          why: 'No Rome-scale state in the west. Power is local, land-based and personal.' },
         { q: 'Which two inventions end the Middle Ages?',
           options: ['The printing press and the ocean-going ship', 'Gunpowder and the compass', 'The steam engine and the telescope', 'Paper and the stirrup'],
           answer: 0,
@@ -84,7 +115,14 @@ const AGES = {
     },
     {
       title: 'Age of Discovery · 1450 – 1700',
-      text: `The age the map closes — and the one most people can't name, even though the modern world turns on it. European ships reach the Americas and sail to Asia, and for the first time every inhabited continent is in permanent contact with the others. Crops, silver, people and disease move in every direction, and all of those continents are remade by it, most of them brutally.\n\nThe same press that spread Luther's protest across Europe also spread Copernicus, Galileo and Newton. By 1700 truth answers to evidence rather than to authority, and Europe has both the ships and the science to press its advantage.`,
+      headline: 'The age the map closes',
+      lead: 'The one most people can\'t name — and the hinge the modern world turns on.',
+      bullets: [
+        { k: 'What happens', v: 'European ships reach the Americas and sail to Asia. For the first time every inhabited continent is in permanent contact with the others.' },
+        { k: 'The cost', v: 'Crops, silver, people and disease move in every direction. All of those continents are remade by it, most of them brutally.' },
+        { k: 'The same press', v: 'That spread Luther\'s protest also spread Copernicus, Galileo and Newton — reformation and modern science ride the same technology.' },
+        { k: 'By 1700', v: 'Truth answers to evidence rather than to authority, and Europe has both the ships and the science to press its advantage.' },
+      ],
       questions: [
         { q: 'What makes 1450–1700 its own age?',
           options: ['Every inhabited continent comes into permanent contact', 'Europe industrialises', 'The Roman Empire is restored', 'Democracy spreads worldwide'],
@@ -98,7 +136,14 @@ const AGES = {
     },
     {
       title: 'Age of Revolutions · 1700 – 1850',
-      text: `Two revolutions running at once, each feeding the other. The mechanical one: steam breaks the ancient ceiling on how much work a human or an animal can do. The political one: America, France and Haiti each argue, and then fight, for the position that authority comes from the governed rather than from birth.\n\nIn about 150 years monarchy stops being the obvious way to run a country and muscle stops being the main source of power. Almost every political word you use daily — citizen, constitution, rights, left and right — is issued in this window.`,
+      headline: 'Steam and citizens',
+      lead: 'Two revolutions running at once, each accelerating the other.',
+      bullets: [
+        { k: 'The mechanical one', v: 'Steam breaks the ancient ceiling on how much work a human or an animal can do.' },
+        { k: 'The political one', v: 'America, France and Haiti each argue — and then fight — that authority comes from the governed rather than from birth.' },
+        { k: 'The result', v: 'In about 150 years monarchy stops being the obvious way to run a country, and muscle stops being the main source of power.' },
+        { k: 'The vocabulary', v: 'Citizen, constitution, rights, left and right — almost every political word you use daily is issued in this window.' },
+      ],
       questions: [
         { q: 'Which two revolutions define 1700–1850?',
           options: ['Mechanical and political', 'Agricultural and religious', 'Scientific and artistic', 'Digital and financial'],
@@ -112,7 +157,14 @@ const AGES = {
     },
     {
       title: 'Industry & Empire · 1850 – 1914',
-      text: `The age of compounding. Inside one lifetime: the telegraph, the telephone, the light bulb, the motor car, the aeroplane — and Einstein rewriting space and time. Nations consolidate to industrial scale, and Europe divides most of the rest of the planet between them, drawing borders that are still on the map.\n\nThe result is the first genuinely global system: wired, scheduled, and running to timetable. It is also armed, allied and extremely confident, which is why a single assassination in 1914 is enough to bring the whole structure down.`,
+      headline: 'The age of compounding',
+      lead: 'Everything speeds up at once, and the planet becomes a single machine.',
+      bullets: [
+        { k: 'One lifetime', v: 'Telegraph, telephone, light bulb, motor car, aeroplane — and Einstein rewriting space and time.' },
+        { k: 'Nations', v: 'Consolidate to industrial scale, and Europe divides most of the rest of the planet between them.' },
+        { k: 'Those borders', v: 'Are drawn in European conference rooms with rulers, and most of them are still on the map.' },
+        { k: 'The catch', v: 'The system is wired, scheduled, armed, allied and confident — so one assassination in 1914 is enough to bring it all down.' },
+      ],
       questions: [
         { q: 'What is new about the world by 1914?',
           options: ['It is one connected, industrial system', 'Most people live in cities', 'Empires have been dismantled', 'Europe is at peace with itself'],
@@ -126,7 +178,14 @@ const AGES = {
     },
     {
       title: 'World Wars & Cold War · 1914 – 1991',
-      text: `The age the West nearly ended itself. Two wars in thirty years kill on an industrial scale, break Europe's empires, and finish with a weapon capable of completing the job. Everything after 1945 is shaped by that: two systems, one planet, and a standoff neither side can win outright.\n\nSo the fight moves sideways — into space, into laboratories, into proxy wars, and into thirteen days over Cuba when it very nearly went the other way. And then the expected bang never comes. In 1989 a wall comes down on live television, and in 1991 the Soviet Union votes itself out of existence.`,
+      headline: 'The age the West nearly ended itself',
+      lead: 'Two wars in thirty years, then a standoff neither side can win.',
+      bullets: [
+        { k: 'The wars', v: 'Kill on an industrial scale, break Europe\'s empires, and finish with a weapon capable of completing the job.' },
+        { k: 'After 1945', v: 'Two systems, one planet. Direct war is unwinnable, so the contest moves sideways.' },
+        { k: 'Sideways means', v: 'Space, laboratories, proxy wars — and thirteen days over Cuba when it very nearly went the other way.' },
+        { k: 'How it ends', v: 'Not with the expected bang. A wall comes down on live television in 1989, and in 1991 the Soviet Union votes itself out of existence.' },
+      ],
       questions: [
         { q: 'What shaped the second half of this age?',
           options: ['A standoff neither side could win outright', 'A single global government', 'The collapse of industry', 'A return to empire'],
@@ -140,7 +199,13 @@ const AGES = {
     },
     {
       title: 'Information Age · 1991 – now',
-      text: `The age you're living in, which is why it has no ending yet. Its one structural change is that copying information becomes effectively free: first the web, then search, then a computer in every pocket, then machines that can write.\n\nEverything else in the period — the financial crash, the pandemic, populism, the return of war to Europe — plays out on top of a network that carries anything, anywhere, instantly. Whether that turns out to be the whole age or just its opening chapter is genuinely not known yet.`,
+      headline: 'The one you\'re living in',
+      lead: 'It has no ending yet, and one structural change underneath everything.',
+      bullets: [
+        { k: 'The change', v: 'Copying information becomes effectively free — first the web, then search, then a computer in every pocket, then machines that write.' },
+        { k: 'Everything else', v: 'The financial crash, the pandemic, populism, the return of war to Europe — all of it plays out on top of that network.' },
+        { k: 'Open question', v: 'Whether this is the whole age or just its opening chapter is genuinely not known yet.' },
+      ],
       questions: [
         { q: 'The structural change of the Information Age is —',
           options: ['Copying information becomes nearly free', 'The world population stops growing', 'Empires return', 'Energy becomes unlimited'],
@@ -148,9 +213,9 @@ const AGES = {
           why: 'Every other development of the period runs on top of that one fact.' },
         { q: 'Put these in order: Discovery, Revolutions, Information, Classical.',
           options: ['Classical → Discovery → Revolutions → Information',
-                    'Classical → Revolutions → Discovery → Information',
-                    'Discovery → Classical → Revolutions → Information',
-                    'Discovery → Revolutions → Classical → Information'],
+            'Classical → Revolutions → Discovery → Information',
+            'Discovery → Classical → Revolutions → Information',
+            'Discovery → Revolutions → Classical → Information'],
           answer: 0,
           why: 'Classical ends in 476, Discovery runs 1450–1700, Revolutions 1700–1850, Information from 1991.' },
       ],
@@ -158,50 +223,97 @@ const AGES = {
   ],
 };
 
-/* Which events each paragraph of an era's story mentions, in paragraph order.
- * game.js splits the story on blank lines and zips it against these, so a
- * study question can only ask about what the passage just taught. A few events
- * in the bank aren't named in any paragraph (Vesuvius, the transatlantic
- * telegraph) — those stay out of Study and appear only in the quiz modes. */
-const ERA_SECTION_IDS = {
+/* Each era in three passages. `ids` names the events the passage covers —
+ * game.js turns them into the bullet list AND draws the questions from the
+ * same list, so the passage and the quiz can never drift apart. A few events
+ * in the bank (Vesuvius) sit in no passage and stay quiz-only. */
+const ERA_SECTIONS = {
   ancient: [
-    ['egypt-unified', 'great-pyramid', 'hammurabi'],
-    ['bronze-collapse', 'olympics', 'rome-founded', 'first-coins'],
-    ['buddha', 'confucius', 'temple-destroyed', 'athens-democracy', 'persia-peak'],
+    { headline: 'Everything invented once',
+      lead: 'The first states appear where rivers flood on schedule — and every part of a state has to be built from nothing.',
+      ids: ['egypt-unified', 'great-pyramid', 'hammurabi'] },
+    { headline: 'The first crash, and the reboot',
+      lead: 'An interconnected bronze-trading world collapses all at once. What grows back is leaner and better organised.',
+      ids: ['bronze-collapse', 'olympics', 'rome-founded', 'first-coins'] },
+    { headline: 'The century that asks why',
+      lead: 'Inside about a hundred years, four traditions appear that are still running today.',
+      ids: ['temple-destroyed', 'buddha', 'confucius', 'persia-peak', 'athens-democracy'] },
   ],
   classical: [
-    ['marathon', 'salamis', 'peloponnesian', 'socrates', 'alexander'],
-    ['hannibal', 'qin-unifies', 'caesar', 'augustus', 'rome-peak', 'paper'],
-    ['crucifixion', 'milan-edict', 'rome-sacked', 'rome-falls'],
+    { headline: 'Greece invents the argument',
+      lead: 'A handful of quarrelsome city-states stop a superpower, produce a golden age, then ruin themselves.',
+      ids: ['marathon', 'salamis', 'peloponnesian', 'socrates', 'alexander'] },
+    { headline: 'Rome holds it together',
+      lead: 'Two empires at opposite ends of Eurasia run the same play: one state, one law, at continental scale.',
+      ids: ['qin-unifies', 'hannibal', 'caesar', 'augustus', 'paper', 'rome-peak'] },
+    { headline: 'The empire converts, then stops',
+      lead: 'A provincial execution becomes the state religion — and then the western half simply ends.',
+      ids: ['crucifixion', 'milan-edict', 'rome-sacked', 'rome-falls'] },
   ],
   medieval: [
-    ['hijra', 'iberia', 'tours', 'charlemagne'],
-    ['lindisfarne', 'hastings', 'crusade', 'genghis', 'marco-polo', 'tenochtitlan'],
-    ['magna-carta', 'black-death', 'joan', 'printing'],
+    { headline: 'Rome\'s world splits three ways',
+      lead: 'Byzantium in the east, Islam across Arabia and North Africa, and a fragmented Christian west.',
+      ids: ['hijra', 'iberia', 'tours', 'charlemagne'] },
+    { headline: 'The edges move in',
+      lead: 'Vikings, Normans, Crusaders and Mongols spend four centuries redrawing who holds what.',
+      ids: ['lindisfarne', 'hastings', 'crusade', 'genghis', 'marco-polo', 'tenochtitlan'] },
+    { headline: 'Kings fenced in, ideas set loose',
+      lead: 'Law starts binding the crown, plague cracks the feudal deal, and a machine starts copying ideas.',
+      ids: ['magna-carta', 'black-death', 'joan', 'printing'] },
   ],
   discovery: [
-    ['constantinople', 'columbus', 'gama', 'cortes'],
-    ['luther', 'thirty-years', 'copernicus', 'galileo', 'principia'],
-    ['armada', 'eic', 'jamestown', 'qing', 'glorious'],
+    { headline: 'The map closes',
+      lead: 'A toll gate on the road east sends Europe around the world instead — and two halves of the planet meet.',
+      ids: ['constantinople', 'columbus', 'gama', 'cortes'] },
+    { headline: 'One press, two revolutions',
+      lead: 'The technology that splits Christianity also makes truth answer to evidence.',
+      ids: ['luther', 'copernicus', 'galileo', 'thirty-years', 'principia'] },
+    { headline: 'The tools of the next world',
+      lead: 'Sea power, joint-stock companies, colonies and a parliament above the crown — all inside a century.',
+      ids: ['armada', 'eic', 'jamestown', 'qing', 'glorious'] },
   ],
   revolution: [
-    ['watt', 'railway', 'independence', 'bastille', 'haiti'],
-    ['napoleon', 'waterloo', 'abolition'],
-    ['vaccine', 'opium', 'revolutions-1848', 'famine'],
+    { headline: 'Steam and citizens',
+      lead: 'One revolution breaks the ceiling on work; the other breaks the rule on who may rule.',
+      ids: ['watt', 'independence', 'bastille', 'haiti', 'railway'] },
+    { headline: 'The experiment eats itself',
+      lead: 'France\'s revolution produces an emperor — but the new vocabulary survives his defeat.',
+      ids: ['napoleon', 'waterloo', 'abolition'] },
+    { headline: 'New leverage, new arguments',
+      lead: 'Science starts saving lives at scale while empire finds new ways to apply force.',
+      ids: ['vaccine', 'opium', 'famine', 'revolutions-1848'] },
   ],
   industrial: [
-    ['telephone', 'lightbulb', 'automobile', 'flight', 'relativity', 'darwin'],
-    ['civil-war', 'germany', 'meiji'],
-    ['suez', 'berlin-conf', 'qing-falls'],
+    { headline: 'One lifetime, every machine',
+      lead: 'Communication, light, the car and flight all arrive inside a single human life.',
+      ids: ['darwin', 'telephone', 'lightbulb', 'automobile', 'flight', 'relativity'] },
+    { headline: 'Nations at industrial scale',
+      lead: 'Three countries consolidate into modern powers within a decade of each other.',
+      ids: ['civil-war', 'meiji', 'germany'] },
+    { headline: 'One system, drawn with rulers',
+      lead: 'The planet becomes a single network — and its borders are drawn in European conference rooms.',
+      ids: ['suez', 'berlin-conf', 'qing-falls'] },
   ],
   worldwars: [
-    ['ww1', 'russian-rev', 'ww1-ends', 'crash-29', 'hitler', 'ww2', 'pearl-harbor', 'dday', 'ww2-ends'],
-    ['prc', 'india', 'israel', 'sputnik', 'moon', 'dna', 'cuba'],
-    ['deng', 'wall-falls'],
+    { headline: 'Thirty years of catastrophe',
+      lead: 'Two wars, one economic collapse, and the end of four empires.',
+      ids: ['ww1', 'russian-rev', 'ww1-ends', 'crash-29', 'hitler', 'ww2', 'pearl-harbor', 'dday', 'ww2-ends'] },
+    { headline: 'Two systems, one planet',
+      lead: 'Empires dissolve, and the contest moves to space, the laboratory and proxy wars.',
+      ids: ['india', 'israel', 'prc', 'dna', 'sputnik', 'cuba', 'moon'] },
+    { headline: 'The ending nobody scripted',
+      lead: 'No final battle: one side quietly rejoins the market world, and the other stops existing.',
+      ids: ['deng', 'wall-falls'] },
   ],
   information: [
-    ['ussr-ends', 'www', 'google', 'eu', 'mandela', 'hong-kong'],
-    ['nine-eleven', 'gfc'],
-    ['genome', 'iphone', 'arab-spring', 'alexnet', 'covid', 'chatgpt'],
+    { headline: 'The network switches on',
+      lead: 'The Cold War ends and the web opens to the public in the same year.',
+      ids: ['ussr-ends', 'www', 'eu', 'mandela', 'hong-kong', 'google'] },
+    { headline: 'The shocks',
+      lead: 'Openness gets turned against itself, and then the financial plumbing nearly fails.',
+      ids: ['nine-eleven', 'gfc'] },
+    { headline: 'The tools keep compounding',
+      lead: 'Genome, smartphone, feeds — and finally machines that write.',
+      ids: ['genome', 'iphone', 'arab-spring', 'alexnet', 'covid', 'chatgpt'] },
   ],
 };

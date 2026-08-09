@@ -681,18 +681,30 @@ function syllabusFor(id) {
   if (id === AGES.id) return AGES;
   const era = ERAS.find((e) => e.id === id);
   if (!era) return null;
-  const paras = era.story.split('\n\n');
+  const parts = ERA_SECTIONS[era.id] || [];
   return {
     id: era.id,
     name: era.name,
     blurb: fmtEraSpan(era),
     era,
-    sections: paras.map((text, i) => ({
-      title: `${era.name} · part ${i + 1} of ${paras.length}`,
-      text,
-      ids: (ERA_SECTION_IDS[era.id] || [])[i] || [],
+    sections: parts.map((p, i) => ({
+      title: `${era.name} · part ${i + 1} of ${parts.length}`,
+      headline: p.headline,
+      lead: p.lead,
+      ids: p.ids,
     })),
   };
+}
+
+// Era passages don't spell their bullets out — they name events, and the list
+// is built from the bank. The passage and the quiz therefore cannot drift.
+function bulletsFor(sec) {
+  if (sec.bullets) return sec.bullets;
+  return (sec.ids || [])
+    .map((id) => EVENTS.find((e) => e.id === id))
+    .filter(Boolean)
+    .sort((a, b) => a.y - b.y)
+    .map((ev) => ({ k: fmtYear(ev.y), v: ev.name, w: ev.why }));
 }
 
 const SYLLABUS_IDS = [AGES.id, ...ERAS.map((e) => e.id)];
@@ -748,8 +760,13 @@ function renderPassage() {
   st.locked = false;
 
   $('study-tag').textContent = sec.title || st.syl.name;
-  $('study-passage').innerHTML = sec.text.split('\n\n')
-    .map((para) => `<p>${esc(para)}</p>`).join('');
+  $('study-passage').innerHTML =
+    `<h2 class="panel-title">${esc(sec.headline)}</h2>`
+    + `<p class="story-what">${esc(sec.lead)}</p>`
+    + '<ul class="story-details">'
+    + bulletsFor(sec).map((b) =>
+      `<li><b>${esc(b.k)}</b><span>${esc(b.v)}${b.w ? `<em>${esc(b.w)}</em>` : ''}</span></li>`).join('')
+    + '</ul>';
   $('study-passage').classList.remove('hidden');
   $('study-quiz').classList.add('hidden');
   $('study-ready').classList.remove('hidden');
