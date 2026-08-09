@@ -786,6 +786,9 @@ function endGame(aborted = false) {
   // with a small bump for the things that took some doing.
   Wardrobe.earn(xpGain / 2 + (isBest ? 10 : 0) + (race && race.won ? 10 : 0));
 
+  // Finishing a round is what earns a chest. What's in it is the roll.
+  if (g.answered > 0) Wardrobe.awardChest('numbers');
+
   if (race && race.won) {
     if (g.rivalId === 'ghost') Wardrobe.grantFlag('numbers:beat-ghost');
     if (g.rivalId === 'metronome' && g.difficulty.id === 'hard') {
@@ -827,6 +830,11 @@ function endGame(aborted = false) {
 
   avatars.forEach((a) => a.behind(false));
   if (race && race.won) flashAll('cheer', 3200); else poseAll('idle');
+
+  // The chest waits on the results screen rather than interrupting the score.
+  const chests = Wardrobe.pending();
+  $('results-chest').classList.toggle('hidden', !chests);
+  $('results-chest').textContent = chests > 1 ? `Open ${chests} chests` : 'Open your chest';
 
   showScreen('results');
   // Count the final score up from zero — the one moment in the game where a
@@ -898,6 +906,12 @@ $('quit-btn').addEventListener('click', () => endGame(true));
 $('next-btn').addEventListener('click', nextQuestion);
 $('again-btn').addEventListener('click', startGame);
 $('menu-btn').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
+$('results-chest').addEventListener('click', () => {
+  Wardrobe.openChestUI(() => {
+    $('results-chest').classList.add('hidden');
+    renderMenu();
+  });
+});
 $('stats-btn').addEventListener('click', () => { renderStats(); showScreen('stats'); });
 $('stats-back').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
 $('learn-btn').addEventListener('click', () => { renderLearn(); showScreen('learn'); });

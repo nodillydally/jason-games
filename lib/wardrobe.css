@@ -271,6 +271,25 @@
   color: var(--a2);
   margin-bottom: 14px;
 }
+/* The chest holds its frames stacked like the runner does, and the lid plays
+   once and stops on the open frame rather than looping. */
+.chest-stage {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  margin: 0 auto 14px;
+}
+.chest-f {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.chest-f.on { opacity: 1; }
+
 .reveal-figure { display: block; width: 84px; height: 126px; margin: 0 auto 12px; }  /* 3x */
 .reveal-name {
   font-family: var(--serif);
