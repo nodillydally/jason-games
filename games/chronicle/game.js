@@ -226,11 +226,20 @@ function qEra(ev) {
   return { qtype: 'era', text: `When was this?\n${ev.name}`, options, events: [ev] };
 }
 
-// "Which came first?" — two events at least a generation apart, so the answer
-// is knowable rather than a coin flip on trivia.
+// "Which came first?" — two events close in time, so the order has to be
+// actually known rather than deduced from a millennium of daylight.
 function qFirst(pool, exclude) {
   const a = weightedDraw(pool, exclude);
-  const candidates = pool.filter((e) => e.id !== a.id && Math.abs(e.y - a.y) >= 25);
+  // Which-came-first is only a question when the two are NEIGHBOURS in time —
+  // the old filter demanded a 25+ year gap, which is how the iPhone ended up
+  // against the sack of Rome. Draw from the handful of chronologically
+  // nearest events instead (with just enough gap for a defensible order);
+  // nearness self-scales: sparse ancient stretches pair across centuries,
+  // dense modern ones across a few years.
+  const candidates = pool
+    .filter((e) => e.id !== a.id && Math.abs(e.y - a.y) >= 3)
+    .sort((x, y) => Math.abs(x.y - a.y) - Math.abs(y.y - a.y))
+    .slice(0, 6);
   const b = candidates.length
     ? candidates[Math.floor(Math.random() * candidates.length)]
     : weightedDraw(pool, new Set([...exclude, a.id]));
@@ -242,9 +251,18 @@ function qFirst(pool, exclude) {
   return { qtype: 'first', text: 'Which came first?', options, events: [a, b] };
 }
 
-// "Which of these happened during [era]?" — the reverse of qEra.
+// "Which of these happened during [era]?" — the reverse of qEra. Distractors
+// come from NEIGHBOURING eras: an iPhone among medieval options eliminates
+// itself, which tests reading, not history.
 function qInEra(ev) {
-  const others = shuffle(EVENTS.filter((e) => e.era !== ev.era)).slice(0, 3);
+  const idx = ERAS.findIndex((e) => e.id === ev.era);
+  const others = shuffle(
+    shuffle(EVENTS.filter((e) => e.era !== ev.era))
+      .sort((a, b) =>
+        Math.abs(ERAS.findIndex((x) => x.id === a.era) - idx)
+        - Math.abs(ERAS.findIndex((x) => x.id === b.era) - idx))
+      .slice(0, 8)
+  ).slice(0, 3);
   const options = shuffle([
     { label: ev.name, right: true, ev },
     ...others.map((e) => ({ label: e.name, right: false, ev })),
@@ -284,13 +302,21 @@ function makeQuestion(pool, exclude) {
 
 // Four events for ordering, pairwise at least 25 years apart.
 function makeSequence(pool) {
+  // Four events scattered across millennia order themselves — the drill only
+  // bites inside a chronological neighbourhood. Anchor on one event, take the
+  // dozen nearest in time, and pick four with just enough pairwise gap for
+  // the true order to be defensible.
+  const anchor = weightedDraw(pool);
+  const hood = pool
+    .filter((e) => e.id !== anchor.id)
+    .sort((a, b) => Math.abs(a.y - anchor.y) - Math.abs(b.y - anchor.y))
+    .slice(0, 11);
+  const candidates = [anchor, ...hood];
   for (let attempt = 0; attempt < 40; attempt += 1) {
     const picked = [];
-    const used = new Set();
-    while (picked.length < 4 && used.size < pool.length) {
-      const ev = weightedDraw(pool, used);
-      used.add(ev.id);
-      if (picked.every((p) => Math.abs(p.y - ev.y) >= 25)) picked.push(ev);
+    for (const ev of shuffle(candidates)) {
+      if (picked.length === 4) break;
+      if (picked.every((p) => Math.abs(p.y - ev.y) >= 3)) picked.push(ev);
     }
     if (picked.length === 4) return shuffle(picked);
   }
