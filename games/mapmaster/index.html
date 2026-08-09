@@ -48,6 +48,12 @@
       <h2 id="difficulty-heading">Difficulty</h2>
       <div class="opt-grid" id="difficulty-options"></div>
 
+      <div id="rival-block" class="hidden">
+        <h2>Rival</h2>
+        <div class="opt-grid" id="rival-options"></div>
+        <p id="rival-blurb" class="rival-blurb"></p>
+      </div>
+
       <div id="setup-hint" class="setup-hint"></div>
       <button id="start-btn" class="primary big">Start</button>
     </div>
@@ -79,6 +85,26 @@
         <div id="hud-streak"></div>
         <div id="hud-score"></div>
       </div>
+    </div>
+
+    <div id="race" class="race hidden">
+      <div class="race-head">
+        <span class="race-vs"><b id="race-rival-icon"></b> <span id="race-rival-name"></span></span>
+        <span id="race-gap" class="race-gap"></span>
+      </div>
+      <div class="race-track">
+        <div class="race-lane">
+          <span class="lane-tag">You</span>
+          <span class="rail"><span id="racer-you" class="racer you"></span></span>
+          <span id="race-you-legs" class="lane-legs"></span>
+        </div>
+        <div class="race-lane">
+          <span class="lane-tag">Them</span>
+          <span class="rail"><span id="racer-rival" class="racer rival"></span></span>
+          <span id="race-rival-legs" class="lane-legs"></span>
+        </div>
+      </div>
+      <div id="race-note" class="race-note"></div>
     </div>
 
     <div class="map-wrap">
@@ -139,6 +165,7 @@
 <script src="../../lib/avatar.js"></script>
 <script src="../../lib/wardrobe.js"></script>
 <script src="../../lib/next.js"></script>
+<script src="rival.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

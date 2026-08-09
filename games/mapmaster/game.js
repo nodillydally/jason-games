@@ -21,10 +21,13 @@
 // Config
 // ---------------------------------------------------------------------------
 
+const RACE_LEGS = 10;
+
 const MODES = [
   { id: 'quiz', label: 'Classic quiz', sub: 'Ten rounds, take your time' },
   { id: 'blitz', label: 'Blitz ⏱', sub: '60 seconds, go fast' },
   { id: 'marathon', label: 'Marathon 💀', sub: '3 lives — how far can you go?' },
+  { id: 'race', label: 'Race 🏁', sub: `First to ${RACE_LEGS} — beat your rival` },
   { id: 'find', label: 'Find it 🎯', sub: 'Spot it on the map' },
   { id: 'review', label: 'Review 📚', sub: 'Drill the ones you miss' },
   { id: 'explore', label: 'Explore 🧭', sub: 'Browse & learn, no score' },
@@ -38,7 +41,7 @@ const QUESTIONS = [
 ];
 
 // Quiz-style modes share the highlight-and-answer round loop.
-const QUIZ_LIKE = ['quiz', 'blitz', 'marathon', 'review'];
+const QUIZ_LIKE = ['quiz', 'blitz', 'marathon', 'review', 'race'];
 
 const CONTINENTS = [
   'World', 'Africa', 'Americas', 'Asia',
@@ -77,9 +80,9 @@ const tip = $('map-tip');
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, ...JSON.parse(raw) };
+    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, pace: {}, ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
-  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {} };
+  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, pace: {} };
 }
 
 const store = loadStore();
@@ -430,7 +433,7 @@ function markCountry(id, cls) {
 // Menu
 // ---------------------------------------------------------------------------
 
-const sel = { mode: 'quiz', continent: 'World', difficulty: 'easy', question: 'location' };
+const sel = { mode: 'quiz', continent: 'World', difficulty: 'easy', question: 'location', rival: 'kid' };
 
 // Countries you've missed and haven't yet mastered: accuracy < 85%, or ones
 // that flipped back to unlearned — lost ground is exactly what Review is for.
@@ -481,6 +484,13 @@ function renderMenu() {
     (id) => { sel.continent = id; renderMenu(); }
   );
   renderOptionGroup($('difficulty-options'), DIFFICULTIES, sel.difficulty, (id) => { sel.difficulty = id; renderMenu(); });
+
+  const isRace = sel.mode === 'race';
+  $('rival-block').classList.toggle('hidden', !isRace);
+  if (isRace && window.Rival) {
+    renderOptionGroup($('rival-options'), Rival.list().map((r) => ({ id: r.id, label: `${r.icon} ${r.label}` })), sel.rival, (id) => { sel.rival = id; renderMenu(); });
+    $('rival-blurb').textContent = Rival.find(sel.rival).blurb;
+  }
 
   const isExplore = sel.mode === 'explore';
   $('difficulty-heading').style.opacity = isExplore ? .35 : 1;
@@ -558,6 +568,7 @@ function renderStats() {
 
 let g = null;
 let blitzInterval = null;
+let raceInterval = null;
 let autoNextTimer = null;
 
 function startGame() {
@@ -567,7 +578,7 @@ function startGame() {
     pool = reviewPool(pool);
     if (!pool.length) return; // Start is disabled, but guard anyway
   }
-  const endless = sel.mode === 'blitz' || sel.mode === 'marathon';
+  const endless = sel.mode === 'blitz' || sel.mode === 'marathon' || sel.mode === 'race';
   g = {
     // Client-generated so a retried sync can't double-count this session.
     id: (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`),
@@ -633,6 +644,37 @@ function startGame() {
     blitzInterval = setInterval(tickBlitz, 150);
     tickBlitz();
   }
+
+  if (g.mode === 'race') {
+    $('racer-you').innerHTML = '';
+    const you = Avatar.create($('racer-you'), { ink: Wardrobe.ink(), gear: Wardrobe.gear(), facing: 'e' });
+    you.pose('run');
+    Rival.start({
+      rivalId: sel.rival,
+      legs: RACE_LEGS,
+      difficultyId: sel.difficulty,
+      // Mapmaster has no question clock; this only feeds the no-history
+      // fallback pace (~5.4s a question).
+      difficultySeconds: 12,
+      drawTopic: () => g.pool[Math.floor(Math.random() * g.pool.length)].continent,
+      baseMsFor: (cont) => {
+        const p = store.pace[cont];
+        return p && p.n ? p.ms / p.n : 0;
+      },
+      missRateFor: (cont) => {
+        const p = store.pace[cont];
+        return p && p.n >= 3 ? p.miss / p.n : null;
+      },
+      playerInk: Wardrobe.ink(),
+      playerGear: Wardrobe.gear(),
+    });
+    raceInterval = setInterval(() => {
+      // The rival can cross the line while you're mid-question; the round in
+      // progress still resolves, then nextRound routes to the results.
+      if (Rival.tick() && g && g.locked === false) updateHud();
+    }, 100);
+  }
+
   nextRound();
 }
 
@@ -666,7 +708,15 @@ function syncSession(aborted, xpGain) {
 function endGame(aborted = false) {
   clearInterval(blitzInterval);
   blitzInterval = null;
+  clearInterval(raceInterval);
+  raceInterval = null;
   clearTimeout(autoNextTimer);
+
+  let race = null;
+  if (g.mode === 'race') {
+    race = Rival.result();
+    Rival.stop();
+  }
 
   if (aborted || g.mode === 'explore') {
     syncSession(true, 0);
@@ -674,6 +724,11 @@ function endGame(aborted = false) {
     renderMenu();
     g = null;
     return;
+  }
+
+  // Winning the race is worth a fat bonus, scaled by how it was won.
+  if (race && race.won) {
+    g.score += Math.round(2.5 * g.difficulty.points + 100 * Math.min(3, Math.max(0, race.margin)));
   }
 
   const xpBefore = store.xp;
@@ -691,7 +746,10 @@ function endGame(aborted = false) {
 
   const levelAfter = levelForXp(store.xp);
   $('results-title').textContent =
-    g.mode === 'blitz' ? "Time's up!"
+    race ? (race.won
+      ? (race.photoFinish ? `🏁 Photo finish — you got ${race.rival.name}!` : `🏁 You beat ${race.rival.name}!`)
+      : `${race.rival.icon} ${race.rival.name} took it — ${race.you}/${race.legs} when it crossed`)
+      : g.mode === 'blitz' ? "Time's up!"
       : g.mode === 'marathon' ? `💀 Out of lives — ${g.correct} correct!`
       : 'Round complete!';
   $('results-score').innerHTML = `${g.score}<small>points · +${xpGain} XP</small>`;
@@ -731,6 +789,19 @@ function endGame(aborted = false) {
 function recordAnswer(country, wasCorrect) {
   g.answered += 1;
   store.answered += 1;
+
+  // Per-continent pace — what the rival racer is calibrated from.
+  const elapsed = Math.max(0, Date.now() - g.roundStartedAt);
+  const pace = store.pace[country.continent] || (store.pace[country.continent] = { ms: 0, n: 0, miss: 0 });
+  pace.ms += elapsed;
+  pace.n += 1;
+  if (!wasCorrect) pace.miss += 1;
+
+  if (g.mode === 'race') {
+    if (wasCorrect) Rival.advanceYou();
+    else Rival.missedLeg();
+  }
+
   // Per-answer detail is what makes "am I actually getting better at Central
   // Asia?" answerable later; session totals alone can't show that.
   g.log.push({
@@ -789,6 +860,8 @@ function updateHud() {
   }
   if (g.mode === 'blitz') {
     $('hud-progress').textContent = `${g.answered} answered`;
+  } else if (g.mode === 'race') {
+    $('hud-progress').textContent = `🏁 First to ${RACE_LEGS}`;
   } else if (g.mode === 'marathon') {
     const hearts = '❤️'.repeat(g.lives) + '🖤'.repeat(MARATHON_LIVES - g.lives);
     $('hud-progress').textContent = `Question ${Math.max(g.round, 1)} · ${hearts}`;
@@ -832,6 +905,7 @@ function drawNextTarget() {
 function nextRound() {
   clearTimeout(autoNextTimer);
   if (g.dead) return endGame();
+  if (g.mode === 'race' && Rival.active() && Rival.result().finishedBy) return endGame();
   if (g.round >= g.rounds) return endGame();
   g.round += 1;
   g.locked = false;
@@ -943,8 +1017,8 @@ function maybeDie(right) {
 
 function finishRound(delayMs) {
   g.locked = true;
-  if (g.mode === 'blitz') {
-    autoNextTimer = setTimeout(nextRound, 700);
+  if (g.mode === 'blitz' || g.mode === 'race') {
+    autoNextTimer = setTimeout(nextRound, g.mode === 'race' ? 900 : 700);
   } else if (delayMs) {
     autoNextTimer = setTimeout(nextRound, delayMs);
   } else {

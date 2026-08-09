@@ -8,6 +8,11 @@
   --p1: #233142;          /* navy */
   --p2: #6B8CAF;          /* its light companion */
 
+  /* rival ink colours (race mode) */
+  --rival-metronome: #86796E;
+  --rival-kid: #C9860F;
+  --rival-professor: #8A6A4F;
+
   /* Atlas palette. Land sits warmer and darker than the sea so the coastline
      reads at a glance on a phone in daylight. */
   --sea: #FDF9F0;
@@ -21,6 +26,10 @@
 :root[data-theme="dark"] {
   --p1: #8AB4DE;
   --p2: #6B8CAF;
+
+  --rival-metronome: #ADA095;
+  --rival-kid: #E8A82C;
+  --rival-professor: #BE9670;
 
   --sea: #100E0A;
   --land: #3B3327;
@@ -273,3 +282,131 @@
 }
 
 /* Cloud sync card styles live in lib/sync.css, shared across games. */
+
+/* ------------------------------ race (rival) ------------------------------ */
+.race {
+  margin: 14px 0 2px;
+  padding: 14px 16px 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+}
+
+.race-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.race-vs { color: var(--ink-3); }
+.race-vs b { font-size: 13px; }
+
+.race-gap { font-weight: 500; transition: color .3s var(--ease); }
+.race-gap.ahead  { color: var(--good); }
+.race-gap.behind { color: var(--bad); }
+.race-gap.level  { color: var(--ink-2); }
+
+.race-lane {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 50px;
+}
+.lane-tag {
+  flex: 0 0 34px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.lane-legs {
+  flex: 0 0 38px;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+/* The rail carries a tick per leg, so position reads as "3 of 10" at a glance
+   rather than as an abstract percentage. */
+.rail {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--rule) 0 1px,
+    transparent 1px 10%
+  ), var(--rule-2);
+  border-radius: 2px;
+}
+.rail::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  bottom: -3px;
+  width: 2px;
+  height: 20px;
+  background: var(--ink);
+  opacity: .5;
+}
+
+/* Feet on the rail, not a counter riding it. */
+.racer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-50%);
+  width: 28px;   /* 1x the 28x42 sprite — fractional scales shimmer */
+  height: 42px;
+}
+
+/* You leap a whole leg at a time; the rival creeps. The difference in easing
+   is doing real work — the snap forward is the reward for a right answer. */
+.racer.you { transition: left .42s var(--ease); }
+.racer.rival { transition: left .1s linear; } /* smooths the 100ms game ticker */
+
+/* The stumble and the win are carried by the figure's own pose — animating the
+   token as well would fight its translateX and jitter it off the rail. */
+
+.race-note {
+  height: 14px;
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  text-align: center;
+  opacity: 0;
+}
+.race-note.good { color: var(--good); }
+.race-note.show { animation: note-flash 2s var(--ease) both; }
+
+@keyframes note-flash {
+  0%       { opacity: 0; transform: translateY(3px); }
+  12%, 65% { opacity: 1; transform: translateY(0); }
+  100%     { opacity: 0; }
+}
+
+/* The block wraps its own <h2>, so the heading's margin collapses out of it
+   and the picker ends up crowding the difficulty row above. */
+#rival-block { margin-top: 26px; }
+
+.rival-blurb {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  margin: 12px 2px 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--rule);
+}
+
+/* ----------------------------- race result ----------------------------- */
+
