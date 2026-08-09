@@ -21,8 +21,13 @@ const COUNT_IN_MS = 500;       // per digit of the 3-2-1 count-in
 const MODES = [
   { id: 'benchmark', label: 'Benchmark', icon: '🎯', hint: 'One passage at your chosen speed, then a comprehension check.' },
   { id: 'ladder',    label: 'Ladder',    icon: '📈', hint: 'Speed climbs 50 wpm each passage until comprehension breaks. Finds your real ceiling.' },
+  { id: 'book',      label: 'My books',  icon: '📚', hint: 'Read your own library a session at a time, with a fill-the-blank check on what you just read. Progress is bookmarked.' },
   { id: 'free',      label: 'Free read', icon: '📄', hint: 'Paste your own text and read it at speed. No quiz — practice, not measurement.' },
 ];
+
+// How much of a book one session covers (~1200 words ≈ 4 min at 300 wpm).
+const BOOK_CHUNKS_PER_SESSION = 3;
+const BOOKMARKS_KEY = 'reader.books.v1';
 
 const CHUNKS = [
   { id: 1, label: '1 word' },
@@ -109,10 +114,110 @@ function dwellMultiplier(text) {
 }
 
 // ---------------------------------------------------------------------------
+// Book library (private — fetched from Atlas, never bundled with the site)
+// ---------------------------------------------------------------------------
+
+const loadBookmarks = () => {
+  try { return JSON.parse(localStorage.getItem(BOOKMARKS_KEY)) || {}; } catch { return {}; }
+};
+const bookmarks = loadBookmarks();
+const saveBookmarks = () => localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
+
+let catalog = null;      // [{slug,title,author,chunks,words}]
+let catalogError = null;
+
+async function contentGet(params) {
+  const url = `${Sync.contentEndpoint()}?${new URLSearchParams(params)}`;
+  const res = await fetch(url, { headers: { authorization: `Bearer ${Sync.token()}` } });
+  if (!res.ok) throw new Error(`library fetch failed (${res.status})`);
+  return res.json();
+}
+
+async function loadCatalog() {
+  if (catalog || catalogError) return;
+  try {
+    catalog = (await contentGet({ op: 'books' })).books;
+  } catch (err) {
+    catalogError = err.message;
+  }
+  if (sel.mode === 'book') renderMenu();
+}
+
+// ---------------------------------------------------------------------------
+// Cloze quiz generation
+// ---------------------------------------------------------------------------
+
+// Real books don't ship with comprehension questions, and hand-writing them
+// would defeat the point. Cloze deletion — blank a content word, supply it
+// from context — is the classic no-AI comprehension measure: you can only
+// fill the blank if you assembled the sentence's meaning, not just saw it.
+
+const STOPWORDS = new Set(('about,above,after,again,against,because,been,before,being,below,between,' +
+  'both,could,doing,down,during,each,further,having,into,itself,more,most,other,over,same,should,' +
+  'their,there,these,they,this,those,through,under,until,very,were,what,when,where,which,while,' +
+  'whom,with,would,your,yours,them,then,than,that,from,have,will,just,like,also,only,even,much,' +
+  'many,some,such,here,once,does,came,went,said,told,asked,thing,things,really,little,know,knew,' +
+  'think,thought,people,every,never,always,still,being,made,make,want,wanted,going,good,great,' +
+  'first,last,back,years,time,himself,herself').split(','));
+
+function clozeCandidates(sentence) {
+  return sentence.split(/\s+/)
+    .map((raw) => raw.replace(/^[^A-Za-z]+|[^A-Za-z]+$/g, ''))
+    .filter((w) => w.length >= 5 && /^[a-z]+$/.test(w) && !STOPWORDS.has(w));
+}
+
+function makeClozeQuiz(text, n = 5) {
+  const sentences = (text.match(/[^.!?]+[.!?]+["')\]]*/g) || [])
+    .map((s) => s.replace(/\s+/g, ' ').trim())
+    .filter((s) => { const w = s.split(' ').length; return w >= 8 && w <= 45; });
+  if (sentences.length < 3) return [];
+
+  // Spread the questions across the whole session so skimming the start
+  // and coasting doesn't pass.
+  const step = sentences.length / Math.min(n, sentences.length);
+  const questions = [];
+  const usedAnswers = new Set();
+  const allCandidates = [...new Set(sentences.flatMap(clozeCandidates))];
+
+  for (let k = 0; k < Math.min(n, sentences.length); k += 1) {
+    const sentence = sentences[Math.floor(k * step)];
+    const cands = clozeCandidates(sentence).filter((w) => !usedAnswers.has(w));
+    if (!cands.length) continue;
+    // The word nearest the middle of the sentence carries the most context.
+    const words = sentence.split(' ');
+    const answer = cands
+      .map((w) => ({ w, d: Math.abs(words.findIndex((x) => x.replace(/^[^A-Za-z]+|[^A-Za-z]+$/g, '') === w) - words.length / 2) }))
+      .sort((a, b) => a.d - b.d)[0].w;
+    usedAnswers.add(answer);
+
+    const distractors = shuffleArr(allCandidates
+      .filter((w) => w !== answer && !sentence.includes(w) && Math.abs(w.length - answer.length) <= 3))
+      .slice(0, 3);
+    if (distractors.length < 3) continue;
+
+    // Blank exactly the answer word, once.
+    const rx = new RegExp(`\\b${answer}\\b`);
+    const blanked = sentence.replace(rx, '＿＿＿');
+    const options = shuffleArr([answer, ...distractors]);
+    questions.push({ q: `Fill the blank: “${blanked}”`, options, answer: options.indexOf(answer) });
+  }
+  return questions;
+}
+
+function shuffleArr(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ---------------------------------------------------------------------------
 // Menu
 // ---------------------------------------------------------------------------
 
-const sel = { mode: 'benchmark', chunk: 1, wpm: 300 };
+const sel = { mode: 'benchmark', chunk: 1, wpm: 300, book: null };
 
 function optionButton(item, group, active) {
   const b = document.createElement('button');
@@ -147,11 +252,44 @@ function renderMenu() {
   $('wpm-value').textContent = `${sel.wpm} wpm`;
 
   $('paste-wrap').classList.toggle('hidden', sel.mode !== 'free');
+  $('book-wrap').classList.toggle('hidden', sel.mode !== 'book');
+  if (sel.mode === 'book') renderBookList();
 
   const mode = MODES.find((m) => m.id === sel.mode);
   $('setup-hint').textContent = sel.mode === 'ladder'
     ? `${mode.hint} Starting at ${sel.wpm} wpm.`
     : mode.hint;
+}
+
+function renderBookList() {
+  const el = $('book-list');
+  if (!Sync.isEnabled()) {
+    el.innerHTML = '<p class="book-note">Your library rides the same code as cloud sync — turn sync on below and the books appear here.</p>';
+    return;
+  }
+  if (catalogError) {
+    el.innerHTML = `<p class="book-note">Couldn’t reach the library: ${esc(catalogError)}</p>`;
+    return;
+  }
+  if (!catalog) {
+    el.innerHTML = '<p class="book-note">Loading your library…</p>';
+    loadCatalog();
+    return;
+  }
+  el.innerHTML = '';
+  catalog.forEach((b) => {
+    const at = (bookmarks[b.slug] && bookmarks[b.slug].chunk) || 0;
+    const pct = Math.min(100, Math.round((at / b.chunks) * 100));
+    const btn = document.createElement('button');
+    btn.className = `book-item${sel.book === b.slug ? ' active' : ''}`;
+    btn.innerHTML =
+      `<span class="book-title">${esc(b.title)}</span>` +
+      `<span class="book-meta">${esc(b.author || '')} · ${(b.words / 1000).toFixed(0)}k words</span>` +
+      `<span class="book-progress"><i style="width:${pct}%"></i></span>` +
+      `<span class="book-pct">${pct === 100 ? '✓ finished' : pct === 0 ? 'not started' : pct + '%'}</span>`;
+    btn.addEventListener('click', () => { sel.book = b.slug; renderMenu(); });
+    el.appendChild(btn);
+  });
 }
 
 function showScreen(name) {
@@ -177,12 +315,35 @@ function pickPassage() {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-function startGame() {
+async function startGame() {
   const isFree = sel.mode === 'free';
   const pasted = $('paste-input').value.trim();
   if (isFree && !pasted) {
     $('setup-hint').textContent = 'Paste some text first — anything from a paragraph up.';
     return;
+  }
+
+  // Book sessions fetch their text from the private library first.
+  let bookSession = null;
+  if (sel.mode === 'book') {
+    if (!Sync.isEnabled()) { $('setup-hint').textContent = 'Turn on Cloud sync below first — the library needs it.'; return; }
+    if (!sel.book) { $('setup-hint').textContent = 'Pick a book from the list.'; return; }
+    const meta = (catalog || []).find((b) => b.slug === sel.book);
+    const from = (bookmarks[sel.book] && bookmarks[sel.book].chunk) || 0;
+    if (meta && from >= meta.chunks) { $('setup-hint').textContent = 'You’ve finished that one — pick another, or reread it by resetting below.'; return; }
+    const startBtn = $('start-btn');
+    startBtn.disabled = true;
+    startBtn.textContent = 'Fetching…';
+    try {
+      const r = await contentGet({ op: 'chunks', book: sel.book, from, count: BOOK_CHUNKS_PER_SESSION });
+      bookSession = { meta, from, total: r.total, text: r.chunks.map((c) => c.content).join('\n\n'), got: r.chunks.length };
+    } catch (err) {
+      $('setup-hint').textContent = `Couldn’t fetch the book: ${err.message}`;
+      return;
+    } finally {
+      startBtn.disabled = false;
+      startBtn.textContent = 'Start';
+    }
   }
 
   g = {
@@ -200,6 +361,7 @@ function startGame() {
     rounds: [],
     passage: null,
     customText: isFree ? pasted : null,
+    book: bookSession,
   };
 
   beginRound();
@@ -208,6 +370,15 @@ function startGame() {
 function beginRound() {
   if (g.mode === 'free') {
     g.passage = { id: 'custom', title: 'Your text', level: 0, text: g.customText, questions: [] };
+  } else if (g.mode === 'book') {
+    const b = g.book;
+    g.passage = {
+      id: b.meta.slug,
+      title: b.meta.title,
+      level: 0,
+      text: b.text,
+      questions: makeClozeQuiz(b.text, 5),
+    };
   } else {
     g.passage = pickPassage();
     g.usedPassages.push(g.passage.id);
@@ -222,6 +393,8 @@ function beginRound() {
 
   $('read-title').textContent = g.mode === 'ladder'
     ? `${g.passage.title} · rung ${g.rung + 1}`
+    : g.mode === 'book'
+    ? `${g.passage.title} · ${Math.round((g.book.from / g.book.total) * 100)}% in`
     : g.passage.title;
   $('read-wpm').textContent = `${g.wpm} wpm`;
   $('progress-fill').style.width = '0%';
@@ -289,11 +462,24 @@ function finishReading() {
   g.lastElapsedMs = Date.now() - g.readStartedAt;
 
   if (g.mode === 'free') return endGame();
+  // Rare: a book stretch too fragmented for cloze generation (front matter,
+  // tables). Bank the reading and move the bookmark rather than blocking.
+  if (g.mode === 'book' && g.passage.questions.length < 3) {
+    advanceBookmark();
+    return endGame();
+  }
 
   g.quizIndex = 0;
   g.quizAnswers = [];
   showScreen('quiz');
   renderQuestion();
+}
+
+function advanceBookmark() {
+  if (!g || g.mode !== 'book') return;
+  const b = g.book;
+  bookmarks[b.meta.slug] = { chunk: Math.min(b.from + b.got, b.total), t: Date.now() };
+  saveBookmarks();
 }
 
 // ---------------------------------------------------------------------------
@@ -362,6 +548,10 @@ function scoreRound() {
   lvl.rounds += 1;
   lvl.correct += correct;
   lvl.total += qs.length;
+
+  // Finishing the quiz banks the reading — the bookmark advances regardless
+  // of the score. You read it; the score just tells you how well.
+  if (g.mode === 'book') advanceBookmark();
 
   if (g.mode === 'ladder' && comprehension >= LADDER_PASS) {
     g.rung += 1;
@@ -452,6 +642,13 @@ function endGame(aborted = false) {
       `<div class="stat"><b>${(g.lastElapsedMs / 60000).toFixed(1)}m</b><span>elapsed</span></div>`;
     $('results-note').textContent = 'Free reads aren\'t scored — run a Benchmark to see whether that speed is holding.';
     $('results-review').innerHTML = '';
+  } else if (!last) {
+    // A book stretch too fragmented to quiz — banked without a score.
+    $('results-title').textContent = g.book ? g.book.meta.title : 'Done';
+    $('results-score').innerHTML = `${g.words.length.toLocaleString()}<span> words</span>`;
+    $('results-stats').innerHTML = '';
+    $('results-note').textContent = 'That stretch was too fragmented to quiz (front matter, most likely) — bookmarked and moving on.';
+    $('results-review').innerHTML = '';
   } else {
     const comp = Math.round(last.comprehension * 100);
     $('results-title').textContent = g.mode === 'ladder'
@@ -464,10 +661,22 @@ function endGame(aborted = false) {
       `<div class="stat"><b>${last.correct}/${last.total}</b><span>correct</span></div>` +
       (g.mode === 'ladder' ? `<div class="stat"><b>${g.rung}</b><span>rungs climbed</span></div>` : '');
 
-    $('results-note').textContent =
-      comp >= 85 ? 'Comprehension is holding. Push the speed up 50 and see if it still does.'
-        : comp >= 60 ? 'You are near the edge — this is roughly your working ceiling right now.'
-        : 'Too fast. At this speed you are recognising words rather than reading sentences.';
+    if (g.mode === 'book') {
+      const b = g.book;
+      const done = Math.min(b.from + b.got, b.total);
+      const pct = Math.round((done / b.total) * 100);
+      const wordsLeft = ((b.total - done) / b.total) * b.meta.words;
+      const hoursLeft = last.effective > 0 ? wordsLeft / last.effective / 60 : null;
+      $('results-title').textContent = `${b.meta.title} — ${pct}%`;
+      $('results-note').textContent = done >= b.total
+        ? '📕 Finished. That\'s a whole book banked.'
+        : `Bookmarked. ${hoursLeft !== null ? `About ${hoursLeft.toFixed(1)}h of reading left at this effective speed — "Go again" continues from here.` : '"Go again" continues from here.'}`;
+    } else {
+      $('results-note').textContent =
+        comp >= 85 ? 'Comprehension is holding. Push the speed up 50 and see if it still does.'
+          : comp >= 60 ? 'You are near the edge — this is roughly your working ceiling right now.'
+          : 'Too fast. At this speed you are recognising words rather than reading sentences.';
+    }
 
     $('results-review').innerHTML = '<h3>What you missed</h3>' + (
       last.answers.every((a) => a.right)
@@ -523,7 +732,7 @@ function renderStats() {
 
   const rows = Object.entries(store.byLevel).sort((a, b) => a[0] - b[0]).map(([level, s]) => {
     const pct = Math.round((s.correct / s.total) * 100);
-    const name = level === '1' ? 'Plain prose' : level === '2' ? 'Denser' : 'Complex';
+    const name = level === '0' ? 'Your books' : level === '1' ? 'Plain prose' : level === '2' ? 'Denser' : 'Complex';
     return `<div class="topic-row">
       <span class="topic-name">${name}</span>
       <span class="bar"><i style="width:${pct}%"></i></span>

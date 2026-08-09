@@ -172,6 +172,35 @@ button.big { width: 100%; padding: 14px; font-size: 1.05rem; margin-top: 16px; }
 
 .setup-hint { color: var(--text-dim); font-size: .85rem; margin-top: 14px; line-height: 1.5; }
 
+/* ---------------------------- Book library ---------------------------- */
+
+.book-list { display: flex; flex-direction: column; gap: 8px; }
+.book-note { color: var(--text-dim); font-size: .85rem; line-height: 1.5; }
+
+.book-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "title pct" "meta pct" "bar bar";
+  gap: 2px 12px;
+  text-align: left;
+  padding: 11px 14px;
+}
+.book-item.active { border-color: var(--primary); background: var(--bg); }
+.book-title { grid-area: title; font-weight: 600; }
+.book-meta { grid-area: meta; color: var(--text-dim); font-size: .78rem; }
+.book-pct { grid-area: pct; align-self: center; color: var(--text-dim); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.book-item.active .book-pct { color: var(--primary); }
+.book-progress {
+  grid-area: bar;
+  height: 4px;
+  background: var(--bg);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.book-item.active .book-progress { background: var(--card); }
+.book-progress i { display: block; height: 100%; background: var(--primary); }
+
 /* ------------------------------ Read ------------------------------ */
 
 .hud {
