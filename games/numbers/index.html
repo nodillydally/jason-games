@@ -42,6 +42,7 @@
 
       <div id="setup-hint" class="setup-hint"></div>
       <button id="start-btn" class="primary big">Start</button>
+      <button id="learn-btn" class="ghost big">📘 Learn the methods</button>
     </div>
 
     <div class="card sync-card">
@@ -76,7 +77,10 @@
     <div class="timer-track"><div id="timer-fill"></div></div>
 
     <div class="card question-card">
-      <div id="topic-tag" class="topic-tag"></div>
+      <div class="question-head">
+        <div id="topic-tag" class="topic-tag"></div>
+        <button id="hint-btn" class="hint-btn" title="Show the method (no answer)">How?</button>
+      </div>
       <div id="question"></div>
       <div id="choices"></div>
       <form id="type-form" class="hidden" autocomplete="off">
@@ -85,6 +89,13 @@
       </form>
       <div id="feedback"></div>
       <button id="next-btn" class="primary hidden">Next</button>
+    </div>
+
+    <div id="hint-sheet" class="hint-sheet hidden">
+      <div class="hint-inner">
+        <button id="hint-close" class="hint-close" title="Close">✕</button>
+        <div id="hint-body"></div>
+      </div>
     </div>
   </section>
 
@@ -103,6 +114,19 @@
     </div>
   </section>
 
+  <!-- ============================= Learn ============================= -->
+  <section id="screen-learn" class="screen">
+    <div class="card stats-card">
+      <h2>How to do these in your head</h2>
+      <p class="learn-intro">Each of these is a technique, not a trick — a minute
+        to read and it stays with you. The one most people have never been taught
+        is square roots.</p>
+      <div class="opt-grid" id="learn-topics"></div>
+      <div id="learn-body"></div>
+      <button id="learn-back" class="primary">Back</button>
+    </div>
+  </section>
+
   <!-- ============================= Stats ============================= -->
   <section id="screen-stats" class="screen">
     <div class="card stats-card">
@@ -118,6 +142,7 @@
 
 <script src="../../lib/sync.js"></script>
 <script src="questions.js"></script>
+<script src="methods.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

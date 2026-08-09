@@ -35,6 +35,7 @@ const screens = {
   game: $('screen-game'),
   results: $('screen-results'),
   stats: $('screen-stats'),
+  learn: $('screen-learn'),
 };
 
 // ---------------------------------------------------------------------------
@@ -213,7 +214,7 @@ function tick() {
     if (left <= 0) return endGame();
   }
 
-  if (g.locked) return;
+  if (g.locked || g.hintOpen) return;
 
   const limit = g.difficulty.seconds * 1000;
   const spent = Date.now() - g.questionStartedAt;
@@ -233,10 +234,13 @@ function nextQuestion() {
   g.locked = false;
   g.current = makeQuestion(drawTopic(), g.level);
   g.questionStartedAt = Date.now();
+  g.hinted = false;
+  closeHint();
 
   const topic = TOPICS.find((t) => t.id === g.current.topic);
   $('topic-tag').textContent = g.mode === 'ladder' ? `${topic.label} · level ${g.level}` : topic.label;
   $('question').textContent = g.current.text;
+  replay($('question'), 'enter');
   $('feedback').textContent = '';
   $('feedback').className = '';
   $('next-btn').classList.add('hidden');
@@ -269,17 +273,64 @@ function renderChoices() {
     // the keyboard-hint digit, so parsing it back would read "1" + "234".
     b.dataset.value = String(value);
     b.innerHTML = `<span class="key">${i + 1}</span>${value.toLocaleString()}`;
+    // Staggered entrance so the options arrive in sequence rather than all at
+    // once — reads as deliberate instead of a flash.
+    b.style.animationDelay = `${i * 45}ms`;
+    b.classList.add('enter');
     b.addEventListener('click', () => answer(value, b));
     el.appendChild(b);
   });
 }
 
-function updateHud() {
+// Counts the displayed score up to its new value rather than snapping, so
+// points feel earned. Eases out, and always lands exactly on the target.
+function animateScore(from, to) {
+  const el = $('hud-score');
+  const start = performance.now();
+  const dur = 420;
+  const step = (now) => {
+    const t = Math.min(1, (now - start) / dur);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = `${Math.round(from + (to - from) * eased).toLocaleString()} pts`;
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+// A "+120" that drifts up from the answer and fades — the clearest possible
+// signal of what the last action was worth.
+function floatPoints(pts, anchor) {
+  const el = document.createElement('div');
+  el.className = 'float-points';
+  el.textContent = `+${pts}`;
+  const host = anchor || $('question');
+  const rect = host.getBoundingClientRect();
+  el.style.left = `${rect.left + rect.width / 2}px`;
+  el.style.top = `${rect.top}px`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+function replay(el, cls) {
+  if (!el) return;
+  el.classList.remove(cls);
+  void el.offsetWidth; // force reflow so the animation restarts
+  el.classList.add(cls);
+}
+
+function updateHud(scoreFrom = null) {
   $('hud-progress').textContent = Number.isFinite(g.rounds)
     ? `Q ${Math.min(g.round, g.rounds)}/${g.rounds}`
     : `${g.answered} answered`;
-  $('hud-score').textContent = `${g.score.toLocaleString()} pts`;
-  $('hud-streak').textContent = g.streak >= 2 ? `🔥 ${g.streak}` : '';
+
+  if (scoreFrom !== null && scoreFrom !== g.score) animateScore(scoreFrom, g.score);
+  else $('hud-score').textContent = `${g.score.toLocaleString()} pts`;
+
+  const streakEl = $('hud-streak');
+  const wasStreak = streakEl.textContent;
+  streakEl.textContent = g.streak >= 2 ? `🔥 ${g.streak}` : '';
+  if (streakEl.textContent && streakEl.textContent !== wasStreak) replay(streakEl, 'flare');
+
   if (g.lives !== null) $('hud-lives').textContent = '❤'.repeat(Math.max(0, g.lives));
 }
 
@@ -291,19 +342,23 @@ function answer(given, btn) {
   const q = g.current;
   const elapsed = Date.now() - g.questionStartedAt;
   const right = given !== null && Number(given) === q.answer;
+  const scoreBefore = g.score;
 
   recordAnswer(q, right, elapsed);
 
   if (right) {
     const pts = awardPoints(elapsed);
     if (btn) btn.classList.add('correct');
-    showFeedback(true, `✓ +${pts} pts`);
+    floatPoints(pts, btn);
+    replay($('question'), 'pop');
+    showFeedback(true, `✓ +${pts} pts${g.hinted ? ' (method used)' : ''}`);
   } else {
     g.streak = 0;
     g.missed.push({ ...q, given });
     if (btn) btn.classList.add('wrong');
     if (g.lives !== null) g.lives -= 1;
     const lead = given === null ? "⏱ Time's up —" : '✗';
+    replay($('question'), 'shake');
     showFeedback(false, `${lead} ${q.text} = <b>${q.answer.toLocaleString()}</b>. ${esc(q.why)}`);
   }
 
@@ -318,7 +373,7 @@ function answer(given, btn) {
 
   if (g.lives !== null && g.lives <= 0) g.dead = true;
   $('timer-fill').style.width = '0%';
-  updateHud();
+  updateHud(scoreBefore);
 
   // Blitz keeps moving on its own; every other mode waits so the explanation
   // can actually be read.
@@ -359,7 +414,9 @@ function recordAnswer(q, wasCorrect, elapsedMs) {
 
 function awardPoints(elapsedMs) {
   const limit = g.difficulty.seconds * 1000;
-  const speed = Math.max(0, 1 - elapsedMs / limit);
+  // A hinted question still counts as correct — the point is learning the
+  // method — but it forfeits the speed bonus rather than being penalised.
+  const speed = g.hinted ? 0 : Math.max(0, 1 - elapsedMs / limit);
   const base = 60 + Math.round(60 * speed);
   const streakBonus = 10 * Math.min(g.streak, 10);
   const ladderBonus = g.mode === 'ladder' ? 1 + (g.level - 1) * 0.3 : 1;
@@ -372,6 +429,67 @@ function showFeedback(good, html) {
   const el = $('feedback');
   el.innerHTML = html;
   el.className = good ? 'good' : 'bad';
+}
+
+// ---------------------------------------------------------------------------
+// Methods — how to do it, never what the answer is
+// ---------------------------------------------------------------------------
+
+// Renders a technique card. Deliberately built from the METHODS data only and
+// never from the live question, so opening a hint can't leak the answer.
+function methodCardHTML(topicId) {
+  const m = METHODS[topicId];
+  if (!m) return '';
+  const topic = TOPICS.find((t) => t.id === topicId);
+  return `
+    <h3 class="method-title"><b>${topic.icon}</b> ${esc(m.title)}</h3>
+    <p class="method-idea">${esc(m.idea)}</p>
+    <ol class="method-steps">${m.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
+    <div class="method-example">
+      <div class="method-problem">${esc(m.example.problem)}</div>
+      ${m.example.lines.map((l) => `<div class="method-line">${esc(l)}</div>`).join('')}
+    </div>
+    ${m.extras ? `<ul class="method-extras">${m.extras.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+  `;
+}
+
+function openHint() {
+  if (!g || !g.current) return;
+  $('hint-body').innerHTML = methodCardHTML(g.current.topic);
+  $('hint-sheet').classList.remove('hidden');
+  // Reading the method shouldn't cost the question — hold the clock while it's
+  // open, otherwise the hint is a trap rather than a help.
+  if (!g.hintOpen) {
+    g.hintOpen = true;
+    g.hintOpenedAt = Date.now();
+    g.hinted = true;
+  }
+}
+
+function closeHint() {
+  const sheet = $('hint-sheet');
+  if (sheet) sheet.classList.add('hidden');
+  if (g && g.hintOpen) {
+    g.questionStartedAt += Date.now() - g.hintOpenedAt;
+    g.hintOpen = false;
+  }
+}
+
+function renderLearn(topicId = 'pow') {
+  const el = $('learn-topics');
+  el.innerHTML = '';
+  TOPICS.forEach((t) => {
+    const b = document.createElement('button');
+    b.className = t.id === topicId ? 'active' : '';
+    b.innerHTML = `<span class="opt-icon">${t.icon}</span>${t.label}`;
+    b.addEventListener('click', () => renderLearn(t.id));
+    el.appendChild(b);
+  });
+  const body = $('learn-body');
+  body.innerHTML = methodCardHTML(topicId);
+  body.classList.remove('fade-in');
+  void body.offsetWidth; // restart the animation on every switch
+  body.classList.add('fade-in');
 }
 
 // ---------------------------------------------------------------------------
@@ -455,6 +573,25 @@ function endGame(aborted = false) {
     : '<p class="clean-sweep">Clean sweep — nothing missed.</p>';
 
   showScreen('results');
+  // Count the final score up from zero — the one moment in the game where a
+  // flourish is clearly earned.
+  const scoreEl = $('results-score');
+  const finalHTML = scoreEl.innerHTML;
+  const target = g.score;
+  const started = performance.now();
+  const countUp = (now) => {
+    const t = Math.min(1, (now - started) / 900);
+    const eased = 1 - Math.pow(1 - t, 3);
+    if (t < 1) {
+      scoreEl.innerHTML = `${Math.round(target * eased).toLocaleString()}<span> pts</span>`;
+      requestAnimationFrame(countUp);
+    } else {
+      scoreEl.innerHTML = finalHTML;
+      replay(scoreEl, 'pop');
+    }
+  };
+  requestAnimationFrame(countUp);
+
   g = null;
 }
 
@@ -503,6 +640,11 @@ $('again-btn').addEventListener('click', startGame);
 $('menu-btn').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
 $('stats-btn').addEventListener('click', () => { renderStats(); showScreen('stats'); });
 $('stats-back').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
+$('learn-btn').addEventListener('click', () => { renderLearn(); showScreen('learn'); });
+$('learn-back').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
+$('hint-btn').addEventListener('click', openHint);
+$('hint-close').addEventListener('click', closeHint);
+$('hint-sheet').addEventListener('click', (e) => { if (e.target === $('hint-sheet')) closeHint(); });
 
 $('type-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -513,6 +655,8 @@ $('type-form').addEventListener('submit', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (!screens.game.classList.contains('active')) return;
+  if (e.key === 'Escape' && g && g.hintOpen) { closeHint(); return; }
+  if (e.key === '?' || e.key === 'h') { openHint(); return; }
   if (e.target === $('type-input')) return;
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= 9) {

@@ -297,3 +297,177 @@ button.big { width: 100%; padding: 14px; font-size: 1.05rem; margin-top: 16px; }
 @media (hover: none) {
   #choices button .key { display: none; }
 }
+
+/* ---------------------------- Motion ---------------------------- */
+
+@keyframes enter-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes pop-scale {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.09); }
+  100% { transform: scale(1); }
+}
+@keyframes shake-x {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(2px); }
+}
+@keyframes flare-up {
+  0%   { transform: scale(1); filter: brightness(1); }
+  40%  { transform: scale(1.3); filter: brightness(1.5); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+@keyframes drift-up {
+  0%   { opacity: 0; transform: translate(-50%, 0) scale(.85); }
+  25%  { opacity: 1; transform: translate(-50%, -14px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -54px) scale(1); }
+}
+@keyframes sheet-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fade-soft {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.screen.active { animation: fade-soft .25s ease both; }
+
+#question.enter { animation: enter-up .3s cubic-bezier(.2, .8, .3, 1) both; }
+#question.pop   { animation: pop-scale .38s ease both; }
+#question.shake { animation: shake-x .4s ease both; }
+
+#choices button.enter { animation: enter-up .28s cubic-bezier(.2, .8, .3, 1) both; }
+
+#hud-streak { display: inline-block; transition: color .2s; }
+#hud-streak.flare { animation: flare-up .45s ease both; }
+
+#results-score.pop { animation: pop-scale .4s ease both; }
+
+.float-points {
+  position: fixed;
+  transform: translate(-50%, 0);
+  pointer-events: none;
+  z-index: 40;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--good);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .5);
+  animation: drift-up .9s ease-out both;
+}
+
+.fade-in { animation: fade-soft .3s ease both; }
+
+/* Respect a system-level request for reduced motion — the game must stay
+   fully playable, so this removes decoration rather than function. */
+@media (prefers-reduced-motion: reduce) {
+  .screen.active,
+  #question.enter, #question.pop, #question.shake,
+  #choices button.enter, #hud-streak.flare,
+  #results-score.pop, .float-points, .fade-in,
+  .hint-inner { animation: none !important; }
+  #timer-fill { transition: none; }
+}
+
+/* ------------------------- Hints & methods ------------------------- */
+
+.question-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.question-head .topic-tag { margin-bottom: 0; }
+
+.hint-btn {
+  padding: 5px 12px;
+  font-size: .78rem;
+  color: var(--text-dim);
+  border-radius: 999px;
+}
+.hint-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+button.ghost {
+  background: transparent;
+  color: var(--text-dim);
+}
+button.ghost:hover { background: var(--bg); color: var(--text); }
+
+.hint-sheet {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 9, 20, .72);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+}
+.hint-inner {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--card-edge);
+  border-radius: 18px;
+  padding: 22px 20px 20px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 82vh;
+  overflow-y: auto;
+  animation: sheet-up .28s cubic-bezier(.2, .8, .3, 1) both;
+}
+.hint-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  font-size: .8rem;
+}
+
+.learn-intro { color: var(--text-dim); font-size: .88rem; line-height: 1.55; margin-bottom: 16px; }
+#learn-body { margin-top: 20px; }
+
+.method-title { font-size: 1.05rem; margin-bottom: 8px; }
+.method-title b { color: var(--text-dim); margin-right: 6px; }
+.method-idea { color: var(--text-dim); font-size: .9rem; line-height: 1.55; margin-bottom: 14px; }
+
+.method-steps { margin: 0 0 16px 18px; }
+.method-steps li { font-size: .9rem; line-height: 1.6; margin-bottom: 4px; }
+
+.method-example {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-variant-numeric: tabular-nums;
+}
+.method-problem {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+.method-line {
+  font-size: .9rem;
+  line-height: 1.7;
+  color: var(--text);
+  padding-left: 14px;
+  border-left: 2px solid var(--card-edge);
+}
+
+.method-extras { margin: 14px 0 0 18px; }
+.method-extras li {
+  font-size: .84rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+
+@media (max-width: 560px) {
+  .hint-inner { padding: 18px 15px 16px; max-height: 88vh; }
+  .method-problem { font-size: 1.05rem; }
+}
