@@ -8,13 +8,25 @@ CC0 places the work in the public domain: free to use in personal, educational
 and commercial projects, with no attribution required. Kenney asks only that
 you credit him if you feel like it — hence this file.
 
-The originals are Ogg Vorbis. They were converted here to mono 44.1 kHz MP3
-(96 kbps) so that Web Audio's decodeAudioData handles them everywhere, iOS
-included, and so the whole set costs about 16 KB.
+The originals are Ogg Vorbis, converted here to mono 44.1 kHz MP3 (96 kbps) so
+Web Audio's decodeAudioData handles them everywhere, iOS included. All five
+together cost about 28 KB.
 
-    level.mp3   <- confirmation_002.ogg   (level up)
-    win.mp3     <- confirmation_004.ogg   (clean round / personal best)
-    streak.mp3  <- glass_002.ogg          (streak milestone)
+These were picked by measurement rather than by ear. The number below each is
+the spectral centroid — the centre of mass of the sound's energy, and a decent
+proxy for how harsh it is. The pack ranges from 406 Hz (a soft thud) up to
+12 kHz (a piercing tick), and anything that fires on every single answer has to
+sit at the bottom of that range.
+
+    correct.mp3  <- bong_001.ogg          0.12s    507 Hz   every correct answer
+    wrong.mp3    <- minimize_008.ogg      0.23s    482 Hz   its falling counterpart
+    streak.mp3   <- maximize_008.ogg      0.23s    406 Hz   warmest in the pack
+    level.mp3    <- confirmation_001.ogg  0.29s    823 Hz   level up
+    win.mp3      <- confirmation_004.ogg  0.49s   1587 Hz   clean round / best
+
+The first set was chosen by filename alone and was wrong: level.mp3 was
+confirmation_002 at 3017 Hz, and everything else was a WebAudio oscillator —
+a bare triangle beep on every correct answer. There is no synthesis left.
 
 To swap any of them, drop a replacement in with the same name, or point
 SAMPLES in lib/juice.js at a different file.
