@@ -10,8 +10,16 @@ Play them at **https://nodillydally.github.io/jason-games/**
 |------|--------|---------|
 | [Mapmaster](games/mapmaster/) | `games/mapmaster/` | World geography |
 | [Numbers](games/numbers/) | `games/numbers/` | Mental math |
+| [Reader](games/reader/) | `games/reader/` | Speed reading + comprehension |
 
-Planned: language, books/facts from reading, chess.
+Planned: vocabulary, books/facts from reading, chess.
+
+Every game so far is deliberately AI-free — they run offline, cost nothing per
+session, and never wait on a network round trip. The open question is whether to
+add a Claude-backed endpoint for the things that genuinely need it (grading
+free-form writing, free recall, generating quiz questions from your own reading
+notes). At single-user volume that costs roughly a cent per session, so the
+argument against it is offline capability and simplicity — not money.
 
 ## Conventions
 

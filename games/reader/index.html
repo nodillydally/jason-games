@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reader — Speed Reading Practice</title>
+  <link rel="stylesheet" href="../../lib/sync.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================= Menu ============================= -->
+  <section id="screen-menu" class="screen active">
+    <a class="hub-link" href="../../">← All games</a>
+
+    <header class="title">
+      <h1>📖 Reader</h1>
+      <p>Read faster without quietly understanding less.</p>
+    </header>
+
+    <div class="card profile-card">
+      <div class="level-badge"><span id="menu-best">—</span><small>best ewpm</small></div>
+      <div class="profile-stats" id="profile-stats"></div>
+      <button id="stats-btn" title="Your stats">📊 Stats</button>
+    </div>
+
+    <div class="card setup-card">
+      <h2>Mode</h2>
+      <div class="opt-grid" id="mode-options"></div>
+
+      <h2>Speed</h2>
+      <div class="wpm-row">
+        <input id="wpm-slider" type="range" min="150" max="900" step="25" value="300">
+        <output id="wpm-value">300 wpm</output>
+      </div>
+
+      <h2>Words at a time</h2>
+      <div class="opt-grid" id="chunk-options"></div>
+
+      <div id="paste-wrap" class="hidden">
+        <h2>Your text</h2>
+        <textarea id="paste-input" rows="6" placeholder="Paste anything — a chapter, an article, your own notes…"></textarea>
+      </div>
+
+      <div id="setup-hint" class="setup-hint"></div>
+      <button id="start-btn" class="primary big">Start</button>
+    </div>
+
+    <div class="card sync-card">
+      <div class="sync-row">
+        <span id="sync-status" class="sync-status">☁ Cloud sync off</span>
+        <button id="sync-btn" class="sync-btn">Set up</button>
+      </div>
+      <div id="sync-panel" class="sync-panel hidden">
+        <p>Paste your sync code to save results to Atlas and track progress over
+          time. Stored in this browser only — the game plays fine without it.</p>
+        <div class="sync-form">
+          <input id="sync-input" type="password" placeholder="Sync code" autocomplete="off" spellcheck="false">
+          <button id="sync-save" class="primary">Save</button>
+          <button id="sync-clear">Turn off</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= Read ============================= -->
+  <section id="screen-read" class="screen">
+    <div class="hud">
+      <button id="quit-btn" title="Back to menu">✕</button>
+      <span id="read-title"></span>
+      <span class="hud-spacer"></span>
+      <span id="read-wpm"></span>
+    </div>
+
+    <div class="progress-track"><div id="progress-fill"></div></div>
+
+    <div class="reader-stage">
+      <div class="focus-line"></div>
+      <div id="word" class="rsvp-word">
+        <span class="pre"></span><span class="orp"></span><span class="post"></span>
+      </div>
+      <div class="focus-line"></div>
+    </div>
+
+    <div id="read-hint" class="read-hint">Space to pause · Esc to quit</div>
+    <div id="paused-note" class="paused-note hidden">Paused — press Space to continue</div>
+  </section>
+
+  <!-- ============================= Quiz ============================= -->
+  <section id="screen-quiz" class="screen">
+    <div class="card quiz-card">
+      <div id="quiz-progress" class="topic-tag"></div>
+      <h2 id="quiz-question"></h2>
+      <div id="quiz-options"></div>
+    </div>
+  </section>
+
+  <!-- ============================ Results ============================ -->
+  <section id="screen-results" class="screen">
+    <div class="card results-card">
+      <h2 id="results-title"></h2>
+      <div id="results-score"></div>
+      <div id="results-stats" class="results-stats"></div>
+      <div id="results-note" class="results-note"></div>
+      <div id="results-review"></div>
+      <div class="results-actions">
+        <button id="again-btn" class="primary big">Go again</button>
+        <button id="menu-btn">Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= Stats ============================= -->
+  <section id="screen-stats" class="screen">
+    <div class="card stats-card">
+      <h2>Your reading</h2>
+      <div id="stats-summary" class="profile-stats"></div>
+      <div id="stats-history"></div>
+      <div id="stats-levels"></div>
+      <button id="stats-back" class="primary">Back</button>
+    </div>
+  </section>
+
+</div>
+
+<script src="../../lib/sync.js"></script>
+<script src="passages.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
