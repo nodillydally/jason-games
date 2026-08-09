@@ -112,6 +112,18 @@ window.Rival = (function () {
       stumbleScale: 0.9,
     },
     {
+      id: 'bane',
+      color: '#8e8880',
+      sprite: 'bane',
+      name: 'Bane',
+      icon: '🛡',
+      blurb: 'Slow, heavy and almost never wrong. He will not out-pace you — he just does not stop, and he does not make the mistake you are counting on.',
+      scale: 1.18,
+      jitter: 0.06,
+      error: 0.03,
+      stumbleScale: 1.1,
+    },
+    {
       id: 'ghost',
       color: 'var(--p1)',
       ghost: true,
@@ -289,6 +301,7 @@ window.Rival = (function () {
       pal: def.pal,
       tint: def.ghost ? '' : def.id,
       facing: 'e',
+      sprite: def.sprite || 'runner',
       ghost: !!def.ghost,
     });
     s.avatar.pose('run');
