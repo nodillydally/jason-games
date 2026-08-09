@@ -1,0 +1,401 @@
+/* walk.css — The Long Walk.
+ *
+ * The scene is four fixed layers and one moving world. Nothing scrolls in the
+ * browser sense: `#world` is translated under a fixed viewport, which keeps the
+ * walker pinned and lets the parallax layers move at their own rates.
+ *
+ * Colour is the era's, not the app's: the Age of Discovery gets sea light and a
+ * low sun, so crossing an era boundary would visibly change the weather. That's
+ * the hook for making the other seven feel like different places. */
+
+body.walking {
+  margin: 0;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #0d1a24;
+  /* A finger dragging the pads must not also pan the page. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#scene { position: fixed; inset: 0; overflow: hidden; }
+
+/* ------------------------------- layers ------------------------------- */
+
+#sky {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 60% at 74% 88%, #E9B45C3d 0%, transparent 60%),
+    linear-gradient(#0C1A26 0%, #17303F 26%, #35576A 56%, #6E8E96 80%, #99A98F 100%);
+}
+
+/* The horizon sits high on purpose: the walkable band is where everything
+   happens, and a portrait phone spent 70% of its height on empty sky. */
+.layer {
+  position: absolute;
+  left: 0;
+  bottom: 128px;
+  height: 62vh;
+  width: 100%;
+  will-change: transform;
+  pointer-events: none;
+}
+
+/* Distant coast: soft, low-contrast, barely moves. */
+#far {
+  bottom: 196px;
+  opacity: .55;
+}
+/* Each dome's vertical radius has to equal the box height and its centre has to
+   sit exactly on the bottom edge, or the ellipse gets clipped mid-curve and the
+   "hill" renders as a rectangle with a bite out of it. */
+#far::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 120px;
+  background-repeat: repeat-x;
+  background-size: 760px 120px;
+  background-image:
+    radial-gradient(300px 120px at 180px 120px, #2C4C5C 0 99%, transparent 100%),
+    radial-gradient(240px 86px at 560px 120px, #2C4C5C 0 99%, transparent 100%);
+}
+
+/* Nearer hills, more contrast, moves about half speed. */
+#mid::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 150px;
+  background-repeat: repeat-x;
+  background-size: 520px 150px;
+  background-image:
+    radial-gradient(260px 150px at 130px 150px, #1B333F 0 99%, transparent 100%),
+    radial-gradient(190px 104px at 420px 150px, #1B333F 0 99%, transparent 100%);
+  opacity: .9;
+}
+
+/* The road. Its stripes are the only thing moving at true speed, so they are
+   what your eye actually reads motion from. */
+#ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 128px;
+  background-color: #8A7B5F;
+  background-image:
+    linear-gradient(#00000026 0 2px, transparent 2px),
+    repeating-linear-gradient(90deg, #00000018 0 3px, transparent 3px 34px);
+  background-repeat: repeat-x;
+  box-shadow: inset 0 3px 0 #B9A87F, inset 0 -60px 60px -60px #00000055;
+}
+
+/* ------------------------------- world ------------------------------- */
+
+#world {
+  position: absolute;
+  left: 0;
+  bottom: 128px;
+  height: 0;
+  will-change: transform;
+}
+
+/* Every 25 years, a marker. These are what turn distance into duration — the
+   gap between Copernicus and the Armada is a count you can do with your eyes. */
+.milepost { position: absolute; bottom: 0; transform: translateX(-50%); text-align: center; }
+.milepost i {
+  display: block;
+  width: 1px;
+  height: 26px;
+  margin: 0 auto;
+  background: linear-gradient(#ffffff00, #ffffff4d);
+}
+.milepost span {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .1em;
+  color: #ffffff5c;
+}
+
+/* ------------------------------ monuments ------------------------------ */
+
+.mon {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: var(--h);
+  justify-content: flex-end;
+}
+
+.mon-glyph {
+  font-size: 46px;
+  line-height: 1;
+  filter: grayscale(.75) brightness(.7);
+  transition: filter .3s var(--ease), transform .3s var(--ease);
+}
+/* The post is the thing that plants it on the ground rather than floating it. */
+.mon-post {
+  width: 3px;
+  flex: 1;
+  min-height: 14px;
+  margin-top: 6px;
+  background: linear-gradient(#ffffff33, #ffffff10);
+}
+.mon-plate {
+  margin-top: 5px;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .06em;
+  color: #ffffff6b;
+  background: #00000038;
+  transition: color .3s var(--ease), background .3s var(--ease);
+}
+
+/* Found: it stays lit for good, so a second walk shows what you already have. */
+.mon.found .mon-glyph { filter: none; }
+.mon.found .mon-plate { color: #F6E6C4; background: #00000055; }
+
+/* Near: you are standing at it. */
+.mon.near .mon-glyph { transform: translateY(-8px) scale(1.22); }
+.mon.near .mon-post { background: linear-gradient(#E9B45Cbb, #E9B45C22); }
+.mon.near .mon-plate { color: #12202B; background: #E9B45C; }
+
+.mon.just-found .mon-glyph { animation: mon-pop .6s var(--ease) both; }
+@keyframes mon-pop {
+  0%   { transform: translateY(-8px) scale(1.22); }
+  40%  { transform: translateY(-22px) scale(1.6); }
+  100% { transform: translateY(-8px) scale(1.22); }
+}
+
+/* --------------------------------- gate --------------------------------- */
+
+.gate {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding-bottom: 6px;
+  width: 220px;
+  text-align: center;
+}
+.gate-arch { font-size: 54px; line-height: 1; filter: grayscale(.4); }
+.gate-year { font-family: var(--mono); font-size: 13px; color: #F6E6C4; letter-spacing: .1em; }
+.gate-label { font-family: var(--serif); font-size: 19px; color: #ffffffcc; }
+.gate-note {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #ffffff59;
+}
+
+/* -------------------------------- player -------------------------------- */
+
+#player {
+  position: absolute;
+  bottom: 116px;
+  width: 48px;
+  height: 66px;         /* a whole 3x multiple of the 16x22 sprite grid */
+  z-index: 5;
+  filter: drop-shadow(0 8px 10px #00000055);
+}
+/* The sprite host is inline-block by default; here it has to fill the box the
+   camera positions, or the SVG resolves to its own intrinsic size. */
+#player .avatar { display: block; width: 100%; height: 100%; }
+
+/* ---------------------------------- hud ---------------------------------- */
+
+#hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+  z-index: 10;
+  background: linear-gradient(#0b1620d9, transparent);
+  color: #F2EDE3;
+}
+
+.walk-back {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  text-decoration: none;
+  color: #F2EDE3;
+  background: #ffffff1a;
+}
+.walk-back:hover { background: #ffffff30; }
+
+.hud-year { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+/* The whole prototype in one number. Tabular so it doesn't jitter as it ticks. */
+.hud-year b {
+  font-family: var(--mono);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+  color: #F6E6C4;
+}
+.hud-year span {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #ffffff7a;
+}
+
+.hud-found { flex: none; text-align: right; }
+.hud-found b { display: block; font-family: var(--mono); font-size: 20px; color: #F6E6C4; }
+.hud-found span {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #ffffff7a;
+}
+.hud-found i { font-style: normal; }
+
+/* --------------------------------- track --------------------------------- */
+
+#track {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: calc(max(12px, env(safe-area-inset-top)) + 58px);
+  height: 2px;
+  background: #ffffff1f;
+  border-radius: 2px;
+  z-index: 10;
+}
+#track-fill { height: 100%; background: #E9B45C99; border-radius: 2px; }
+#track-you {
+  position: absolute;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: #E9B45C;
+}
+
+/* --------------------------------- plaque --------------------------------- */
+
+/* The plaque hangs in the sky, not over the road. Anchoring it to the bottom
+   buried the walker and the ground — the two things you are actually looking
+   at — and the sky was dead space anyway. */
+#plaque {
+  position: absolute;
+  left: 50%;
+  top: calc(max(12px, env(safe-area-inset-top)) + 84px);
+  transform: translateX(-50%);
+  width: min(520px, calc(100% - 32px));
+  padding: 18px 20px 20px;
+  z-index: 12;
+  border-radius: var(--r-lg);
+  background: #12202Bf2;
+  border: 1px solid #ffffff1f;
+  box-shadow: 0 22px 50px -20px #000000aa;
+  color: #F2EDE3;
+  animation: plaque-up .28s var(--ease) both;
+}
+#plaque.hidden { display: none; }
+@keyframes plaque-up {
+  from { opacity: 0; transform: translate(-50%, -14px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.plaque-year {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .16em;
+  color: #E9B45C;
+}
+#plaque h2 {
+  margin: 8px 0 8px;
+  font-family: var(--serif);
+  font-size: clamp(21px, 5.5vw, 27px);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -.015em;
+}
+#plaque p { margin: 0; font-size: 14px; line-height: 1.6; color: #D6CFC2; }
+
+/* ---------------------------------- hint ---------------------------------- */
+
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  transform: translate(-50%, 10px);
+  z-index: 11;
+  padding: 11px 18px;
+  border-radius: var(--r-pill);
+  background: #12202Bd9;
+  border: 1px solid #ffffff1a;
+  color: #D6CFC2;
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .35s var(--ease), transform .35s var(--ease);
+  white-space: nowrap;
+}
+.hint.show { opacity: 1; transform: translate(-50%, 0); }
+.hint b { color: #F6E6C4; }
+
+/* ---------------------------------- pads ---------------------------------- */
+
+#pads { position: absolute; inset: 0; z-index: 8; pointer-events: none; }
+#pads button {
+  position: absolute;
+  bottom: 0;
+  top: 96px;
+  width: 42%;
+  display: grid;
+  place-items: center;
+  padding: 0 0 max(28px, env(safe-area-inset-bottom));
+  border: none;
+  background: transparent;
+  color: #ffffff2e;
+  font-size: 44px;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+#pad-left { left: 0; justify-items: start; padding-left: 20px; }
+#pad-right { right: 0; justify-items: end; padding-right: 20px; }
+#pads button:active { color: #ffffff7a; }
+
+/* A keyboard is the better control, so the thumb pads step back on desktop. */
+@media (hover: hover) and (pointer: fine) {
+  #pads button { font-size: 30px; color: #ffffff1a; }
+}
+
+@media (max-width: 560px) {
+  .hint { white-space: normal; text-align: center; width: min(340px, calc(100% - 40px)); }
+  .mon-glyph { font-size: 29px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mon.just-found .mon-glyph { animation: none; }
+  #plaque { animation: none; }
+}

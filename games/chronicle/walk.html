@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#F6EFE2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>The Long Walk — Age of Discovery</title>
+  <link rel="stylesheet" href="../../lib/theme.css">
+  <script src="../../lib/theme.js"></script>
+  <link rel="stylesheet" href="../../lib/wardrobe.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="walk.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛵</text></svg>">
+</head>
+<body class="walking">
+
+<!-- The whole prototype is one scene. No screens, no modes, no quiz: the
+     question this is here to answer is only "does walking a timeline feel
+     like anything", and every extra system would muddy the answer. -->
+<div id="scene">
+
+  <div id="sky"></div>
+  <div id="far" class="layer"></div>
+  <div id="mid" class="layer"></div>
+
+  <!-- Everything that lives at a year: mileposts, landmarks, the gate. -->
+  <div id="world"></div>
+
+  <div id="ground"></div>
+
+  <!-- The player never moves horizontally; the world does. -->
+  <div id="player"></div>
+
+  <!-- The readout that sells the whole idea: the year ticks as you walk. -->
+  <header id="hud">
+    <a class="walk-back" href="index.html" title="Back to Chronicle">✕</a>
+    <div class="hud-year">
+      <b id="year">1450</b>
+      <span id="era-name">Age of Discovery</span>
+    </div>
+    <div class="hud-found">
+      <b id="found">0</b><span>of <i id="total">0</i> found</span>
+    </div>
+  </header>
+
+  <!-- Distance covered, as a share of the era. -->
+  <div id="track"><div id="track-fill"></div><div id="track-you"></div></div>
+
+  <!-- Slides up when you stop next to something. -->
+  <div id="plaque" class="hidden">
+    <span class="plaque-year" id="plaque-year"></span>
+    <h2 id="plaque-name"></h2>
+    <p id="plaque-why"></p>
+  </div>
+
+  <div id="hint" class="hint">Hold <b>→</b> to walk east. Stop beside a monument to read it.</div>
+
+  <!-- Touch: two big invisible halves, plus visible arrows so it's discoverable. -->
+  <div id="pads">
+    <button id="pad-left" aria-label="Walk west">‹</button>
+    <button id="pad-right" aria-label="Walk east">›</button>
+  </div>
+
+</div>
+
+<script src="../../lib/pixel.js"></script>
+<script src="../../lib/gear.js"></script>
+<script src="../../lib/avatar.js"></script>
+<script src="data/events.js"></script>
+<script src="walk.js"></script>
+</body>
+</html>

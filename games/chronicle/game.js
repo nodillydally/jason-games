@@ -46,12 +46,21 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => (
 // Persistent profile
 // ---------------------------------------------------------------------------
 
+// `pinned` is the timeline you have built: an event pins the first time you
+// finish the passage that taught it, and never unpins. It is deliberately not
+// the same thing as `stats[id].learned` — one records that you were shown where
+// this sits, the other that you can retrieve it. The strip draws both.
+const BLANK_STORE = {
+  xp: 0, games: 0, correct: 0, answered: 0,
+  best: {}, stats: {}, studied: {}, studiedAt: {}, pinned: {},
+};
+
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, studied: {}, ...JSON.parse(raw) };
+    if (raw) return { ...BLANK_STORE, ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
-  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, studied: {} };
+  return { ...BLANK_STORE };
 }
 
 const store = loadStore();
@@ -79,6 +88,67 @@ function fmtYear(y) {
 function fmtEraSpan(era) {
   const to = era.to >= 2100 ? 'today' : fmtYear(era.to);
   return `${fmtYear(era.from)} – ${to}`;
+}
+
+// ---------------------------------------------------------------------------
+// The timeline strip
+// ---------------------------------------------------------------------------
+// A game about owning the timeline never drew one. This is it: eight era bands,
+// every event in the bank a dot at its own year inside its band. A cold dot is
+// history you have never been shown; it fills the first time you finish the
+// passage that teaches it, and turns gold once you can actually retrieve it.
+//
+// Bands are equal width but dots sit at their true year within the band, so the
+// Ancient World reads as empty road and the Information Age as a pile-up —
+// which is the one thing about the shape of history that a list cannot say.
+
+const isPinned = (id) => Boolean(store.pinned && store.pinned[id]);
+const pinnedCount = () => EVENTS.filter((e) => isPinned(e.id)).length;
+
+function dotClass(ev) {
+  if (statFor(ev.id).learned) return 'learned';
+  if (isPinned(ev.id)) return 'pinned';
+  return 'cold';
+}
+
+function stripHtml(opts = {}) {
+  const bands = ERAS.map((era) => {
+    const span = era.to - era.from;
+    const dots = EVENTS.filter((e) => e.era === era.id).map((ev) => {
+      const at = span > 0 ? ((ev.y - era.from) / span) * 100 : 50;
+      const pos = Math.min(96, Math.max(4, at));
+      const fresh = opts.fresh && opts.fresh.includes(ev.id) ? ' fresh' : '';
+      return `<i class="tl-dot ${dotClass(ev)}${fresh}" style="left:${pos.toFixed(2)}%"></i>`;
+    }).join('');
+    // The label is the era's opening year, not its name. Eight names do not fit
+    // across a phone — "Age of Discovery" and "Age of Revolutions" both
+    // ellipsize to "AGE OF …" — and on a timeline the axis wants years anyway.
+    // The name lives in the tooltip and on the course card.
+    return `<span class="tl-era${opts.focus === era.id ? ' focus' : ''}" title="${esc(era.name)} · ${fmtEraSpan(era)}">`
+      + `<span class="tl-band">${dots}</span>`
+      + `<span class="tl-era-name">${esc(fmtYear(era.from))}</span>`
+      + '</span>';
+  }).join('');
+  return `<div class="tl-strip${opts.compact ? ' compact' : ''}">${bands}</div>`;
+}
+
+function renderStrip(host, opts = {}) {
+  if (!host) return;
+  const legend = opts.compact ? '' : '<div class="tl-legend">'
+    + `<b>${pinnedCount()}</b> of ${EVENTS.length} placed`
+    + `<span><i class="tl-dot pinned"></i> placed</span>`
+    + `<span><i class="tl-dot learned"></i> held</span>`
+    + '</div>';
+  host.innerHTML = stripHtml(opts) + legend;
+}
+
+// Pinning is what finishing a passage buys you. Returns only the ones that were
+// new, so the moment can be shown rather than merely recorded.
+function pinEvents(ids) {
+  store.pinned = store.pinned || {};
+  const fresh = ids.filter((id) => !store.pinned[id]);
+  fresh.forEach((id) => { store.pinned[id] = true; });
+  return fresh;
 }
 
 // ---------------------------------------------------------------------------
@@ -255,6 +325,8 @@ function renderMenu() {
     `<span><b>${store.games}</b> games</span>` +
     `<span><b>${learnedCount()}</b> learned</span>` +
     `<span><b>${acc}%</b> accuracy</span>`;
+
+  renderStrip($('menu-strip'));
 
   const modes = $('mode-options');
   modes.innerHTML = '';
@@ -678,6 +750,9 @@ function endGame(aborted = false) {
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`
     : `+${xpGain} XP`;
 
+  // The strip belongs to Study; a quiz round leaves it alone.
+  $('results-strip').innerHTML = '';
+
   $('results-missed').innerHTML = g.missed.length
     ? '<h3>Worth pinning down</h3>' + g.missed.slice(0, 6).map((ev) =>
       `<div class="missed-row"><code>${fmtYear(ev.y)} · ${esc(ev.name)}</code><span>${esc(ev.why)}</span></div>`).join('')
@@ -693,19 +768,34 @@ function endGame(aborted = false) {
 }
 
 // ---------------------------------------------------------------------------
-// Study — read a passage, then immediately retrieve it
+// Study — guess it cold, read it, then climb back up
 // ---------------------------------------------------------------------------
-// The old Learn screen put every paragraph of an era up front and the quiz at
-// the end, which is the shape of homework rather than of learning: by question
-// four you are recalling paragraph one from ten minutes ago. Study interleaves
-// it — one passage, questions on that passage only, then the next passage.
+// The previous loop was a wall of text and a pop quiz: read five events, watch
+// the passage vanish, then answer three questions generated by exactly the same
+// code the quiz modes use. That is a quiz with a preamble, which is no use at
+// all to somebody who cannot do the quiz yet — and that is who Study is for.
+//
+// Each passage now runs a ladder over the same handful of events:
+//
+//   PREDICT  order them cold, before reading a word. Unscored, and you are
+//            meant to be bad at it: a wrong guess makes the right answer stick
+//            better than reading it does, and it gives the section a "before".
+//   READ     the reveal *is* the passage — true order, years, and the why.
+//   SPOT     questions with the passage still on screen. You cannot fail this.
+//   RECALL   the passage goes away. Same events, real retrieval.
+//   PLACE    order them again, scored, measured against your opening guess.
+//
+// The bookend is the whole point. "1/4 cold, 4/4 now" is something you can feel
+// inside three minutes, and it is the only part of this game that shows you
+// learning rather than testing you.
 //
 // Two kinds of syllabus share the loop:
 //   AGES  — the overview course, with hand-written questions about the ages
 //           themselves. A new player should start here, because a date means
-//           nothing until you know which age it lands in.
+//           nothing until you know which age it lands in. It carries no event
+//           ids, so it runs the two rungs it can: SPOT open-book, then RECALL.
 //   eras  — an era's story split into its paragraphs, with questions generated
-//           from exactly the events that paragraph named.
+//           from exactly the events that paragraph named, and the full ladder.
 
 function syllabusFor(id) {
   const card = ERA_CARDS[id] || {};
@@ -744,6 +834,24 @@ const SYLLABUS_IDS = [AGES.id, ...ERAS.map((e) => e.id)];
 
 let st = null;
 
+const sectionEvents = (sec) => (sec.ids || [])
+  .map((id) => EVENTS.find((e) => e.id === id))
+  .filter(Boolean);
+
+const show = (id, yes) => { const el = $(id); if (el) el.classList.toggle('hidden', !yes); };
+
+// "Studied" is not a permanent tick — it is when you last looked. A course you
+// read six weeks ago and a course you read this morning are not the same thing,
+// and the picker is the only place that can say so.
+function agoLabel(ts) {
+  if (!ts) return '✓ studied';
+  const days = Math.floor((Date.now() - ts) / 86400000);
+  if (days <= 0) return '✓ studied today';
+  if (days === 1) return '✓ yesterday';
+  if (days < 30) return `✓ ${days}d ago`;
+  return `✓ ${Math.floor(days / 30)}mo ago`;
+}
+
 function renderStudyList() {
   const host = $('study-list');
   if (!host) return;
@@ -753,6 +861,13 @@ function renderStudyList() {
     const done = store.studied && store.studied[id];
     const b = document.createElement('button');
     b.className = `study-row${id === AGES.id ? ' primer' : ''}${done ? ' done' : ''}`;
+    // How much of this era you have placed is the honest progress line — parts
+    // remaining tells you the length of the reading, not the state of the work.
+    const pool = syl.era ? EVENTS.filter((e) => e.era === syl.id) : [];
+    const placed = pool.filter((e) => isPinned(e.id)).length;
+    const mark = done
+      ? agoLabel(store.studiedAt && store.studiedAt[id])
+      : `${syl.sections.length} parts`;
     b.innerHTML =
       `<span class="syl-icon">${syl.icon || ''}</span>`
       + '<span class="study-row-body">'
@@ -760,7 +875,9 @@ function renderStudyList() {
         + `<em>${esc(id === AGES.id ? 'Start here' : syl.blurb || '')}</em>`
         + `<i>${esc(syl.what || '')}</i>`
       + '</span>'
-      + `<span class="study-row-mark">${done ? '✓ studied' : `${syl.sections.length} parts`}</span>`;
+      + `<span class="study-row-mark">${mark}`
+        + (pool.length ? `<span class="row-placed">${placed}/${pool.length} placed</span>` : '')
+      + '</span>';
     b.addEventListener('click', () => startStudy(id));
     host.appendChild(b);
   });
@@ -770,31 +887,115 @@ function startStudy(id) {
   const syl = syllabusFor(id);
   if (!syl) return;
   st = {
-    syl, si: 0, qi: 0, questions: [], locked: false,
+    syl, si: 0, qi: 0, questions: [], rungs: null, locked: false,
+    phase: 'read', events: [], order: null, canOrder: false,
     correct: 0, answered: 0, missed: [], log: [],
+    // Ordering before and after the passage, kept apart: the cold guess is a
+    // measurement, never a score.
+    predictScore: 0, predictOf: 0, placeScore: 0, placeOf: 0, sectionPredict: 0,
+    pinned: [],
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     startedAt: Date.now(),
   };
   showScreen('study');
-  renderPassage();
+  enterSection(0);
 }
 
 const totalSections = () => st.syl.sections.length;
+const curSection = () => st.syl.sections[st.si];
+
+function enterSection(i) {
+  st.si = i;
+  const sec = curSection();
+  st.events = sectionEvents(sec);
+  st.rungs = buildRungs(sec);
+  st.questions = [];
+  st.qi = 0;
+  st.locked = false;
+  st.sectionPredict = 0;
+  // Ordering needs at least three things to order; below that it isn't a
+  // question. The overview course has no events at all and skips to reading.
+  st.canOrder = st.events.length >= 3;
+  st.phase = st.canOrder ? 'predict' : 'read';
+  renderPhase();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// The five phases, and what is on screen during each.
+function renderPhase() {
+  const sec = curSection();
+  $('study-tag').textContent = sec.title || `${st.syl.name} · part ${st.si + 1} of ${totalSections()}`;
+  $('study-feedback').textContent = '';
+  $('study-feedback').className = '';
+
+  const ordering = st.phase === 'predict' || st.phase === 'place';
+  show('study-order', ordering);
+  show('study-passage', st.phase === 'read' || st.phase === 'spot');
+  show('study-quiz', st.phase === 'spot' || st.phase === 'recall');
+  show('study-ready', st.phase === 'read');
+  show('study-check', false);
+  show('study-next', false);
+  show('study-reread', false);
+
+  if (ordering) return renderOrder();
+  if (st.phase === 'read') return renderPassage();
+  return showStudyQuestion();
+}
+
+function advancePhase() {
+  if (!st) return;
+  switch (st.phase) {
+    case 'predict': st.phase = 'read'; return renderPhase();
+    case 'read':    return enterRung('spot');
+    case 'spot':    return enterRung('recall');
+    case 'recall':  return toPlaceOrDone();
+    default:        return finishSection();
+  }
+}
+
+// A rung with nothing to ask is skipped rather than shown empty.
+function enterRung(name) {
+  const qs = st.rungs[name];
+  if (!qs.length) return name === 'spot' ? enterRung('recall') : toPlaceOrDone();
+  st.phase = name;
+  st.questions = qs;
+  st.qi = 0;
+  return renderPhase();
+}
+
+function toPlaceOrDone() {
+  if (st.canOrder) { st.phase = 'place'; return renderPhase(); }
+  return finishSection();
+}
+
+// Finishing a passage is what pins its events onto the strip.
+function finishSection() {
+  const fresh = pinEvents(st.events.map((e) => e.id));
+  st.pinned.push(...fresh);
+  saveStore();
+  if (fresh.length && window.Juice) {
+    Juice.toast(`📍 ${fresh.length} placed — ${pinnedCount()} of ${EVENTS.length} on your timeline`);
+  }
+  if (st.si + 1 < totalSections()) return enterSection(st.si + 1);
+  finishStudy();
+}
 
 function updateStudyHud() {
   $('study-progress').textContent = `Part ${st.si + 1} of ${totalSections()}`;
   $('study-score').textContent = st.answered ? `${st.correct}/${st.answered}` : '';
-  const done = st.si + (st.questions.length ? st.qi / st.questions.length : 0);
-  $('study-fill').style.width = `${Math.min(100, (done / totalSections()) * 100)}%`;
+  const stages = ['predict', 'read', 'spot', 'recall', 'place'];
+  const within = Math.max(0, stages.indexOf(st.phase)) / stages.length;
+  $('study-fill').style.width = `${Math.min(100, ((st.si + within) / totalSections()) * 100)}%`;
+  renderStrip($('study-strip'), {
+    compact: true,
+    focus: st.syl.era ? st.syl.id : null,
+    fresh: st.pinned,
+  });
 }
 
 function renderPassage() {
-  const sec = st.syl.sections[st.si];
-  st.questions = buildStudyQuestions(sec);
-  st.qi = 0;
+  const sec = curSection();
   st.locked = false;
-
-  $('study-tag').textContent = sec.title || st.syl.name;
   $('study-passage').innerHTML =
     `<h2 class="panel-title">${esc(sec.headline)}</h2>`
     + `<p class="story-what">${esc(sec.lead)}</p>`
@@ -803,21 +1004,19 @@ function renderPassage() {
       ? `<li class="ev"><b>${esc(b.k)}</b><span>${esc(b.v)}<em>${esc(b.w)}</em></span></li>`
       : `<li class="pt"><b>${esc(b.k)}</b><span>${esc(b.v)}</span></li>`)).join('')
     + '</ul>';
-  $('study-passage').classList.remove('hidden');
-  $('study-quiz').classList.add('hidden');
-  $('study-ready').classList.remove('hidden');
-  $('study-ready').textContent = st.questions.length
-    ? `Got it — ask me ${st.questions.length} question${st.questions.length === 1 ? '' : 's'}`
+  const n = st.rungs.spot.length + st.rungs.recall.length;
+  $('study-ready').textContent = n
+    ? `Got it — ask me ${n} question${n === 1 ? '' : 's'}`
     : 'Continue';
   updateStudyHud();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // A study question can only ask about what the passage just said — that is the
 // contract of this mode, and why era sections carry an explicit event list.
-function buildStudyQuestions(sec) {
+// The split is the ladder: one asked with the book open, the rest with it shut.
+function buildRungs(sec) {
   if (sec.questions) {
-    return sec.questions.map((sq) => ({
+    const all = sec.questions.map((sq) => ({
       qtype: 'age',
       text: sq.q,
       // The written answer is always index 0 in the data; shuffling here is
@@ -826,31 +1025,199 @@ function buildStudyQuestions(sec) {
       why: sq.why,
       events: [],
     }));
+    return { spot: all.slice(0, 1), recall: all.slice(1) };
   }
-  const pool = (sec.ids || []).map((id) => EVENTS.find((e) => e.id === id)).filter(Boolean);
-  if (pool.length < 2) return [];
+  const pool = sectionEvents(sec);
+  if (pool.length < 2) return { spot: [], recall: [] };
   const asked = new Set();
-  const out = [];
-  for (let i = 0; i < Math.min(3, pool.length); i += 1) {
-    const q = makeQuestion(pool, asked);
-    q.events.forEach((e) => asked.add(e.id));
-    if (asked.size >= pool.length) asked.clear();
-    out.push(q);
+  const draw = (n) => {
+    const out = [];
+    for (let i = 0; i < n; i += 1) {
+      const q = makeQuestion(pool, asked);
+      q.events.forEach((e) => asked.add(e.id));
+      if (asked.size >= pool.length) asked.clear();
+      out.push(q);
+    }
+    return out;
+  };
+  return { spot: draw(1), recall: draw(2) };
+}
+
+// ---------------------------------------------------------------------------
+// The order builder — the same task cold and warm
+// ---------------------------------------------------------------------------
+
+function renderOrder() {
+  const predicting = st.phase === 'predict';
+  const n = st.events.length;
+  st.order = { events: shuffle(st.events), placed: [], done: false };
+  st.qStartedAt = Date.now();
+
+  $('order-head').innerHTML = predicting
+    ? '<span class="q-lead">Before you read</span>'
+      + '<span class="q-event">Put these in order</span>'
+      + '<p class="order-note">Guess — earliest first. Being wrong here is the point:'
+      + ' you get the same list back once you have read the passage.</p>'
+    : '<span class="q-lead">Book closed</span>'
+      + '<span class="q-event">Now place them for real</span>'
+      + `<p class="order-note">You had ${st.sectionPredict} of ${n} before you read it.</p>`;
+
+  $('study-check').textContent = predicting ? 'Lock in my guess' : 'Check order';
+  drawOrder();
+  updateStudyHud();
+}
+
+function drawOrder() {
+  const n = st.events.length;
+  const slots = $('order-slots');
+  slots.innerHTML = '';
+  st.order.placed.forEach((ev, i) => {
+    const chip = document.createElement('button');
+    chip.className = 'seq-chip';
+    chip.innerHTML = `<b>${i + 1}</b>${esc(ev.name)}`;
+    chip.title = 'Tap to remove';
+    chip.addEventListener('click', () => {
+      if (st.order.done) return;
+      st.order.placed.splice(i, 1);
+      drawOrder();
+    });
+    slots.appendChild(chip);
+  });
+  for (let i = st.order.placed.length; i < n; i += 1) {
+    const empty = document.createElement('div');
+    empty.className = 'seq-empty';
+    empty.textContent = i + 1;
+    slots.appendChild(empty);
   }
-  return out;
+
+  const pool = $('order-pool');
+  pool.innerHTML = '';
+  st.order.events.filter((e) => !st.order.placed.includes(e)).forEach((ev) => {
+    const b = document.createElement('button');
+    b.textContent = ev.name;
+    b.addEventListener('click', () => {
+      if (st.order.done || st.order.placed.length >= n) return;
+      st.order.placed.push(ev);
+      drawOrder();
+    });
+    pool.appendChild(b);
+  });
+
+  show('study-check', true);
+  $('study-check').disabled = st.order.placed.length !== n;
+}
+
+function checkOrder() {
+  if (!st || !st.order || st.order.done) return;
+  const n = st.events.length;
+  if (st.order.placed.length !== n) return;
+  st.order.done = true;
+
+  const truth = st.events.slice().sort((a, b) => a.y - b.y);
+  let right = 0;
+  st.order.placed.forEach((ev, i) => { if (truth[i] === ev) right += 1; });
+
+  // The reveal is the same in both phases: true order, years attached. In the
+  // predict phase this reveal *is* the first thing you read about the passage.
+  const slots = $('order-slots');
+  slots.innerHTML = '';
+  truth.forEach((ev, i) => {
+    const chip = document.createElement('div');
+    chip.className = `seq-chip reveal ${st.order.placed[i] === ev ? 'right' : 'wrong'}`;
+    chip.innerHTML = `<b>${fmtYear(ev.y)}</b>${esc(ev.name)}`;
+    slots.appendChild(chip);
+  });
+  $('order-pool').innerHTML = '';
+  show('study-check', false);
+
+  if (st.phase === 'predict') {
+    // Unscored on purpose. A cold guess must not be able to dent your accuracy
+    // or mark an event missed in Review — nobody had told you yet.
+    st.sectionPredict = right;
+    st.predictScore += right;
+    st.predictOf += n;
+    showStudyFeedback(right === n, right === n
+      ? `${right}/${n} cold — you already had this one.`
+      : `${right}/${n} cold. Now read why, and you'll get them straight back.`);
+    $('study-next').textContent = 'Read the passage →';
+  } else {
+    st.placeScore += right;
+    st.placeOf += n;
+    const elapsed = Date.now() - (st.qStartedAt || Date.now());
+    st.order.placed.forEach((ev, i) => {
+      recordStudyAnswer(ev, truth[i] === ev, Math.round(elapsed / n));
+    });
+    const gained = right - st.sectionPredict;
+    showStudyFeedback(right === n, right === n
+      ? (gained > 0 ? `${right}/${n} — up from ${st.sectionPredict} before you read it.` : `${right}/${n}. Held it.`)
+      : `${right}/${n} placed${gained > 0 ? ` — up from ${st.sectionPredict}` : ''}.`);
+    $('study-next').textContent = st.si + 1 < totalSections() ? 'Next passage →' : 'Finish';
+    if (window.Juice) {
+      if (right === n) Juice.good({ anchor: $('study-next') });
+      else Juice.bad();
+    }
+  }
+
+  show('study-next', true);
+  saveStore();
+  updateStudyHud();
+}
+
+function showStudyFeedback(good, text) {
+  const el = $('study-feedback');
+  el.textContent = text;
+  el.className = good ? 'good' : 'bad';
+}
+
+// Study answers feed the same per-event mastery the quiz modes use, so studying
+// an era genuinely moves Review and the stats screen. The cold prediction is
+// the one thing that never lands here.
+function recordStudyAnswer(ev, right, elapsedMs) {
+  if (!ev) return;
+  st.answered += 1;
+  if (right) st.correct += 1;
+  store.answered += 1;
+  const rec = store.stats[ev.id] || (store.stats[ev.id] = { seen: 0, correct: 0, run: 0 });
+  rec.seen += 1;
+  if (right) {
+    store.correct += 1;
+    rec.correct += 1;
+    rec.run = (rec.run || 0) > 0 ? rec.run + 1 : 1;
+    if (!rec.learned && rec.run >= LEARN_RUN) rec.learned = true;
+  } else {
+    rec.run = (rec.run || 0) < 0 ? rec.run - 1 : -1;
+    if (rec.learned && -rec.run >= UNLEARN_RUN) rec.learned = false;
+    st.missed.push(ev.name);
+  }
+  st.log.push({
+    item_id: ev.id,
+    item_name: ev.name,
+    correct: right,
+    ms: elapsedMs,
+    answered_at: new Date().toISOString(),
+  });
 }
 
 function showStudyQuestion() {
   const q = st && st.questions[st.qi];
   if (!st) return;
-  if (!q) return nextStudySection();
+  if (!q) return advancePhase();
 
-  // The passage goes away while you answer: retrieval is the point, and
-  // reading the answer off the page teaches nothing. Re-read is one tap away.
-  $('study-passage').classList.add('hidden');
-  $('study-ready').classList.add('hidden');
-  $('study-quiz').classList.remove('hidden');
+  // The rung is the difference between these two screens, so it is stated. On
+  // SPOT the passage stays up and the answer is findable — that rung exists so
+  // there is a step between reading a thing and being expected to hold it. On
+  // RECALL it goes away, because retrieval is the part that does the work.
+  const spotting = st.phase === 'spot';
+  show('study-passage', spotting);
+  show('study-ready', false);
+  show('study-quiz', true);
+  show('study-reread', !spotting);
   $('study-reread').textContent = 'Re-read the passage';
+
+  $('study-rung').innerHTML = spotting
+    ? '<b>Open book</b> it\'s on the page above'
+    : '<b>Book closed</b> from memory now';
+  $('study-rung').className = `rung-tag ${spotting ? 'open' : 'closed'}`;
 
   // Event questions are a lead-in plus the event ("When was this? / Hastings"),
   // so the lead is small and the event is the headline. An overview question is
@@ -875,10 +1242,17 @@ function showStudyQuestion() {
 
   $('study-feedback').textContent = '';
   $('study-feedback').className = '';
-  $('study-next').classList.add('hidden');
+  show('study-next', false);
   st.locked = false;
   st.qStartedAt = Date.now();
   updateStudyHud();
+
+  // On the open-book rung the question sits under the full passage, which on a
+  // phone is a screen and a half below the fold — without this you are looking
+  // at a passage you have already read with no sign anything has changed.
+  if (spotting) {
+    $('study-quiz').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 
 function toggleReread() {
@@ -894,28 +1268,19 @@ function answerStudy(opt, btn) {
   const q = st.questions[st.qi];
   const right = Boolean(opt && opt.right);
   const elapsed = Date.now() - st.qStartedAt;
-  st.answered += 1;
-  if (right) st.correct += 1;
 
-  // Event questions feed the same per-event mastery the quiz modes use, so
-  // studying an era genuinely moves Review and the stats screen.
   const primary = q.qtype === 'first'
     ? q.options.find((o) => o.right).ev
     : q.events[0];
   if (primary) {
-    store.answered += 1;
-    const rec = store.stats[primary.id] || (store.stats[primary.id] = { seen: 0, correct: 0 });
-    rec.seen += 1;
-    if (right) { store.correct += 1; rec.correct += 1; }
-    st.log.push({
-      item_id: primary.id,
-      item_name: primary.name,
-      correct: right,
-      ms: elapsed,
-      answered_at: new Date().toISOString(),
-    });
+    recordStudyAnswer(primary, right, elapsed);
+  } else {
+    // Overview questions have no event behind them — they count for the session
+    // but there is nothing to attribute them to.
+    st.answered += 1;
+    if (right) st.correct += 1;
+    else st.missed.push(q.text.split('\n')[0]);
   }
-  if (!right) st.missed.push(primary ? primary.name : q.text.split('\n')[0]);
 
   [...$('study-choices').children].forEach((b, i) => {
     if (q.options[i] && q.options[i].right) b.classList.add('correct');
@@ -933,31 +1298,31 @@ function answerStudy(opt, btn) {
     else Juice.bad();
   }
 
+  // The button says what actually happens next, because the next thing is
+  // sometimes a different rung rather than another question.
   const last = st.qi + 1 >= st.questions.length;
-  $('study-next').textContent = !last
-    ? 'Next question'
+  $('study-next').textContent = !last ? 'Next question'
+    : st.phase === 'spot' ? 'Close the book →'
+    : st.canOrder ? 'Place them →'
     : (st.si + 1 < totalSections() ? 'Next passage →' : 'Finish');
-  $('study-next').classList.remove('hidden');
+  show('study-next', true);
   saveStore();
   updateStudyHud();
 }
 
 function studyNext() {
   if (!st) return;
+  // Ordering phases have a single step; question phases walk their list first.
+  if (st.phase === 'predict' || st.phase === 'place') return advancePhase();
   st.qi += 1;
   if (st.qi < st.questions.length) return showStudyQuestion();
-  nextStudySection();
-}
-
-function nextStudySection() {
-  st.si += 1;
-  if (st.si < totalSections()) return renderPassage();
-  finishStudy();
+  advancePhase();
 }
 
 // Reading is worth something on its own — you can't retrieve what was never
-// stored — so passages pay a flat rate and recall pays the rest.
-const studyXp = () => Math.round(st.correct * 12 + totalSections() * 10);
+// stored — so passages pay a flat rate and recall pays the rest. Pins pay too:
+// placing an event on the strip for the first time is real progress.
+const studyXp = () => Math.round(st.correct * 12 + totalSections() * 10 + st.pinned.length * 4);
 
 function syncStudy(aborted) {
   if (!st || !st.log.length) return;
@@ -989,23 +1354,38 @@ function finishStudy() {
   store.games += 1;
   store.studied = store.studied || {};
   store.studied[st.syl.id] = true;
+  store.studiedAt = store.studiedAt || {};
+  store.studiedAt[st.syl.id] = Date.now();
   saveStore();
   const levelAfter = levelForXp(store.xp);
   syncStudy(false);
 
   const acc = st.answered ? Math.round((st.correct / st.answered) * 100) : 0;
+  // The headline number is the one the ladder exists to produce: how much
+  // better you order these events after reading than you did cold.
+  const cold = st.predictOf ? Math.round((st.predictScore / st.predictOf) * 100) : null;
+  const warm = st.placeOf ? Math.round((st.placeScore / st.placeOf) * 100) : null;
+
   $('results-title').textContent = `${st.syl.name} — studied`;
-  $('results-score').innerHTML = `${st.correct}/${st.answered}<span>recalled</span>`;
+  // `span` is a block caption in the shared theme, so the arrow can't be one.
+  $('results-score').innerHTML = cold !== null
+    ? `${cold}%<i class="score-arrow">→</i>${warm}%<span>ordering — cold, then after reading</span>`
+    : `${st.correct}/${st.answered}<span>recalled</span>`;
   $('results-stats').innerHTML =
     `<div class="stat"><b>${totalSections()}</b><span>passages</span></div>`
     + `<div class="stat"><b>${acc}%</b><span>accuracy</span></div>`
+    + (st.pinned.length ? `<div class="stat"><b>+${st.pinned.length}</b><span>placed 📍</span></div>` : '')
     + `<div class="stat"><b>+${xpGain}</b><span>XP</span></div>`;
+  renderStrip($('results-strip'), { fresh: st.pinned, focus: st.syl.era ? st.syl.id : null });
   $('results-xp').innerHTML = levelAfter > levelBefore
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`
     : `+${xpGain} XP`;
-  $('results-missed').innerHTML = st.missed.length
+  // An event missed on both the recall question and the placement is one event
+  // to look at again, not two.
+  const missedOnce = [...new Set(st.missed)];
+  $('results-missed').innerHTML = missedOnce.length
     ? '<h3>Worth another pass</h3><div class="chips">'
-      + st.missed.slice(0, 8).map((m) => `<span class="chip">${esc(m)}</span>`).join('')
+      + missedOnce.slice(0, 8).map((m) => `<span class="chip">${esc(m)}</span>`).join('')
       + '</div>'
     : '<p class="clean-sweep">Everything held on the first ask.</p>';
 
@@ -1082,7 +1462,8 @@ $('again-btn').addEventListener('click', startGame);
 $('menu-btn').addEventListener('click', () => { showScreen('menu'); renderMenu(); renderStudyList(); });
 $('stats-btn').addEventListener('click', () => { renderStats(); showScreen('stats'); });
 $('stats-back').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
-$('study-ready').addEventListener('click', showStudyQuestion);
+$('study-ready').addEventListener('click', advancePhase);
+$('study-check').addEventListener('click', checkOrder);
 $('study-next').addEventListener('click', studyNext);
 $('study-reread').addEventListener('click', toggleReread);
 $('study-quit').addEventListener('click', quitStudy);
@@ -1092,13 +1473,24 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') return quitStudy();
     const sn = parseInt(e.key, 10);
     if (sn >= 1 && sn <= 9) {
+      // In an ordering phase the number keys pick off the pool, which is the
+      // only way to do this drill on a keyboard.
+      if (!$('study-order').classList.contains('hidden')) {
+        const p = $('order-pool').children[sn - 1];
+        if (p) p.click();
+        return;
+      }
       const b = $('study-choices').children[sn - 1];
       if (b && !b.disabled && !$('study-quiz').classList.contains('hidden')) b.click();
     } else if (e.key === 'Enter') {
-      const ready = $('study-ready');
-      const nxt = $('study-next');
-      if (!ready.classList.contains('hidden')) ready.click();
-      else if (!nxt.classList.contains('hidden')) nxt.click();
+      // Whichever of the three advance buttons is currently live.
+      const live = ['study-next', 'study-check', 'study-ready']
+        .map((id) => $(id))
+        .find((el) => el && !el.classList.contains('hidden') && !el.disabled);
+      if (live) live.click();
+    } else if (e.key === 'Backspace') {
+      const last = $('order-slots').querySelector('button.seq-chip:last-of-type');
+      if (last) { e.preventDefault(); last.click(); }
     }
     return;
   }

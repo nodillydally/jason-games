@@ -40,10 +40,25 @@
          makes every individual date mean something. -->
     <div class="card study-menu">
       <h2 class="section">Study</h2>
-      <p class="learn-intro">Read a short passage, get quizzed on that passage,
-        move on. New here? Start at the top — it teaches what the ages are
-        before asking you to place anything inside them.</p>
+      <p class="learn-intro">Guess a passage cold, read why you were wrong, then
+        place it again for real. New here? Start at the top — it teaches what the
+        ages are before asking you to place anything inside them.</p>
+
+      <!-- The timeline you are building. Every event in the bank is a dot; they
+           fill in as you study, and go gold once you can retrieve them. -->
+      <div id="menu-strip" class="menu-strip"></div>
+
       <div id="study-list" class="study-list"></div>
+
+      <a class="walk-link" href="walk.html">
+        <span class="walk-icon">⛵</span>
+        <span class="walk-body">
+          <b>Walk the Age of Discovery</b>
+          <em>Prototype</em>
+          <i>The timeline as a place you move through — 250 years on foot, west to east. No quiz, just the road.</i>
+        </span>
+        <span class="walk-go">→</span>
+      </a>
     </div>
 
     <div class="card setup-card">
@@ -112,6 +127,7 @@
       <div id="results-score"></div>
       <div id="results-stats" class="results-stats"></div>
       <div id="results-xp" class="results-xp"></div>
+      <div id="results-strip"></div>
       <div id="results-missed"></div>
       <div class="results-actions">
         <button id="again-btn" class="primary big">Play again</button>
@@ -131,18 +147,35 @@
     </div>
     <div class="progress-track"><div id="study-fill"></div></div>
 
+    <!-- The strip you are filling in, always in view while you study. -->
+    <div id="study-strip" class="study-strip"></div>
+
+    <!-- One card, five phases: predict → read → spot → recall → place. The
+         order builder is shared between the cold guess and the real placement,
+         because they are deliberately the same task twice. -->
     <div class="card study-card">
       <div id="study-tag" class="topic-tag"></div>
+
+      <div id="study-order" class="study-order hidden">
+        <div id="order-head" class="order-head"></div>
+        <div id="order-slots" class="seq-slots"></div>
+        <div id="order-pool" class="seq-pool"></div>
+      </div>
+
       <div id="study-passage" class="study-passage"></div>
-      <button id="study-ready" class="primary big">Got it — quiz me</button>
 
       <div id="study-quiz" class="hidden">
+        <div id="study-rung" class="rung-tag"></div>
         <div id="study-q" class="study-q"></div>
         <div id="study-choices"></div>
-        <div id="study-feedback"></div>
-        <button id="study-next" class="primary hidden">Next question</button>
-        <button id="study-reread" class="ghost">Re-read the passage</button>
       </div>
+
+      <div id="study-feedback"></div>
+
+      <button id="study-ready" class="primary big">Got it — ask me about it</button>
+      <button id="study-check" class="primary hidden">Lock in my guess</button>
+      <button id="study-next" class="primary hidden">Next</button>
+      <button id="study-reread" class="ghost hidden">Re-read the passage</button>
     </div>
   </section>
 

@@ -169,6 +169,110 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------------------------- timeline strip ----------------------------
+ *
+ * The picture the game was missing. Eight era bands of equal width, every
+ * event in the bank a dot at its true year inside its band — so the Ancient
+ * World reads as empty road and the Information Age as a pile-up. */
+
+.tl-strip {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.tl-era { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+
+.tl-band {
+  position: relative;
+  display: block;
+  height: 26px;
+  border-radius: 3px;
+  background: var(--paper-2);
+  box-shadow: inset 0 0 0 1px var(--rule-2);
+  overflow: hidden;
+}
+.tl-era.focus .tl-band {
+  background: color-mix(in oklab, var(--p1) 12%, var(--paper-2));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--p1) 35%, transparent);
+}
+
+/* A dot is 5px because a timeline of 113 events on a phone has about 3px per
+   event to play with — any bigger and the bands are solid bars. */
+.tl-dot {
+  position: absolute;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  opacity: .3;
+  transition: background .3s var(--ease), opacity .3s var(--ease), box-shadow .3s var(--ease);
+}
+.tl-dot.pinned { background: var(--p1); opacity: .85; }
+.tl-dot.learned {
+  background: var(--a1);
+  opacity: 1;
+  box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--a1) 35%, transparent);
+}
+/* Placed in this very session — worth catching the eye once. */
+.tl-dot.fresh { animation: tl-pin .7s var(--ease) both; }
+@keyframes tl-pin {
+  0%   { transform: scale(0) translateY(-8px); opacity: 0; }
+  55%  { transform: scale(2.1) translateY(0); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* Years, left-aligned to the band they open — an axis tick, not a caption. */
+.tl-era-name {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .02em;
+  color: var(--ink-3);
+  line-height: 1.25;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tl-strip.compact .tl-era-name { display: none; }
+.tl-strip.compact .tl-band { height: 16px; border-radius: 2px; }
+
+.tl-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.tl-legend b { color: var(--p1); font-weight: 500; font-size: 11px; }
+.tl-legend span { display: inline-flex; align-items: center; gap: 5px; }
+/* The legend's swatches are the same element, out of a band and back in flow. */
+.tl-legend .tl-dot { position: static; margin: 0; width: 6px; height: 6px; }
+
+.menu-strip { margin: 4px 0 22px; }
+
+/* Always in view while studying, so a pin is something you watch land. */
+.study-strip {
+  margin: 10px 2px 0;
+  animation: fade-up .4s var(--ease) both;
+}
+
+#results-strip:not(:empty) { margin: 22px 0 4px; }
+#results-score .score-arrow {
+  display: inline;
+  font-style: normal;
+  font-size: .42em;
+  color: var(--ink-3);
+  vertical-align: middle;
+  margin: 0 .16em;
+}
+
 /* ------------------------------- study ------------------------------- */
 
 .learn-intro { color: var(--ink-2); font-size: 14px; line-height: 1.65; margin-bottom: 20px; }
@@ -263,6 +367,55 @@
   color: var(--ink-3);
 }
 .study-row.done .study-row-mark { color: var(--good); }
+/* How much of this era is on the strip — the honest progress line. */
+.row-placed { display: block; margin-top: 3px; color: var(--ink-3); }
+
+/* ------------------------------- the walk -------------------------------
+ *
+ * An experiment, and it says so. Sits under the courses because it is not one
+ * — it's the same era with the reading laid out as ground you cross. */
+
+.walk-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 16px 18px;
+  text-decoration: none;
+  color: inherit;
+  border: 1px dashed var(--stroke-hi);
+  border-radius: var(--r-lg);
+  background: var(--paper);
+  transition: transform .22s ease, border-color .22s ease, background .22s ease;
+}
+.walk-link:hover {
+  transform: translateY(-2px);
+  border-color: var(--p1);
+  background: color-mix(in oklab, var(--p1) 5%, var(--paper));
+}
+.walk-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  font-size: 1.05rem;
+  border-radius: var(--r-md);
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
+}
+.walk-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.walk-body b { font-family: var(--serif); font-size: 19px; font-weight: 400; }
+.walk-body em {
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--a2);
+}
+.walk-body i { font-style: normal; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); margin-top: 3px; }
+.walk-go { flex: none; color: var(--p1); font-size: 18px; }
 
 /* The overview is the recommended entry point: it takes the full width and
    the only saturated band on the screen. */
@@ -364,6 +517,56 @@
   font-size: 15.5px;
   line-height: 1.6;
   max-width: 56ch;
+}
+
+/* --------------------------- the order builder --------------------------- */
+
+.order-head { margin-bottom: 24px; text-align: center; }
+
+/* An empty slot only has to be a target, not a row — at full height, five
+   blanks push the options you have to tap off the bottom of a phone. They grow
+   into full rows as you fill them, which is most of the feedback. */
+#order-slots .seq-empty { min-height: 34px; }
+.order-note {
+  margin: 14px auto 0;
+  max-width: 44ch;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+#study-check { width: 100%; padding: 15px; margin-top: 4px; }
+
+/* ------------------------------ the rungs ------------------------------
+ *
+ * Open book vs book closed is the whole difference between two screens that
+ * otherwise look identical, so it gets said out loud above the question. */
+
+.rung-tag {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 7px;
+  margin-bottom: 20px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.rung-tag b {
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  letter-spacing: .1em;
+}
+.rung-tag.open b {
+  color: var(--good);
+  background: color-mix(in oklab, var(--good) 12%, transparent);
+}
+.rung-tag.closed b {
+  color: var(--p1);
+  background: color-mix(in oklab, var(--p1) 14%, transparent);
 }
 
 .study-q { margin: 2px 0 22px; }
