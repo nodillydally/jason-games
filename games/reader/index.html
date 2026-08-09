@@ -34,8 +34,8 @@
       <h2>Mode</h2>
       <div class="opt-grid" id="mode-options"></div>
 
-      <h2>Speed</h2>
-      <div class="wpm-row">
+      <h2 id="speed-heading">Speed</h2>
+      <div class="wpm-row" id="wpm-row">
         <input id="wpm-slider" type="range" min="150" max="900" step="25" value="300">
         <output id="wpm-value">300 wpm</output>
       </div>
@@ -95,6 +95,19 @@
 
     <div id="read-hint" class="read-hint">Space to pause · Esc to quit</div>
     <div id="paused-note" class="paused-note hidden">Paused — press Space to continue</div>
+  </section>
+
+  <!-- ========================== Scroll read ========================= -->
+  <section id="screen-scroll" class="screen">
+    <div class="hud">
+      <button id="scroll-quit" title="Back to menu">✕</button>
+      <span id="scroll-title"></span>
+      <span class="hud-spacer"></span>
+      <span id="scroll-clock"></span>
+    </div>
+    <div class="progress-track" id="scroll-track"><div id="scroll-fill"></div></div>
+    <div id="scroll-text" class="scroll-text"></div>
+    <button id="scroll-done" class="primary big">I’m done reading</button>
   </section>
 
   <!-- ============================= Quiz ============================= -->

@@ -19,15 +19,15 @@ const LADDER_PASS = 0.7;       // comprehension needed to climb
 const COUNT_IN_MS = 500;       // per digit of the 3-2-1 count-in
 
 const MODES = [
-  { id: 'benchmark', label: 'Benchmark', icon: '🎯', hint: 'One passage at your chosen speed, then a comprehension check.' },
-  { id: 'ladder',    label: 'Ladder',    icon: '📈', hint: 'Speed climbs 50 wpm each passage until comprehension breaks. Finds your real ceiling.' },
-  { id: 'book',      label: 'My books',  icon: '📚', hint: 'Read your own library a session at a time, with a fill-the-blank check on what you just read. Progress is bookmarked.' },
-  { id: 'free',      label: 'Free read', icon: '📄', hint: 'Paste your own text and read it at speed. No quiz — practice, not measurement.' },
+  { id: 'baseline',  label: 'Baseline',   icon: '⏱', hint: 'The test that comes first: read one passage at your natural pace — no flashing, no clock — then a quiz. This sets your true starting speed.' },
+  { id: 'benchmark', label: 'Flash read', icon: '⚡', hint: 'Words flash one at a time at a speed you set, then a comprehension check.' },
+  { id: 'timed',     label: 'Timed read', icon: '📜', hint: 'The whole passage on screen, but the clock only gives you enough time for your target speed. Finish before it runs out.' },
+  { id: 'ladder',    label: 'Ladder',     icon: '📈', hint: 'Flash speed climbs 50 wpm each passage until comprehension breaks. Finds your ceiling.' },
+  { id: 'book',      label: 'Book passages', icon: '📚', hint: 'Hand-picked signature passages from your own library — the mirroring chapter, the weekly scorecard, the Fourth Tuesday — with a fill-the-blank check.' },
+  { id: 'free',      label: 'Free read',  icon: '📄', hint: 'Paste your own text and read it at speed. No quiz — practice, not measurement.' },
 ];
 
-// How much of a book one session covers (~1200 words ≈ 4 min at 300 wpm).
-const BOOK_CHUNKS_PER_SESSION = 3;
-const BOOKMARKS_KEY = 'reader.books.v1';
+const SCROLL_MODES = new Set(['baseline', 'timed']);
 
 const CHUNKS = [
   { id: 1, label: '1 word' },
@@ -43,6 +43,7 @@ const $ = (id) => document.getElementById(id);
 const screens = {
   menu: $('screen-menu'),
   read: $('screen-read'),
+  scroll: $('screen-scroll'),
   quiz: $('screen-quiz'),
   results: $('screen-results'),
   stats: $('screen-stats'),
@@ -59,9 +60,9 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => (
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { xp: 0, sessions: 0, wordsRead: 0, bestEffective: 0, history: [], byLevel: {}, ...JSON.parse(raw) };
+    if (raw) return { xp: 0, sessions: 0, wordsRead: 0, bestEffective: 0, baselineWpm: 0, history: [], byLevel: {}, passagesDone: {}, ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
-  return { xp: 0, sessions: 0, wordsRead: 0, bestEffective: 0, history: [], byLevel: {} };
+  return { xp: 0, sessions: 0, wordsRead: 0, bestEffective: 0, baselineWpm: 0, history: [], byLevel: {}, passagesDone: {} };
 }
 
 const store = loadStore();
@@ -117,14 +118,8 @@ function dwellMultiplier(text) {
 // Book library (private — fetched from Atlas, never bundled with the site)
 // ---------------------------------------------------------------------------
 
-const loadBookmarks = () => {
-  try { return JSON.parse(localStorage.getItem(BOOKMARKS_KEY)) || {}; } catch { return {}; }
-};
-const bookmarks = loadBookmarks();
-const saveBookmarks = () => localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
-
-let catalog = null;      // [{slug,title,author,chunks,words}]
-let catalogError = null;
+let passageList = null;   // [{id,book_slug,book_title,author,label,words}]
+let passageError = null;
 
 async function contentGet(params) {
   const url = `${Sync.contentEndpoint()}?${new URLSearchParams(params)}`;
@@ -133,12 +128,12 @@ async function contentGet(params) {
   return res.json();
 }
 
-async function loadCatalog() {
-  if (catalog || catalogError) return;
+async function loadPassageList() {
+  if (passageList || passageError) return;
   try {
-    catalog = (await contentGet({ op: 'books' })).books;
+    passageList = (await contentGet({ op: 'passages' })).passages;
   } catch (err) {
-    catalogError = err.message;
+    passageError = err.message;
   }
   if (sel.mode === 'book') renderMenu();
 }
@@ -217,7 +212,7 @@ function shuffleArr(arr) {
 // Menu
 // ---------------------------------------------------------------------------
 
-const sel = { mode: 'benchmark', chunk: 1, wpm: 300, book: null };
+const sel = { mode: 'benchmark', chunk: 1, wpm: 300, passageId: null };
 
 function optionButton(item, group, active) {
   const b = document.createElement('button');
@@ -255,39 +250,54 @@ function renderMenu() {
   $('book-wrap').classList.toggle('hidden', sel.mode !== 'book');
   if (sel.mode === 'book') renderBookList();
 
+  // Baseline is self-paced by definition — the slider would be a lie there.
+  $('wpm-row').classList.toggle('hidden', sel.mode === 'baseline');
+  $('speed-heading').classList.toggle('hidden', sel.mode === 'baseline');
+
   const mode = MODES.find((m) => m.id === sel.mode);
-  $('setup-hint').textContent = sel.mode === 'ladder'
-    ? `${mode.hint} Starting at ${sel.wpm} wpm.`
-    : mode.hint;
+  let hint = sel.mode === 'ladder' ? `${mode.hint} Starting at ${sel.wpm} wpm.` : mode.hint;
+  if (sel.mode === 'baseline' && store.baselineWpm) {
+    hint += ` Your last baseline: ${store.baselineWpm} wpm.`;
+  }
+  if (sel.mode !== 'baseline' && !store.baselineWpm && store.sessions === 0) {
+    hint += ' Tip: run Baseline first so you know your natural speed.';
+  }
+  $('setup-hint').textContent = hint;
 }
 
 function renderBookList() {
   const el = $('book-list');
   if (!Sync.isEnabled()) {
-    el.innerHTML = '<p class="book-note">Your library rides the same code as cloud sync — turn sync on below and the books appear here.</p>';
+    el.innerHTML = '<p class="book-note">Your library rides the same code as cloud sync — turn sync on below and the passages appear here.</p>';
     return;
   }
-  if (catalogError) {
-    el.innerHTML = `<p class="book-note">Couldn’t reach the library: ${esc(catalogError)}</p>`;
+  if (passageError) {
+    el.innerHTML = `<p class="book-note">Couldn’t reach the library: ${esc(passageError)}</p>`;
     return;
   }
-  if (!catalog) {
+  if (!passageList) {
     el.innerHTML = '<p class="book-note">Loading your library…</p>';
-    loadCatalog();
+    loadPassageList();
     return;
   }
   el.innerHTML = '';
-  catalog.forEach((b) => {
-    const at = (bookmarks[b.slug] && bookmarks[b.slug].chunk) || 0;
-    const pct = Math.min(100, Math.round((at / b.chunks) * 100));
+  let lastBook = null;
+  passageList.forEach((p) => {
+    if (p.book_title !== lastBook) {
+      lastBook = p.book_title;
+      const h = document.createElement('div');
+      h.className = 'book-group';
+      h.textContent = p.book_title;
+      el.appendChild(h);
+    }
+    const done = store.passagesDone && store.passagesDone[p.id];
     const btn = document.createElement('button');
-    btn.className = `book-item${sel.book === b.slug ? ' active' : ''}`;
+    btn.className = `book-item${sel.passageId === p.id ? ' active' : ''}`;
     btn.innerHTML =
-      `<span class="book-title">${esc(b.title)}</span>` +
-      `<span class="book-meta">${esc(b.author || '')} · ${(b.words / 1000).toFixed(0)}k words</span>` +
-      `<span class="book-progress"><i style="width:${pct}%"></i></span>` +
-      `<span class="book-pct">${pct === 100 ? '✓ finished' : pct === 0 ? 'not started' : pct + '%'}</span>`;
-    btn.addEventListener('click', () => { sel.book = b.slug; renderMenu(); });
+      `<span class="book-title">${esc(p.label)}</span>` +
+      `<span class="book-meta">${p.words} words</span>` +
+      `<span class="book-pct">${done != null ? `✓ ${Math.round(done * 100)}%` : 'new'}</span>`;
+    btn.addEventListener('click', () => { sel.passageId = p.id; renderMenu(); });
     el.appendChild(btn);
   });
 }
@@ -323,22 +333,18 @@ async function startGame() {
     return;
   }
 
-  // Book sessions fetch their text from the private library first.
+  // Book sessions fetch their passage from the private library first.
   let bookSession = null;
   if (sel.mode === 'book') {
     if (!Sync.isEnabled()) { $('setup-hint').textContent = 'Turn on Cloud sync below first — the library needs it.'; return; }
-    if (!sel.book) { $('setup-hint').textContent = 'Pick a book from the list.'; return; }
-    const meta = (catalog || []).find((b) => b.slug === sel.book);
-    const from = (bookmarks[sel.book] && bookmarks[sel.book].chunk) || 0;
-    if (meta && from >= meta.chunks) { $('setup-hint').textContent = 'You’ve finished that one — pick another, or reread it by resetting below.'; return; }
+    if (!sel.passageId) { $('setup-hint').textContent = 'Pick a passage from the list.'; return; }
     const startBtn = $('start-btn');
     startBtn.disabled = true;
     startBtn.textContent = 'Fetching…';
     try {
-      const r = await contentGet({ op: 'chunks', book: sel.book, from, count: BOOK_CHUNKS_PER_SESSION });
-      bookSession = { meta, from, total: r.total, text: r.chunks.map((c) => c.content).join('\n\n'), got: r.chunks.length };
+      bookSession = await contentGet({ op: 'passage', id: sel.passageId });
     } catch (err) {
-      $('setup-hint').textContent = `Couldn’t fetch the book: ${err.message}`;
+      $('setup-hint').textContent = `Couldn’t fetch the passage: ${err.message}`;
       return;
     } finally {
       startBtn.disabled = false;
@@ -371,13 +377,13 @@ function beginRound() {
   if (g.mode === 'free') {
     g.passage = { id: 'custom', title: 'Your text', level: 0, text: g.customText, questions: [] };
   } else if (g.mode === 'book') {
-    const b = g.book;
+    const p = g.book;
     g.passage = {
-      id: b.meta.slug,
-      title: b.meta.title,
+      id: `${p.book_slug}:${p.id}`,
+      title: `${p.book_title} — ${p.label}`,
       level: 0,
-      text: b.text,
-      questions: makeClozeQuiz(b.text, 5),
+      text: p.content,
+      questions: makeClozeQuiz(p.content, 5),
     };
   } else {
     g.passage = pickPassage();
@@ -391,10 +397,10 @@ function beginRound() {
   g.paused = false;
   g.readStartedAt = null;
 
+  if (SCROLL_MODES.has(g.mode)) return beginScrollRead();
+
   $('read-title').textContent = g.mode === 'ladder'
     ? `${g.passage.title} · rung ${g.rung + 1}`
-    : g.mode === 'book'
-    ? `${g.passage.title} · ${Math.round((g.book.from / g.book.total) * 100)}% in`
     : g.passage.title;
   $('read-wpm').textContent = `${g.wpm} wpm`;
   $('progress-fill').style.width = '0%';
@@ -403,6 +409,56 @@ function beginRound() {
 
   showScreen('read');
   countIn(3);
+}
+
+// ---------------------------------------------------------------------------
+// Scroll reading (Baseline + Timed) — the whole passage on screen at once
+// ---------------------------------------------------------------------------
+
+function beginScrollRead() {
+  $('scroll-title').textContent = g.passage.title;
+  $('scroll-text').innerHTML = g.passage.text
+    .split(/\n\n+/)
+    .map((p) => `<p>${esc(p)}</p>`)
+    .join('');
+  $('scroll-text').scrollTop = 0;
+
+  g.readStartedAt = Date.now();
+
+  if (g.mode === 'timed') {
+    // The clock grants exactly the time your target speed implies. Reading
+    // faster banks nothing; the test is whether you finish at all.
+    g.allowedMs = (g.words.length / g.wpm) * 60000;
+    $('scroll-track').classList.remove('hidden');
+    timer = setInterval(scrollTick, 100);
+  } else {
+    // Baseline: no clock on screen — the point is your natural pace,
+    // and a visible countdown would contaminate it.
+    g.allowedMs = null;
+    $('scroll-track').classList.add('hidden');
+    $('scroll-clock').textContent = 'Read normally, then press done';
+  }
+
+  showScreen('scroll');
+}
+
+function scrollTick() {
+  if (!g || !g.allowedMs) return;
+  const left = g.allowedMs - (Date.now() - g.readStartedAt);
+  if (left <= 0) return finishScrollRead(true);
+  $('scroll-clock').textContent = `⏱ ${Math.ceil(left / 1000)}s`;
+  const frac = left / g.allowedMs;
+  $('scroll-fill').style.width = `${frac * 100}%`;
+  $('scroll-fill').className = frac < 0.2 ? 'low' : '';
+}
+
+function finishScrollRead(expired = false) {
+  clearInterval(timer);
+  timer = null;
+  // If the clock ran out, the elapsed time is the full allotment; if Done came
+  // early, the real elapsed time is what the wpm is computed from.
+  if (expired && g.allowedMs) g.readStartedAt = Date.now() - g.allowedMs;
+  finishReading();
 }
 
 function countIn(n) {
@@ -462,24 +518,13 @@ function finishReading() {
   g.lastElapsedMs = Date.now() - g.readStartedAt;
 
   if (g.mode === 'free') return endGame();
-  // Rare: a book stretch too fragmented for cloze generation (front matter,
-  // tables). Bank the reading and move the bookmark rather than blocking.
-  if (g.mode === 'book' && g.passage.questions.length < 3) {
-    advanceBookmark();
-    return endGame();
-  }
+  // Rare: a passage too fragmented for cloze generation. Bank the reading.
+  if (g.mode === 'book' && g.passage.questions.length < 3) return endGame();
 
   g.quizIndex = 0;
   g.quizAnswers = [];
   showScreen('quiz');
   renderQuestion();
-}
-
-function advanceBookmark() {
-  if (!g || g.mode !== 'book') return;
-  const b = g.book;
-  bookmarks[b.meta.slug] = { chunk: Math.min(b.from + b.got, b.total), t: Date.now() };
-  saveBookmarks();
 }
 
 // ---------------------------------------------------------------------------
@@ -549,9 +594,16 @@ function scoreRound() {
   lvl.correct += correct;
   lvl.total += qs.length;
 
-  // Finishing the quiz banks the reading — the bookmark advances regardless
-  // of the score. You read it; the score just tells you how well.
-  if (g.mode === 'book') advanceBookmark();
+  if (g.mode === 'book') {
+    // Track the best comprehension per passage — the ✓ in the library list.
+    const prev = store.passagesDone[g.book.id];
+    store.passagesDone[g.book.id] = Math.max(prev || 0, comprehension);
+  }
+
+  if (g.mode === 'baseline') {
+    // The number every other mode trains against.
+    store.baselineWpm = actualWpm;
+  }
 
   if (g.mode === 'ladder' && comprehension >= LADDER_PASS) {
     g.rung += 1;
@@ -643,11 +695,11 @@ function endGame(aborted = false) {
     $('results-note').textContent = 'Free reads aren\'t scored — run a Benchmark to see whether that speed is holding.';
     $('results-review').innerHTML = '';
   } else if (!last) {
-    // A book stretch too fragmented to quiz — banked without a score.
-    $('results-title').textContent = g.book ? g.book.meta.title : 'Done';
+    // A passage too fragmented to quiz — banked without a score.
+    $('results-title').textContent = g.book ? `${g.book.book_title} — ${g.book.label}` : 'Done';
     $('results-score').innerHTML = `${g.words.length.toLocaleString()}<span> words</span>`;
     $('results-stats').innerHTML = '';
-    $('results-note').textContent = 'That stretch was too fragmented to quiz (front matter, most likely) — bookmarked and moving on.';
+    $('results-note').textContent = 'That stretch was too fragmented to quiz — banked without a score.';
     $('results-review').innerHTML = '';
   } else {
     const comp = Math.round(last.comprehension * 100);
@@ -661,16 +713,19 @@ function endGame(aborted = false) {
       `<div class="stat"><b>${last.correct}/${last.total}</b><span>correct</span></div>` +
       (g.mode === 'ladder' ? `<div class="stat"><b>${g.rung}</b><span>rungs climbed</span></div>` : '');
 
-    if (g.mode === 'book') {
-      const b = g.book;
-      const done = Math.min(b.from + b.got, b.total);
-      const pct = Math.round((done / b.total) * 100);
-      const wordsLeft = ((b.total - done) / b.total) * b.meta.words;
-      const hoursLeft = last.effective > 0 ? wordsLeft / last.effective / 60 : null;
-      $('results-title').textContent = `${b.meta.title} — ${pct}%`;
-      $('results-note').textContent = done >= b.total
-        ? '📕 Finished. That\'s a whole book banked.'
-        : `Bookmarked. ${hoursLeft !== null ? `About ${hoursLeft.toFixed(1)}h of reading left at this effective speed — "Go again" continues from here.` : '"Go again" continues from here.'}`;
+    if (g.mode === 'baseline') {
+      $('results-title').textContent = '⏱ Your baseline';
+      // Train slightly above natural pace — pressure without collapse.
+      const train = Math.round((last.wpm + 50) / 25) * 25;
+      sel.wpm = Math.min(900, Math.max(150, train));
+      $('results-note').textContent =
+        `Your natural pace is ${last.wpm} wpm at ${comp}% comprehension. ` +
+        `I've set the speed slider to ${sel.wpm} — training just above natural is where the gains are.`;
+    } else if (g.mode === 'book') {
+      $('results-note').textContent =
+        comp >= 85 ? 'You own this passage. It\'s marked ✓ in the library.'
+          : comp >= 60 ? 'Decent hold — worth one more pass at the same speed.'
+          : 'That one slipped past you — reread it slower. These passages are the ones worth actually keeping.';
     } else {
       $('results-note').textContent =
         comp >= 85 ? 'Comprehension is holding. Push the speed up 50 and see if it still does.'
@@ -702,6 +757,7 @@ function renderStats() {
   const avgEwpm = h.length ? Math.round(h.reduce((s, r) => s + r.ewpm, 0) / h.length) : 0;
   $('stats-summary').innerHTML =
     `<span><b>Lv ${levelForXp(store.xp)}</b> · ${store.xp.toLocaleString()} XP</span>` +
+    `<span><b>${store.baselineWpm || '—'}</b> baseline</span>` +
     `<span><b>${store.bestEffective || '—'}</b> best ewpm</span>` +
     `<span><b>${avgEwpm || '—'}</b> average</span>` +
     `<span><b>${store.wordsRead.toLocaleString()}</b> words</span>`;
@@ -748,6 +804,8 @@ function renderStats() {
 
 $('start-btn').addEventListener('click', startGame);
 $('quit-btn').addEventListener('click', () => endGame(true));
+$('scroll-quit').addEventListener('click', () => endGame(true));
+$('scroll-done').addEventListener('click', () => finishScrollRead(false));
 $('again-btn').addEventListener('click', startGame);
 $('menu-btn').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
 $('stats-btn').addEventListener('click', () => { renderStats(); showScreen('stats'); });
@@ -762,6 +820,9 @@ document.addEventListener('keydown', (e) => {
   if (screens.read.classList.contains('active')) {
     if (e.code === 'Space') { e.preventDefault(); togglePause(); }
     else if (e.key === 'Escape') endGame(true);
+  } else if (screens.scroll.classList.contains('active')) {
+    if (e.key === 'Escape') endGame(true);
+    else if (e.key === 'Enter') finishScrollRead(false);
   } else if (screens.quiz.classList.contains('active')) {
     const n = parseInt(e.key, 10);
     if (n >= 1 && n <= 9) {
