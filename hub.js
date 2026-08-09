@@ -39,9 +39,10 @@
     [{ g: 'reader', mode: 'Book passages', why: 'Friday is books — one signature passage, kept for good.' }],
     [{ g: 'chronicle', mode: 'Sequence', why: 'Order four events — the drill that builds the actual timeline.' },
      { g: 'mapmaster', mode: 'Find it', why: 'The reverse drill — recall is stronger than recognition.' }],
-    [{ g: 'briefing', mode: 'Daily', why: 'Recall yesterday cold, keep today in writing — graded.' },
-     { g: 'reader', mode: 'Timed read', why: 'Whole-page reading under a clock — closest to real reading.' }],
+    [{ g: 'reader', mode: 'Timed read', why: 'Whole-page reading under a clock — closest to real reading.' }],
   ];
+  // Briefing isn't in the rotation — it's the standing daily duty alongside
+  // whatever game the rotation picks.
 
   const STREAK_KEY = 'games.streak.v1';
 
@@ -76,17 +77,17 @@
     // your natural reading speed, and every Reader mode trains against it.
     const reader = read('reader.profile.v1');
     if (!reader || !reader.baselineWpm) {
-      return { game: GAMES.reader, mode: 'Baseline', why: 'The audit comes first — one passage at your natural pace sets the number everything else trains against.' };
+      return { key: 'reader', game: GAMES.reader, mode: 'Baseline', why: 'The audit comes first — one passage at your natural pace sets the number everything else trains against.' };
     }
 
     // First Sunday of the month: re-baseline. The trend is the score.
     if (dayIdx === 6 && now.getDate() <= 7) {
-      return { game: GAMES.reader, mode: 'Baseline', why: 'First Sunday — monthly re-baseline. The trend over months is the real score.' };
+      return { key: 'reader', game: GAMES.reader, mode: 'Baseline', why: 'First Sunday — monthly re-baseline. The trend over months is the real score.' };
     }
 
     const cand = ROTATION[dayIdx].find((c) => GAMES[c.g]) || { g: 'reader', mode: 'Flash read', why: 'Speed with comprehension held.' };
     const gameKey = cand.g;
-    const pick = { game: GAMES[gameKey], mode: cand.mode, why: cand.why };
+    const pick = { key: gameKey, game: GAMES[gameKey], mode: cand.mode, why: cand.why };
 
     // Sharpen with what the games already know about you.
     if (gameKey === 'mapmaster') {
@@ -107,6 +108,26 @@
     return pick;
   }
 
+  /* Which games were launched today, so each duty can carry its own check.
+     "Launched" is the honest signal the hub can actually observe. */
+  const PLAYLOG_KEY = 'games.playlog.v1';
+  const playedToday = () => (read(PLAYLOG_KEY) || {})[todayKey()] || [];
+  function recordPlay(key) {
+    const log = read(PLAYLOG_KEY) || {};
+    const today = log[todayKey()] || [];
+    if (!today.includes(key)) log[todayKey()] = [...today, key];
+    // Keep the log small — only the last two weeks matters.
+    const keep = Object.keys(log).sort().slice(-14);
+    write(PLAYLOG_KEY, Object.fromEntries(keep.map((k) => [k, log[k]])));
+  }
+
+  // The Brief's own definition of "kept": every story graded. Read straight
+  // from Briefing's store (it keys days by UTC date, so match that).
+  function briefDoneToday() {
+    const b = read('briefing.profile.v1');
+    return Boolean(b && b.doneDates && b.doneDates[new Date().toISOString().slice(0, 10)]);
+  }
+
   function renderToday() {
     const host = document.getElementById('today');
     if (!host) return;
@@ -120,16 +141,26 @@
       return `<span class="day${i === dayIdx ? ' now' : ''}" title="${g.name} — ${c.mode}">${dayNames[i]}<em>${g.icon}</em></span>`;
     }).join('');
 
+    // Two things, every day: the Brief, and the rotation's game.
+    const briefDone = briefDoneToday();
+    const briefStarted = playedToday().includes('briefing');
+    const gameDone = playedToday().some((k) => k !== 'briefing');
+    const bothDone = briefDone && gameDone;
+
+    const duty = (key, game, title, sub, done, doneLabel) => `
+      <a class="duty${done ? ' done' : ''}" href="${game.href}" data-key="${key}">
+        <span class="check">${done ? '✓' : ''}</span>
+        <span class="d-icon">${game.icon}</span>
+        <span class="d-body"><b>${title}</b><small>${sub}</small></span>
+        <span class="d-go">${done ? doneLabel : 'Play →'}</span>
+      </a>`;
+
     host.innerHTML = `
-      <div class="today-label">${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][dayIdx]}</div>
-      <div class="today-row">
-        <div class="today-icon">${pick.game.icon}</div>
-        <div class="today-body">
-          <div class="today-pick">${pick.game.name} · ${pick.mode}</div>
-          <div class="today-why">${pick.why}</div>
-        </div>
-      </div>
-      <a class="today-play" href="${pick.game.href}" data-game="${pick.game.name}">Play ${pick.mode} →</a>
+      <div class="today-label">${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][dayIdx]}${bothDone ? ' — day complete' : ''}</div>
+      ${duty('briefing', GAMES.briefing, 'The Brief',
+        briefDone ? 'Kept — every story graded.' : briefStarted ? 'Started — some stories still ungraded.' : 'Recall yesterday · keep today · graded.',
+        briefDone, 'Kept ✓')}
+      ${duty(pick.key, pick.game, `${pick.game.name} · ${pick.mode}`, pick.why, gameDone, 'Played ✓')}
       <div class="week-strip">${strip}</div>`;
   }
 
@@ -217,8 +248,9 @@
   // Launching a game is the thing that counts. Delay the navigation just long
   // enough for the streak to light up — the payoff has to be visible.
   document.addEventListener('click', (e) => {
-    const link = e.target.closest('a.game:not(.soon), a.today-play');
+    const link = e.target.closest('a.game:not(.soon), a.duty, a.today-play');
     if (!link) return;
+    recordPlay(link.dataset.key || link.dataset.game || 'unknown');
     const before = loadStreak().streak;
     const after = bumpStreak().streak;
     if (after === before) return;                 // already played today

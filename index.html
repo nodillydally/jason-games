@@ -188,6 +188,60 @@
   .week-strip .day em { display: block; font-style: normal; font-size: 13px; margin-top: 3px; }
   .week-strip .day.now { background: var(--ink); color: var(--paper); }
 
+  /* The two daily duties: the Brief, and the rotation's game. */
+  .duty {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--rule);
+    border-radius: var(--r-md);
+    text-decoration: none;
+    color: inherit;
+    margin-bottom: 10px;
+    background: var(--paper);
+    transition: background .2s ease, border-color .2s ease;
+  }
+  .duty:hover { background: var(--paper-2); border-color: var(--ink-3); }
+  .duty .check {
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border-radius: 50%;
+    border: 1.5px solid var(--rule);
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    color: var(--paper);
+  }
+  .duty.done .check { background: var(--good); border-color: var(--good); }
+  .duty .d-icon { font-size: 1.1rem; flex: none; }
+  .duty .d-body { flex: 1; min-width: 0; }
+  .duty .d-body b {
+    display: block;
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: 400;
+    letter-spacing: -.015em;
+  }
+  .duty .d-body small {
+    display: block;
+    color: var(--ink-2);
+    font-size: 12.5px;
+    line-height: 1.45;
+    margin-top: 2px;
+  }
+  .duty .d-go {
+    flex: none;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .duty.done .d-go { color: var(--good); }
+
   /* --------------------------- combined rank --------------------------- */
 
   .rank-card {

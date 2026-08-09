@@ -140,6 +140,9 @@ function renderMenu() {
     `<span><b>${Object.keys(store.doneDates).length}</b> briefs kept</span>` +
     `<span><b>${avg !== null ? `${letterFor(avg)} (${avg})` : '—'}</b> avg grade</span>`;
 
+  // News dump only needs grading, not the feed — any synced day qualifies.
+  $('dump-btn').disabled = !Sync.isEnabled();
+
   if (!Sync.isEnabled()) {
     $('setup-hint').textContent = 'Briefing reads your private news feed — turn on Cloud sync below first.';
     $('start-btn').disabled = true;
@@ -180,10 +183,12 @@ let marketsError = null;
 
 // Every draft keystroke and every landed grade goes straight to localStorage,
 // keyed by the brief's date — leaving mid-session loses nothing.
+const dayKeyFor = () => (g && g.type === 'dump' ? 'briefing.dump.v1' : DAY_KEY);
+
 function saveDay() {
   if (!g) return;
   try {
-    localStorage.setItem(DAY_KEY, JSON.stringify({
+    localStorage.setItem(dayKeyFor(), JSON.stringify({
       date: g.brief.date,
       id: g.id,
       startedAt: g.startedAt,
@@ -198,17 +203,22 @@ function saveDay() {
 
 function loadDay(date) {
   try {
-    const s = JSON.parse(localStorage.getItem(DAY_KEY));
+    const s = JSON.parse(localStorage.getItem(dayKeyFor()));
     return s && s.date === date ? s : null;
   } catch { return null; }
 }
 
-function startDay() {
-  if (!briefs || !briefs.length) return;
-  const brief = briefs[0];
+function startDay(type = 'brief') {
+  if (type === 'brief' && (!briefs || !briefs.length)) return;
+  const brief = type === 'brief' ? briefs[0]
+    : { date: new Date().toISOString().slice(0, 10), topic: 'your own sources', items: [] };
 
   const tabs = {};
-  if (briefs[1]) tabs.recall = { text: '', grade: null, pending: false, hinted: false, error: null };
+  // Recall of yesterday works in both session types, whenever a brief exists
+  // to grade against. (In dump mode, "yesterday" is the latest brief.)
+  const recallBrief = type === 'brief' ? briefs && briefs[1] : briefs && briefs[0];
+  if (recallBrief) tabs.recall = { text: '', grade: null, pending: false, hinted: false, error: null };
+  if (type === 'dump') tabs.dump = { text: '', grade: null, pending: false, error: null };
   brief.items.forEach((_, i) => { tabs[`s${i}`] = { text: '', grade: null, pending: false, error: null }; });
   tabs.markets = { text: '', grade: null, pending: false, error: null };
 
@@ -216,9 +226,11 @@ function startDay() {
     id: (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`),
     startedAt: Date.now(),
     log: [],
+    type,
     brief,
+    recallBrief,
     tabs,
-    active: briefs[1] ? 'recall' : 's0',
+    active: recallBrief ? 'recall' : type === 'dump' ? 'dump' : 's0',
     score: 0,
     finished: false,
   };
@@ -239,7 +251,7 @@ function startDay() {
     if (next) g.active = next;
   }
 
-  $('day-meta').textContent = `${weekday(brief.date)} · ${brief.topic}`;
+  $('day-meta').textContent = g.type === 'dump' ? `News dump · ${weekday(brief.date)}` : `${weekday(brief.date)} · ${brief.topic}`;
   showScreen('day');
   renderTabs();
   renderPanel();
@@ -253,8 +265,16 @@ const storiesAllGraded = () => g.brief.items.every((_, i) => g.tabs[`s${i}`].gra
 
 function tabLabel(key) {
   if (key === 'recall') return '🧠 Yesterday';
+  if (key === 'dump') return '🎙 Today';
   if (key === 'markets') return '📈 Markets';
   return `Story ${Number(key.slice(1)) + 1}`;
+}
+
+// "Kept the day" means different things per session type: every story graded
+// for a brief; the dump graded for a dump.
+function keptToday() {
+  if (g.type === 'dump') return Boolean(g.tabs.dump && g.tabs.dump.grade);
+  return storiesAllGraded();
 }
 
 function renderTabs() {
@@ -354,7 +374,7 @@ function renderPanel() {
   const state = g.tabs[key];
 
   if (key === 'recall') {
-    const y = briefs[1];
+    const y = g.recallBrief;
     const hintHtml = state.hinted
       ? `<div class="hint-reveal"><b>Headlines (cued recall — caps the grade)</b><ul>${y.items.map((it) => `<li>${esc(it.headline || it.what)}</li>`).join('')}</ul></div>`
       : `<button id="hint-btn" class="ghost">Show headlines (caps the grade at 85)</button>`;
@@ -365,6 +385,15 @@ function renderPanel() {
         ${state.grade
           ? gradeCard(state.grade, `<div class="reveal-block"><b>${weekday(y.date)}'s stories were</b><ul>${y.items.map((it) => `<li>${esc(it.headline || it.what)}</li>`).join('')}</ul></div>`)
           : promptBlock([`${y.items.length} stories`, 'What happened?', 'Why did it matter?'], state, 'Save & next', hintHtml)}
+      </div>`;
+  } else if (key === 'dump') {
+    panel.innerHTML = `
+      <div class="card story-card">
+        <div class="story-meta">News dump · ${weekday(g.brief.date)} · your own sources</div>
+        <h2 class="panel-title">What did you learn from today's news?</h2>
+        ${state.grade
+          ? gradeCard(state.grade)
+          : promptBlock(['Every story you picked up', 'Why each matters', 'What you think', 'Connect them'], state, 'Save & next')}
       </div>`;
   } else if (key === 'markets') {
     renderMarketsPanel(panel, state);
@@ -469,9 +498,11 @@ function submitTake() {
   state.error = null;
 
   const payload = key === 'recall'
-    ? { kind: 'recall', date: briefs[1].date, user_text: text, hinted: Boolean(state.hinted) }
+    ? { kind: 'recall', date: g.recallBrief.date, user_text: text, hinted: Boolean(state.hinted) }
     : key === 'markets'
     ? { kind: 'markets', user_text: text }
+    : key === 'dump'
+    ? { kind: 'dump', date: session.brief.date, user_text: text }
     : { kind: 'story', date: session.brief.date, idx: Number(key.slice(1)), user_text: text };
 
   apiPost('game-grade', payload).then((grade) => {
@@ -483,7 +514,7 @@ function submitTake() {
     store.gradedCount += 1;
     saveStore();
     g.log.push({
-      item_id: key === 'recall' ? `${briefs[1].date}#recall` : key === 'markets' ? `${g.brief.date}#markets` : `${g.brief.date}#${key.slice(1)}`,
+      item_id: key === 'recall' ? `${g.recallBrief.date}#recall` : key === 'markets' ? `${g.brief.date}#markets` : key === 'dump' ? `${g.brief.date}#dump` : `${g.brief.date}#${key.slice(1)}`,
       item_name: (key.startsWith('s') ? (g.brief.items[Number(key.slice(1))].headline || '') : tabLabel(key)).slice(0, 120) || tabLabel(key),
       correct: grade.score >= 70,
       ms: 0,
@@ -517,7 +548,7 @@ function syncSession(aborted, xpGain) {
     game: 'briefing',
     session: {
       client_session_id: g.id,
-      mode: 'daily',
+      mode: g.type === 'dump' ? 'dump' : 'daily',
       continent: null,
       difficulty: null,
       question_type: 'graded',
@@ -562,7 +593,7 @@ function endGame(aborted = false) {
 
   // The streak is for keeping the whole brief — every story graded. Recall
   // and markets are bonuses, not gates.
-  if (storiesAllGraded()) store.doneDates[g.brief.date] = true;
+  if (keptToday()) store.doneDates[g.brief.date] = true;
 
   g.finished = true;
   saveDay();
@@ -587,7 +618,7 @@ function renderResults(xpGain = 0, levelBefore = null, levelAfter = null) {
   const graded = tabKeys().filter((k) => g.tabs[k].grade);
   const avg = graded.length ? Math.round(graded.reduce((s, k) => s + g.tabs[k].grade.score, 0) / graded.length) : 0;
 
-  $('results-title').textContent = storiesAllGraded() ? 'Brief kept' : 'Progress banked';
+  $('results-title').textContent = keptToday() ? (g.type === 'dump' ? 'Day dumped & kept' : 'Brief kept') : 'Progress banked';
   $('results-score').innerHTML = `${letterFor(avg)}<span> · ${avg}/100 average</span>`;
   $('results-stats').innerHTML =
     `<div class="stat"><b>${graded.length}/${tabKeys().length}</b><span>graded</span></div>` +
@@ -596,7 +627,7 @@ function renderResults(xpGain = 0, levelBefore = null, levelAfter = null) {
   $('results-xp').innerHTML = (levelAfter !== null && levelAfter > levelBefore)
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`
     : xpGain ? `+${xpGain} XP` : '';
-  $('results-note').textContent = storiesAllGraded()
+  $('results-note').textContent = keptToday()
     ? 'Tomorrow opens with cold recall of today.'
     : 'Streak counts full briefs — some stories are still ungraded.';
 
@@ -641,7 +672,8 @@ function renderStats() {
 // Wiring
 // ---------------------------------------------------------------------------
 
-$('start-btn').addEventListener('click', startDay);
+$('start-btn').addEventListener('click', () => startDay('brief'));
+$('dump-btn').addEventListener('click', () => startDay('dump'));
 $('day-quit').addEventListener('click', () => endGame(true));
 $('menu-btn').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
 $('stats-btn').addEventListener('click', () => { renderStats(); showScreen('stats'); });
