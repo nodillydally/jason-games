@@ -9,6 +9,13 @@
   --p2: #6E8C63;
 }
 
+/* Loaded after lib/theme.css, so this keeps Numbers green at night rather than
+   inheriting the shared blue. */
+:root[data-theme="dark"] {
+  --p1: #93C583;
+  --p2: #6E8C63;
+}
+
 #app { max-width: 680px; }
 
 /* --------------------------- question stage --------------------------- */

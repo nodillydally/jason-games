@@ -58,6 +58,10 @@
   --good-ink: #FFFFFF;
   --bad-ink: #FFFFFF;
   --on-ink: var(--paper);
+  --on-good: #FFFFFF;      /* text that sits on a filled good/bad answer — */
+  --on-bad: #FFFFFF;       /* flips to dark once those fills lighten for dark mode */
+  --ink-hard: #000000;     /* where a pressed primary goes: further from the ground */
+  --ripple: #14111018;
 
   --serif: "Instrument Serif", "Times New Roman", Georgia, serif;
   --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -75,6 +79,55 @@
   --spring: cubic-bezier(.2, .8, .2, 1);   /* deliberately not springy */
 
   --tap: 44px;
+}
+
+/* ====================== dark ======================
+ * Not an inversion — the same paper stock at night. The ground stays warm
+ * (#14120E, not #000) and the text stays cream, so the two themes read as one
+ * design in two lights rather than as two designs.
+ *
+ * Only the ground-level tokens are redefined. Everything else in this file is
+ * expressed through them, so the whole system — including each game's skin and
+ * lib/sync.css — follows without a second rule being written.
+ *
+ * lib/theme.js stamps data-theme on <html> from <head>, before first paint.
+ * The values below are the only place dark colour is defined. */
+
+:root[data-theme="dark"] {
+  --paper: #14120E;
+  --paper-2: #1E1A15;
+  --card-bg: #1A1712;
+  --ink: #F2EDE3;
+  --ink-2: #BCB3A4;
+  --ink-3: #8A8175;
+  --rule: #F2EDE31f;
+  --rule-2: #F2EDE314;
+  --stroke-hi: #F2EDE33d;
+
+  /* Accents lift off the dark ground; the deep navys and mosses of the light
+     theme would vanish into it. */
+  --p1: #8AAFD6;
+  --p2: #6B8CAF;
+  --a1: #F0B646;
+  --a2: #E0A63F;
+  --good: #6FA968;
+  --bad: #E08878;
+
+  /* Filled answer buttons are now light, so their text goes dark. */
+  --on-good: #10160F;
+  --on-bad: #1E0D0A;
+  --ink-hard: #FFFFFF;
+  --ripple: #F2EDE322;
+
+  --shadow: 0 1px 0 #00000040, 0 12px 28px -18px #000000cc;
+  --shadow-lift: 0 1px 0 #00000040, 0 26px 50px -22px #000000e6;
+}
+
+/* The grain has to change sign: dark speckle on cream, light speckle on ink. */
+:root[data-theme="dark"] .fx-grain {
+  mix-blend-mode: screen;
+  filter: invert(1);
+  opacity: .05;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -242,7 +295,7 @@ button {
   transition: background .2s ease, color .2s ease, border-color .2s ease,
               box-shadow .2s ease, transform .15s ease;
 }
-button:hover { border-color: #14111038; box-shadow: var(--shadow); }
+button:hover { border-color: var(--stroke-hi); box-shadow: var(--shadow); }
 button:active { transform: translateY(1px); }
 button:focus-visible { outline: 2px solid var(--p1); outline-offset: 2px; }
 button:disabled { cursor: default; }
@@ -255,7 +308,7 @@ button.primary {
   font-weight: 500;
   box-shadow: var(--shadow);
 }
-button.primary:hover { background: #000; box-shadow: var(--shadow-lift); }
+button.primary:hover { background: var(--ink-hard); box-shadow: var(--shadow-lift); }
 button.primary:disabled { opacity: .35; box-shadow: var(--shadow); }
 
 button.big {
@@ -278,7 +331,7 @@ button.ghost:hover { background: var(--paper-2); color: var(--ink); }
   position: absolute;
   border-radius: 50%;
   transform: translate(-50%, -50%) scale(0);
-  background: radial-gradient(circle, #14111018, transparent 70%);
+  background: radial-gradient(circle, var(--ripple), transparent 70%);
   pointer-events: none;
   z-index: 2;
   animation: ripple .5s var(--ease) forwards;
@@ -311,7 +364,7 @@ button.ghost:hover { background: var(--paper-2); color: var(--ink); }
   box-shadow: var(--shadow);
 }
 .opt-grid button.selected .sub,
-.opt-grid button.active .sub { color: #F6EFE2a0; }
+.opt-grid button.active .sub { color: color-mix(in oklab, var(--paper) 68%, transparent); }
 .opt-grid button:disabled { opacity: .3; }
 
 .opt-icon { margin-right: 7px; }
@@ -504,12 +557,12 @@ button.ghost:hover { background: var(--paper-2); color: var(--ink); }
 #choices button.correct {
   background: var(--good);
   border-color: var(--good);
-  color: #fff;
+  color: var(--on-good);
 }
 #choices button.wrong {
   background: var(--bad);
   border-color: var(--bad);
-  color: #fff;
+  color: var(--on-bad);
 }
 /* No bounce, no shake — the colour change is the whole message. */
 
@@ -813,8 +866,8 @@ input:focus, textarea:focus {
   100% { opacity: 0; transform: translate(-50%, -10px); }
 }
 
-/* Sound toggle — a mono label, not a button that shouts. */
-.fx-sound {
+/* Sound and theme toggles — two quiet discs in the corner, not a control bar. */
+.fx-sound, .fx-theme {
   position: fixed;
   right: calc(16px + env(safe-area-inset-right));
   bottom: calc(16px + env(safe-area-inset-bottom));
@@ -833,7 +886,10 @@ input:focus, textarea:focus {
   opacity: .5;
   transition: opacity .2s ease, box-shadow .2s ease;
 }
-.fx-sound:hover { opacity: 1; box-shadow: var(--shadow-lift); }
+.fx-sound:hover, .fx-theme:hover { opacity: 1; box-shadow: var(--shadow-lift); }
+
+/* The theme disc sits inboard of the sound one. */
+.fx-theme { right: calc(62px + env(safe-area-inset-right)); font-size: 14px; }
 
 /* ====================== small screens ====================== */
 

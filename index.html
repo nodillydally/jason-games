@@ -7,13 +7,30 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Jason's Learning Games</title>
 <link rel="stylesheet" href="lib/theme.css">
+<script src="lib/theme.js"></script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
 <style>
   /* Hub-only styles. Everything structural comes from lib/theme.css. */
 
-  main.wrap { max-width: 760px; }
+  main.wrap { max-width: 1040px; }
 
   /* ------------------------------ header ------------------------------ */
+  /* One column on a phone. On anything desktop-shaped the masthead and the
+     day's session sit side by side, so the page fills its width instead of
+     stranding everything against the left edge. */
+
+  .hub-top { display: grid; grid-template-columns: 1fr; gap: 30px; }
+
+  @media (min-width: 900px) {
+    .hub-top {
+      grid-template-columns: 1.02fr .98fr;
+      gap: 64px;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+    .hub-top .sec-head { margin-top: 0; }
+    .hub-head { padding-top: 26px; }
+  }
 
   .hub-head { padding-top: 12px; }
   .hub-head .title { margin: 18px 0 0; }
@@ -182,24 +199,30 @@
   }
   .rank-card .level-badge { font-size: 34px; }
 
-  /* ------------------------------ game list ------------------------------ */
-  /* A ruled list, not a deck of cards: on a phone it scans in one pass. */
+  /* ------------------------------ game cards ------------------------------ */
+  /* Cards, not rows: on a phone each game gets its own object to press, and
+     the grid reflows to two-up on anything wider than a handset. */
 
   .grid {
-    border-top: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+    gap: 12px;
   }
 
   .game {
     position: relative;
     display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 20px 4px;
-    border-bottom: 1px solid var(--rule);
+    flex-direction: column;
+    gap: 12px;
+    padding: 22px 20px 18px;
+    background: var(--card-bg);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow);
     text-decoration: none;
     color: inherit;
     overflow: hidden;
-    transition: background .25s ease, padding-left .25s ease;
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
     animation: rise .5s var(--ease) both;
   }
   .game:nth-of-type(2) { animation-delay: .05s; }
@@ -208,75 +231,79 @@
   .game:nth-of-type(5) { animation-delay: .20s; }
   .game:nth-of-type(6) { animation-delay: .25s; }
   .game:nth-of-type(7) { animation-delay: .30s; }
+  .game:nth-of-type(8) { animation-delay: .35s; }
 
-  .game:hover { background: var(--paper-2); padding-left: 12px; }
-
-  /* The only colour each row gets: a hairline in the game's own ink. */
+  /* The card's whole colour budget: a printed band across the head. */
   .game::before {
     content: "";
     position: absolute;
-    left: 0;
-    top: 12px;
-    bottom: 12px;
-    width: 2px;
+    inset: 0 0 auto;
+    height: 3px;
     background: var(--c1, var(--p1));
-    border-radius: 2px;
-    opacity: 0;
-    transition: opacity .25s ease;
   }
-  .game:hover::before { opacity: 1; }
+
+  .game:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+    border-color: var(--stroke-hi);
+  }
+  .game:active { transform: translateY(0); }
 
   .game .icon {
     flex: none;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     display: grid;
     place-items: center;
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     border-radius: var(--r-md);
-    background: var(--card-bg);
+    background: var(--paper);
     border: 1px solid var(--rule);
   }
 
   .game .body { flex: 1; min-width: 0; }
   .game h2 {
     font-family: var(--serif);
-    font-size: 24px;
-    line-height: 1.1;
-    letter-spacing: -.015em;
+    font-size: 25px;
+    line-height: 1.08;
+    letter-spacing: -.02em;
   }
   .game p {
     color: var(--ink-2);
-    font-size: 13.5px;
-    line-height: 1.5;
-    margin-top: 5px;
-    max-width: 46ch;
+    font-size: 13px;
+    line-height: 1.55;
+    margin-top: 8px;
   }
 
   /* Per-game level, read straight out of the game's own localStorage. */
   .game .lv {
     display: inline-block;
-    margin-left: 10px;
+    margin-left: 8px;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 9.5px;
     letter-spacing: .1em;
     text-transform: uppercase;
     color: var(--c1, var(--p1));
     vertical-align: middle;
   }
 
+  /* Pinned to the foot so cards of different heights still line up. */
   .game .go {
-    flex: none;
-    font-family: var(--serif);
-    font-size: 20px;
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule-2);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
     color: var(--ink-3);
-    transition: transform .25s ease, color .25s ease;
+    transition: color .25s ease;
   }
-  .game:hover .go { transform: translateX(4px); color: var(--ink); }
+  .game:hover .go { color: var(--c1, var(--p1)); }
 
-  .game.soon { pointer-events: none; }
-  .game.soon .icon, .game.soon h2, .game.soon p { opacity: .45; }
-  .game.soon .go { display: none; }
+  .game.soon { pointer-events: none; box-shadow: none; }
+  .game.soon::before { opacity: .3; }
+  .game.soon .icon, .game.soon h2, .game.soon p { opacity: .4; }
   .game.soon h2::after {
     content: "soon";
     font-family: var(--mono);
@@ -289,8 +316,8 @@
     padding: 3px 9px;
     margin-left: 10px;
     vertical-align: middle;
-    opacity: 1;
   }
+
 
   footer {
     margin-top: 44px;
@@ -318,20 +345,23 @@
 <body>
 <main class="wrap">
 
-  <header class="hub-head">
-    <span class="eyebrow">Deliberate practice</span>
-    <div class="title">
-      <h1>Learning<br><em>Games</em></h1>
-      <p>One session a day. The rotation covers every domain — if you keep showing up.</p>
-    </div>
-    <div id="streak" class="streak-line cold">
-      <span class="dot"></span> <b id="streak-n">0</b> day streak
-    </div>
-  </header>
+  <div class="hub-top">
+    <header class="hub-head">
+      <span class="eyebrow">Deliberate practice</span>
+      <div class="title">
+        <h1>Learning<br><em>Games</em></h1>
+        <p>One session a day. The rotation covers every domain — if you keep showing up.</p>
+      </div>
+      <div id="streak" class="streak-line cold">
+        <span class="dot"></span> <b id="streak-n">0</b> day streak
+      </div>
+    </header>
 
-  <div class="sec-head">Today</div>
-
-  <section id="today" class="today"></section>
+    <div class="hub-today">
+      <div class="sec-head">Today</div>
+      <section id="today" class="today"></section>
+    </div>
+  </div>
 
   <div class="card rank-card" id="rank-card">
     <div class="level-badge"><span id="rank-level">1</span><small>Overall level</small></div>
@@ -350,7 +380,7 @@
         <h2>Mapmaster</h2>
         <p>Name the country, find it on the map, drill the ones you keep missing.</p>
       </span>
-      <span class="go">→</span>
+      <span class="go">Play →</span>
     </a>
 
     <a class="game" href="games/numbers/" data-game="numbers" style="--c1:#3E5E3A;">
@@ -359,7 +389,7 @@
         <h2>Numbers</h2>
         <p>Mental math under time pressure — and the shortcuts behind it.</p>
       </span>
-      <span class="go">→</span>
+      <span class="go">Play →</span>
     </a>
 
     <a class="game" href="games/reader/" data-game="reader" style="--c1:#C76A5E;">
@@ -368,7 +398,7 @@
         <h2>Reader</h2>
         <p>Speed reading with a comprehension check — raw wpm means nothing alone.</p>
       </span>
-      <span class="go">→</span>
+      <span class="go">Play →</span>
     </a>
 
     <a class="game" href="games/chronicle/" data-game="chronicle" style="--c1:#8A6A3B;">
@@ -377,7 +407,7 @@
         <h2>Chronicle</h2>
         <p>The timeline of history — what happened when, which came first, and why it mattered.</p>
       </span>
-      <span class="go">→</span>
+      <span class="go">Play →</span>
     </a>
 
     <a class="game" href="games/briefing/" data-game="briefing" style="--c1:#3D5A80;">
@@ -386,7 +416,7 @@
         <h2>Briefing</h2>
         <p>Your daily news, kept — commit to the why before seeing it, then get quizzed on yesterday's.</p>
       </span>
-      <span class="go">→</span>
+      <span class="go">Play →</span>
     </a>
 
     <a class="game soon" href="#" style="--c1:#6B8CAF;">

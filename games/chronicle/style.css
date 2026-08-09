@@ -9,6 +9,11 @@
   --p2: #C79A4F;          /* aged gold */
 }
 
+:root[data-theme="dark"] {
+  --p1: #D6AC6A;
+  --p2: #C79A4F;
+}
+
 #app { max-width: 680px; }
 
 /* --------------------------- question stage --------------------------- */

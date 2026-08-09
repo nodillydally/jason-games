@@ -16,6 +16,18 @@
   --land-hover: #C9B893;
 }
 
+/* At night the atlas is printed the other way round: dark sea, warm land that
+   still reads as the raised thing. Loaded after lib/theme.css, so these win. */
+:root[data-theme="dark"] {
+  --p1: #8AB4DE;
+  --p2: #6B8CAF;
+
+  --sea: #100E0A;
+  --land: #3B3327;
+  --land-edge: #F2EDE322;
+  --land-hover: #4E4334;
+}
+
 #app { max-width: 940px; }
 
 /* ------------------------------- map ------------------------------- */
@@ -54,10 +66,11 @@
 #map.clickable .country:hover { fill: var(--land-hover); }
 
 #map .country.dim { fill: #E7DCC4; }
+:root[data-theme="dark"] #map .country.dim { fill: #272117; }
 
 #map .country.target {
   fill: var(--a1);
-  stroke: #14111055;
+  stroke: var(--stroke-hi);
   stroke-width: .8;
   animation: target-fade 1.8s ease-in-out infinite;
 }

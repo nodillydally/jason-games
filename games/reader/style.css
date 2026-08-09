@@ -9,6 +9,11 @@
   --p2: #D99A7E;
 }
 
+:root[data-theme="dark"] {
+  --p1: #E89184;
+  --p2: #D99A7E;
+}
+
 #app { max-width: 680px; }
 
 /* --------------------------- book library --------------------------- */
@@ -274,12 +279,12 @@ body:has(#screen-read.active) .fx-sound { opacity: .1; }
 #quiz-options button.correct {
   background: var(--good);
   border-color: var(--good);
-  color: #fff;
+  color: var(--on-good);
 }
 #quiz-options button.wrong {
   background: var(--bad);
   border-color: var(--bad);
-  color: #fff;
+  color: var(--on-bad);
 }
 
 .missed-row span { color: var(--good); }
