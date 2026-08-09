@@ -866,14 +866,31 @@ input:focus, textarea:focus {
   100% { opacity: 0; transform: translate(-50%, -10px); }
 }
 
-/* Sound and theme toggles — two discs in the thumb corner. Quiet, but they
-   have to be *findable*: at half opacity in a hairline border they read as
-   smudges on cream, which is exactly how the first version failed. */
-.fx-sound, .fx-theme {
+/* The corner dock. Three different files put something in this corner — the
+   sound toggle, the theme toggle and the next-game chip — and each used to pin
+   itself with its own `position: fixed`, so they stacked on top of each other.
+   They now share one row and lay out with a gap, and a fourth control would
+   just slot in. Order is set by CSS, not by which script happens to run first. */
+.fx-dock {
   position: fixed;
   right: calc(16px + env(safe-area-inset-right));
   bottom: calc(16px + env(safe-area-inset-bottom));
   z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;   /* the gaps shouldn't eat taps meant for the page */
+}
+.fx-dock > * { pointer-events: auto; }
+
+/* Sound and theme toggles — quiet, but they have to be *findable*: at half
+   opacity in a hairline border they read as smudges on cream, which is exactly
+   how the first version failed. */
+.fx-sound, .fx-theme {
+  position: relative;
   width: 40px;
   height: 40px;
   min-height: 40px;
@@ -894,8 +911,10 @@ input:focus, textarea:focus {
   box-shadow: var(--shadow-lift);
 }
 
-/* The theme disc sits inboard of the sound one. */
-.fx-theme { right: calc(64px + env(safe-area-inset-right)); }
+/* Rightmost is the one you reach for most. */
+.fx-sound { order: 3; }
+.fx-theme { order: 2; }
+#next-game-chip { order: 1; }
 
 /* Muted is drawn, not implied by dimness — a struck-through note. */
 .fx-sound.muted { color: var(--ink-3); }
