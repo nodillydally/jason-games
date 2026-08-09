@@ -108,18 +108,11 @@
     return pick;
   }
 
-  /* Which games were launched today, so each duty can carry its own check.
-     "Launched" is the honest signal the hub can actually observe. */
-  const PLAYLOG_KEY = 'games.playlog.v1';
-  const playedToday = () => (read(PLAYLOG_KEY) || {})[todayKey()] || [];
-  function recordPlay(key) {
-    const log = read(PLAYLOG_KEY) || {};
-    const today = log[todayKey()] || [];
-    if (!today.includes(key)) log[todayKey()] = [...today, key];
-    // Keep the log small — only the last two weeks matters.
-    const keep = Object.keys(log).sort().slice(-14);
-    write(PLAYLOG_KEY, Object.fromEntries(keep.map((k) => [k, log[k]])));
-  }
+  // Written by lib/sync.js when a game records a finished (non-aborted)
+  // session — launching a game does NOT check it off; logging a session does.
+  // Keyed by UTC ISO date, matching what sync.js writes.
+  const PLAYLOG_KEY = 'games.playlog.v2';
+  const playedToday = () => (read(PLAYLOG_KEY) || {})[new Date().toISOString().slice(0, 10)] || [];
 
   // The Brief's own definition of "kept": every story graded. Read straight
   // from Briefing's store (it keys days by UTC date, so match that).
@@ -245,12 +238,15 @@
   renderRank();
   renderStreak();
 
+  // Back-navigating from a game often restores the hub from the bfcache, so
+  // re-read the duties — a session logged in the game must show immediately.
+  window.addEventListener('pageshow', (e) => { if (e.persisted) renderToday(); });
+
   // Launching a game is the thing that counts. Delay the navigation just long
   // enough for the streak to light up — the payoff has to be visible.
   document.addEventListener('click', (e) => {
     const link = e.target.closest('a.game:not(.soon), a.duty, a.today-play');
     if (!link) return;
-    recordPlay(link.dataset.key || link.dataset.game || 'unknown');
     const before = loadStreak().streak;
     const after = bumpStreak().streak;
     if (after === before) return;                 // already played today
