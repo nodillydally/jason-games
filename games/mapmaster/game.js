@@ -159,28 +159,30 @@ const shuffle = (arr) => {
 
 const centerOf = (c) => [(c.box[0] + c.box[2]) / 2, (c.box[1] + c.box[3]) / 2];
 
-// Distractors: easy = random from the same region; medium = the target's
-// nearest neighbours, which is much harder to tell apart.
+// Distractors always come from the target's own NEIGHBOURHOOD — Jamaica next
+// to Sweden and Australia is process of elimination, not geography. Easy
+// draws from a regional band (the ~16 nearest in the same continent), medium
+// from the 12 nearest outright.
 function pickChoices(target, pool, count) {
-  let candidates = pool.filter((c) => c.id !== target.id);
+  let candidates = pool.filter((c) => c.id !== target.id && c.continent === target.continent);
+  if (candidates.length < count - 1) {
+    candidates = COUNTRIES.filter((c) => c.id !== target.id && c.continent === target.continent);
+  }
   if (candidates.length < count - 1) {
     candidates = COUNTRIES.filter((c) => c.id !== target.id);
   }
-  let distractors;
-  if (count >= 6) {
-    const [tx, ty] = centerOf(target);
-    const nearest = candidates
-      .map((c) => {
-        const [x, y] = centerOf(c);
-        return { c, d: (x - tx) ** 2 + (y - ty) ** 2 };
-      })
-      .sort((a, b) => a.d - b.d)
-      .slice(0, 12)
-      .map((o) => o.c);
-    distractors = shuffle(nearest).slice(0, count - 1);
-  } else {
-    distractors = shuffle(candidates.slice()).slice(0, count - 1);
-  }
+
+  const [tx, ty] = centerOf(target);
+  const byDistance = candidates
+    .map((c) => {
+      const [x, y] = centerOf(c);
+      return { c, d: (x - tx) ** 2 + (y - ty) ** 2 };
+    })
+    .sort((a, b) => a.d - b.d)
+    .map((o) => o.c);
+
+  const band = byDistance.slice(0, count >= 6 ? 12 : 16);
+  const distractors = shuffle(band).slice(0, count - 1);
   return shuffle([target, ...distractors]);
 }
 
