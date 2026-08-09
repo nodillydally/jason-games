@@ -114,6 +114,21 @@
     <button id="scroll-done" class="primary big">I’m done reading</button>
   </section>
 
+  <!-- ============================ Recall ============================ -->
+  <section id="screen-recall" class="screen">
+    <div class="card recall-card">
+      <div class="hud recall-hud">
+        <button id="recall-quit" title="Back to menu">✕</button>
+        <span id="recall-meta"></span>
+      </div>
+      <h2>What did you just read?</h2>
+      <p class="recall-hint">The main idea and every point you can remember, in your own words. This is the comprehension score — it multiplies your speed.</p>
+      <textarea id="recall-text" rows="7" placeholder="The passage was about…" autocomplete="off"></textarea>
+      <div id="recall-error" class="recall-error"></div>
+      <button id="recall-submit" class="primary big">Grade my recall</button>
+    </div>
+  </section>
+
   <!-- ============================= Quiz ============================= -->
   <section id="screen-quiz" class="screen">
     <div class="card quiz-card">

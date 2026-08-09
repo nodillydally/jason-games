@@ -347,3 +347,57 @@ body:has(#screen-read.active) .fx-sound { opacity: .1; }
   .quiz-card { padding: 24px 20px; }
   .wpm-row output { min-width: 84px; font-size: 19px; }
 }
+
+/* ------------------------- recall (AI check) ------------------------- */
+
+.recall-card { margin-top: 20px; padding: 26px; }
+.recall-hud {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 0;
+}
+#recall-meta { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); }
+.recall-card h2 {
+  font-family: var(--serif);
+  font-size: 26px;
+  letter-spacing: -.02em;
+  margin-bottom: 6px;
+}
+.recall-hint { font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; margin-bottom: 14px; }
+#recall-text {
+  width: 100%;
+  font-size: 15px;
+  line-height: 1.7;
+  resize: vertical;
+  min-height: 150px;
+  margin-bottom: 10px;
+}
+.recall-error { color: var(--bad); font-size: 13px; min-height: 18px; margin-bottom: 6px; }
+#recall-submit { width: 100%; }
+
+/* typed cloze */
+.cloze-row { display: flex; gap: 8px; }
+#cloze-input {
+  flex: 1;
+  font-size: 16px;
+  padding: 13px 16px;
+  border-radius: var(--r-md);
+}
+#cloze-input:disabled { opacity: .6; }
+.cloze-verdict { min-height: 26px; margin-top: 12px; font-size: 15px; font-weight: 600; }
+.cloze-verdict .good { color: var(--good); }
+.cloze-verdict .bad { color: var(--bad); }
+
+/* AI grade on results */
+.grade-summary { font-size: 14.5px; line-height: 1.6; margin: 6px 0 12px; }
+.grade-good, .grade-missed {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.grade-good li { color: var(--ink-soft); }
+.grade-good li::marker { content: '✓ '; color: var(--good); }
+.grade-missed li::marker { color: var(--bad); }

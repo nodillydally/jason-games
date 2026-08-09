@@ -16,10 +16,12 @@
 const STORE_KEY = 'reader.profile.v1';
 const LADDER_STEP = 50;        // wpm added per rung
 const LADDER_PASS = 0.7;       // comprehension needed to climb
+const BASELINE_MIN_COMP = 0.6; // below this, a baseline doesn't count
+const RECALL_MIN_WORDS = 20;
 const COUNT_IN_MS = 500;       // per digit of the 3-2-1 count-in
 
 const MODES = [
-  { id: 'baseline',  label: 'Baseline',   icon: '⏱', hint: 'The test that comes first: read one passage at your natural pace — no flashing, no clock — then a quiz. This sets your true starting speed.' },
+  { id: 'baseline',  label: 'Baseline',   icon: '⏱', hint: 'The test that comes first: read one passage at your natural pace — no flashing, no clock — then write what you remember and get graded on it. This sets your true starting speed.' },
   { id: 'benchmark', label: 'Flash read', icon: '⚡', hint: 'Words flash one at a time at a speed you set, then a comprehension check.' },
   { id: 'timed',     label: 'Timed read', icon: '📜', hint: 'The whole passage on screen, but the clock only gives you enough time for your target speed. Finish before it runs out.' },
   { id: 'ladder',    label: 'Ladder',     icon: '📈', hint: 'Flash speed climbs 50 wpm each passage until comprehension breaks. Finds your ceiling.' },
@@ -44,6 +46,7 @@ const screens = {
   menu: $('screen-menu'),
   read: $('screen-read'),
   scroll: $('screen-scroll'),
+  recall: $('screen-recall'),
   quiz: $('screen-quiz'),
   results: $('screen-results'),
   stats: $('screen-stats'),
@@ -172,7 +175,6 @@ function makeClozeQuiz(text, n = 5) {
   const step = sentences.length / Math.min(n, sentences.length);
   const questions = [];
   const usedAnswers = new Set();
-  const allCandidates = [...new Set(sentences.flatMap(clozeCandidates))];
 
   for (let k = 0; k < Math.min(n, sentences.length); k += 1) {
     const sentence = sentences[Math.floor(k * step)];
@@ -185,27 +187,37 @@ function makeClozeQuiz(text, n = 5) {
       .sort((a, b) => a.d - b.d)[0].w;
     usedAnswers.add(answer);
 
-    const distractors = shuffleArr(allCandidates
-      .filter((w) => w !== answer && !sentence.includes(w) && Math.abs(w.length - answer.length) <= 3))
-      .slice(0, 3);
-    if (distractors.length < 3) continue;
-
-    // Blank exactly the answer word, once.
+    // Blank exactly the answer word, once. The answer is TYPED, not picked
+    // from options — four buttons at 25% each made the whole check guessable.
     const rx = new RegExp(`\\b${answer}\\b`);
     const blanked = sentence.replace(rx, '＿＿＿');
-    const options = shuffleArr([answer, ...distractors]);
-    questions.push({ q: `Fill the blank: “${blanked}”`, options, answer: options.indexOf(answer) });
+    questions.push({ q: `Fill the blank: “${blanked}”`, word: answer });
   }
   return questions;
 }
 
-function shuffleArr(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+// Typed answers get one keystroke of grace on longer words — this tests
+// whether the word was read, not whether it was spelled.
+function clozeMatch(typed, word) {
+  const a = typed.trim().toLowerCase();
+  const b = word.toLowerCase();
+  if (a === b) return true;
+  if (b.length < 6 || Math.abs(a.length - b.length) > 1) return false;
+  // Edit distance ≤ 1, checked directly rather than with a full DP table.
+  if (a.length === b.length) {
+    let diff = 0;
+    for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) diff += 1;
+    return diff <= 1;
   }
-  return a;
+  const [short, long] = a.length < b.length ? [a, b] : [b, a];
+  let i = 0; let j = 0; let used = false;
+  while (i < short.length && j < long.length) {
+    if (short[i] === long[j]) { i += 1; j += 1; continue; }
+    if (used) return false;
+    used = true;
+    j += 1;
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -520,6 +532,9 @@ function finishReading() {
   g.lastElapsedMs = Date.now() - g.readStartedAt;
 
   if (g.mode === 'free') return endGame();
+  // The measurement modes get the un-gameable check: free recall, graded by
+  // AI against the passage. Multiple choice can be guessed; a blank box can't.
+  if (SCROLL_MODES.has(g.mode) && Sync.isEnabled()) return beginRecall();
   // Rare: a passage too fragmented for cloze generation. Bank the reading.
   if (g.mode === 'book' && g.passage.questions.length < 3) return endGame();
 
@@ -527,6 +542,89 @@ function finishReading() {
   g.quizAnswers = [];
   showScreen('quiz');
   renderQuestion();
+}
+
+// ---------------------------------------------------------------------------
+// AI recall check (Baseline + Timed read)
+// ---------------------------------------------------------------------------
+
+function beginRecall() {
+  $('recall-meta').textContent = `${g.passage.title} · ${g.words.length.toLocaleString()} words`;
+  $('recall-text').value = '';
+  $('recall-error').textContent = '';
+  const btn = $('recall-submit');
+  btn.disabled = false;
+  btn.textContent = 'Grade my recall';
+  showScreen('recall');
+  $('recall-text').focus();
+}
+
+function submitRecall() {
+  const text = $('recall-text').value.trim();
+  if (text.split(/\s+/).filter(Boolean).length < RECALL_MIN_WORDS) {
+    $('recall-error').textContent = `A real attempt first — at least ${RECALL_MIN_WORDS} words.`;
+    return;
+  }
+  const session = g;
+  const btn = $('recall-submit');
+  btn.disabled = true;
+  btn.textContent = 'Grading…';
+  $('recall-error').textContent = '';
+
+  fetch(Sync.contentEndpoint().replace(/game-content(?=[^/]*$)/, 'game-grade'), {
+    method: 'POST',
+    headers: { authorization: `Bearer ${Sync.token()}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ kind: 'reading', passage_text: session.passage.text, user_text: text }),
+  }).then(async (res) => {
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `grading failed (${res.status})`);
+    if (g !== session) return;   // quit while grading
+    scoreRecallRound(body, text);
+  }).catch((err) => {
+    if (g !== session) return;
+    btn.disabled = false;
+    btn.textContent = 'Grade my recall';
+    $('recall-error').textContent = `${err.message} — try again.`;
+  });
+}
+
+function scoreRecallRound(grade, text) {
+  const comprehension = Math.max(0, Math.min(100, grade.score)) / 100;
+  const actualWpm = Math.round(g.words.length / (g.lastElapsedMs / 60000));
+  const effective = Math.round(actualWpm * comprehension);
+
+  g.rounds.push({
+    passage: g.passage.title,
+    level: g.passage.level,
+    wpm: actualWpm,
+    correct: grade.score,
+    total: 100,
+    comprehension,
+    effective,
+    ai: grade,
+    recallText: text,
+  });
+
+  g.log.push({
+    item_id: g.passage.id,
+    item_name: g.passage.title,
+    correct: comprehension >= BASELINE_MIN_COMP,
+    ms: Math.round(g.lastElapsedMs),
+    answered_at: new Date().toISOString(),
+  });
+
+  const lvl = store.byLevel[g.passage.level] || (store.byLevel[g.passage.level] = { rounds: 0, correct: 0, total: 0 });
+  lvl.rounds += 1;
+  lvl.correct += grade.score;
+  lvl.total += 100;
+
+  if (g.mode === 'baseline' && comprehension >= BASELINE_MIN_COMP) {
+    // The number every other mode trains against — but only if the recall
+    // proves the reading actually happened.
+    store.baselineWpm = actualWpm;
+  }
+
+  endGame();
 }
 
 // ---------------------------------------------------------------------------
@@ -540,9 +638,26 @@ function renderQuestion() {
   $('quiz-question').textContent = q.q;
 
   const el = $('quiz-options');
+  if (q.word) {
+    // Generated cloze is TYPED, not multiple choice: producing the word is the
+    // test recognition can't fake. Four buttons at 25% each were guessable.
+    el.innerHTML = `
+      <div class="cloze-row">
+        <input id="cloze-input" type="text" placeholder="The missing word" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button id="cloze-submit" class="primary">Answer</button>
+      </div>
+      <div id="cloze-verdict" class="cloze-verdict"></div>`;
+    const input = $('cloze-input');
+    const submit = () => answerQuestion(input.value);
+    $('cloze-submit').addEventListener('click', submit);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+    input.focus();
+    return;
+  }
+  // Hand-authored questions (built-in passages) stay multiple choice — their
+  // wrong options are plausible claims the passage doesn't make, so they
+  // can't be answered from sentence grammar alone.
   el.innerHTML = '';
-  // Options stay in their authored order: the correct answer is not always
-  // first, and shuffling would only re-randomise an already-fixed layout.
   q.options.forEach((opt, i) => {
     const b = document.createElement('button');
     b.textContent = opt;
@@ -551,11 +666,37 @@ function renderQuestion() {
   });
 }
 
-function answerQuestion(choice) {
+function answerQuestion(response) {
   const qs = g.passage.questions;
   const q = qs[g.quizIndex];
-  const right = choice === q.answer;
-  g.quizAnswers.push({ choice, right });
+  if (q.word) return answerCloze(String(response));
+  const right = response === q.answer;
+  g.quizAnswers.push({ choice: q.options[response], right });
+
+  g.log.push({
+    item_id: g.passage.id,
+    item_name: g.passage.title,
+    correct: right,
+    ms: Math.round(g.lastElapsedMs / qs.length),
+    answered_at: new Date().toISOString(),
+  });
+
+  const opts = [...$('quiz-options').children];
+  opts.forEach((b) => { b.disabled = true; });
+  if (opts[q.answer]) opts[q.answer].classList.add('correct');
+  if (!right && opts[response]) opts[response].classList.add('wrong');
+  if (right) Juice.good({ anchor: opts[response] });
+  else Juice.bad();
+
+  advanceQuiz(right);
+}
+
+function answerCloze(typed) {
+  const qs = g.passage.questions;
+  const q = qs[g.quizIndex];
+  if (!typed.trim()) return;
+  const right = clozeMatch(typed, q.word);
+  g.quizAnswers.push({ choice: typed.trim(), right });
 
   g.log.push({
     item_id: g.passage.id,
@@ -567,19 +708,27 @@ function answerQuestion(choice) {
 
   // Show the verdict before moving on. The quiz used to advance silently, which
   // gave back neither the correction nor the hit of getting one right.
-  const opts = [...$('quiz-options').children];
-  opts.forEach((b) => { b.disabled = true; });
-  if (opts[q.answer]) opts[q.answer].classList.add('correct');
-  if (!right && opts[choice]) opts[choice].classList.add('wrong');
-  if (right) Juice.good({ anchor: opts[choice] });
+  const input = $('cloze-input');
+  input.disabled = true;
+  $('cloze-submit').disabled = true;
+  const verdict = $('cloze-verdict');
+  verdict.innerHTML = right
+    ? `<span class="good">✓ ${esc(q.word)}</span>`
+    : `<span class="bad">✗ It was “${esc(q.word)}”</span>`;
+  if (right) Juice.good({ anchor: input });
   else Juice.bad();
 
+  advanceQuiz(right);
+}
+
+function advanceQuiz(right) {
+  const qs = g.passage.questions;
   g.quizIndex += 1;
   setTimeout(() => {
     if (!g || !screens.quiz.classList.contains('active')) return;  // quit mid-pause
     if (g.quizIndex < qs.length) renderQuestion();
     else scoreRound();
-  }, right ? 650 : 1250);
+  }, right ? 700 : 1500);
 }
 
 function scoreRound() {
@@ -614,8 +763,9 @@ function scoreRound() {
     store.passagesDone[g.book.id] = Math.max(prev || 0, comprehension);
   }
 
-  if (g.mode === 'baseline') {
-    // The number every other mode trains against.
+  if (g.mode === 'baseline' && comprehension >= BASELINE_MIN_COMP) {
+    // The number every other mode trains against — but only when the quiz
+    // shows the reading actually happened.
     store.baselineWpm = actualWpm;
   }
 
@@ -668,9 +818,13 @@ function endGame(aborted = false) {
   store.wordsRead += g.wordsRead;
 
   // XP = comprehended words / 10. Free reads earn at half rate since nothing
-  // verifies the comprehension.
+  // verifies the comprehension. AI-graded rounds use the graded percentage
+  // directly instead of the pass/fail log.
   const answered = g.log.length;
-  const compFactor = answered ? g.log.filter((a) => a.correct).length / answered : 0;
+  const lastRound = g.rounds[g.rounds.length - 1];
+  const compFactor = lastRound && lastRound.ai
+    ? lastRound.comprehension
+    : answered ? g.log.filter((a) => a.correct).length / answered : 0;
   g.xpGain = g.mode === 'free'
     ? Math.round(g.wordsRead / 20)
     : Math.round((g.wordsRead / 10) * compFactor);
@@ -724,10 +878,17 @@ function endGame(aborted = false) {
     $('results-stats').innerHTML =
       `<div class="stat"><b>${last.wpm}</b><span>raw wpm</span></div>` +
       `<div class="stat"><b>${comp}%</b><span>comprehension</span></div>` +
-      `<div class="stat"><b>${last.correct}/${last.total}</b><span>correct</span></div>` +
+      (last.ai
+        ? `<div class="stat"><b>${last.ai.letter}</b><span>recall grade</span></div>`
+        : `<div class="stat"><b>${last.correct}/${last.total}</b><span>correct</span></div>`) +
       (g.mode === 'ladder' ? `<div class="stat"><b>${g.rung}</b><span>rungs climbed</span></div>` : '');
 
-    if (g.mode === 'baseline') {
+    if (g.mode === 'baseline' && last.comprehension < BASELINE_MIN_COMP) {
+      $('results-title').textContent = '⏱ Baseline not set';
+      $('results-note').textContent =
+        `You covered the words at ${last.wpm} wpm, but the recall only proved ${comp}% comprehension — ` +
+        `that's not a reading speed, so it wasn't recorded. Read one again at whatever pace lets you actually keep it.`;
+    } else if (g.mode === 'baseline') {
       $('results-title').textContent = '⏱ Your baseline';
       // Train slightly above natural pace — pressure without collapse.
       const train = Math.round((last.wpm + 50) / 25) * 25;
@@ -747,15 +908,26 @@ function endGame(aborted = false) {
           : 'Too fast. At this speed you are recognising words rather than reading sentences.';
     }
 
-    $('results-review').innerHTML = '<h3>What you missed</h3>' + (
-      last.answers.every((a) => a.right)
-        ? '<p class="clean-sweep">Nothing — full marks.</p>'
-        : last.answers.map((a, i) => a.right ? '' : `
-            <div class="missed-row">
-              <code>${esc(last.questions[i].q)}</code>
-              <span>Answer: ${esc(last.questions[i].options[last.questions[i].answer])}</span>
-            </div>`).join('')
-    );
+    if (last.ai) {
+      const a = last.ai;
+      $('results-review').innerHTML =
+        `<h3>The grader's read</h3><p class="grade-summary">${esc(a.summary || '')}</p>` +
+        ((a.strengths || []).length
+          ? '<ul class="grade-good">' + a.strengths.map((s) => `<li>${esc(s)}</li>`).join('') + '</ul>' : '') +
+        ((a.missed || []).length
+          ? '<h3>What you missed</h3><ul class="grade-missed">' + a.missed.map((m) => `<li>${esc(m)}</li>`).join('') + '</ul>'
+          : '<p class="clean-sweep">Nothing major missed.</p>');
+    } else {
+      $('results-review').innerHTML = '<h3>What you missed</h3>' + (
+        last.answers.every((a) => a.right)
+          ? '<p class="clean-sweep">Nothing — full marks.</p>'
+          : last.answers.map((a, i) => a.right ? '' : `
+              <div class="missed-row">
+                <code>${esc(last.questions[i].q)}</code>
+                <span>Your answer: ${esc(a.choice)} · It was: ${esc(last.questions[i].word || last.questions[i].options[last.questions[i].answer])}</span>
+              </div>`).join('')
+      );
+    }
   }
 
   showScreen('results');
@@ -764,7 +936,7 @@ function endGame(aborted = false) {
   // level-up gets its own beat after it.
   const scoreEl = $('results-score');
   Juice.replay(scoreEl, 'pop');
-  const perfect = last && last.answers.every((a) => a.right);
+  const perfect = last && (last.ai ? last.comprehension >= 0.9 : last.answers.every((a) => a.right));
   if (perfect || (last && last.effective >= store.bestEffective)) Juice.celebrate(scoreEl);
   if (levelAfter > levelBefore) setTimeout(() => Juice.levelUp(levelAfter), 500);
 
@@ -829,6 +1001,8 @@ $('start-btn').addEventListener('click', startGame);
 $('quit-btn').addEventListener('click', () => endGame(true));
 $('scroll-quit').addEventListener('click', () => endGame(true));
 $('scroll-done').addEventListener('click', () => finishScrollRead(false));
+$('recall-quit').addEventListener('click', () => endGame(true));
+$('recall-submit').addEventListener('click', submitRecall);
 $('again-btn').addEventListener('click', startGame);
 $('menu-btn').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
 $('stats-btn').addEventListener('click', () => { renderStats(); showScreen('stats'); });
@@ -855,7 +1029,10 @@ document.addEventListener('keydown', (e) => {
   } else if (screens.scroll.classList.contains('active')) {
     if (e.key === 'Escape') endGame(true);
     else if (e.key === 'Enter') finishScrollRead(false);
-  } else if (screens.quiz.classList.contains('active')) {
+  } else if (screens.recall.classList.contains('active')) {
+    if (e.key === 'Escape') endGame(true);
+  } else if (screens.quiz.classList.contains('active') && !$('cloze-input')) {
+    // Number keys pick multiple-choice options; typed cloze keeps its input.
     const n = parseInt(e.key, 10);
     if (n >= 1 && n <= 9) {
       const btn = $('quiz-options').children[n - 1];
