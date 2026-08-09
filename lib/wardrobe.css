@@ -358,3 +358,26 @@
 @media (max-width: 430px) {
   .wd-count { display: none; }
 }
+
+/* ------------------------------- the locker -----------------------------
+   The hub's lobby card styles its own figure, buttons and spacing — all this
+   has to do is undo the sidebar column, which only exists for a game's profile
+   card. Sizing the figure here as well is what pushed the sprite out of its
+   own box. */
+.lobby-card .wardrobe-bay {
+  flex-direction: row;
+  padding-left: 0;
+  border-left: none;
+}
+/* Full-width buttons are a sidebar affordance; on the lobby's wide row they
+   each took a line of their own. */
+.lobby-card .wardrobe-btn,
+.lobby-card .wardrobe-purse { width: auto; }
+/* The lobby gives the figure its own stage and a shadow under the feet, so the
+   sidebar's framed tile just fights it. */
+.lobby-card .wardrobe-figure { background: none; border: none; }
+
+/* The locker has room for the counts even where a game's sidebar does not. */
+@media (max-width: 430px) {
+  .lobby-card .wd-count { display: inline; }
+}

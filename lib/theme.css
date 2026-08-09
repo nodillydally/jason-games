@@ -402,7 +402,7 @@ button.ghost:hover { background: var(--paper-2); color: var(--ink); }
    Placed by grid rather than by wrapping the markup, because the left-hand
    children differ between games and wardrobe.js injects .wardrobe-bay at
    runtime. Columns 1-2 are the progress side; column 3 is the character. */
-.profile-card {
+.profile-card:has(.level-badge) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) minmax(122px, 25%);
   /* The character column is taller than the progress side, and a spanning item
@@ -415,14 +415,17 @@ button.ghost:hover { background: var(--paper-2); color: var(--ink); }
   row-gap: 14px;
 }
 
-.profile-card .level-badge   { grid-column: 1; grid-row: 1; }
-.profile-card .xp            { grid-column: 2; grid-row: 1; }
-.profile-card .profile-stats { grid-column: 1 / 3; grid-row: 2; }
-.profile-card #stats-btn     { grid-column: 1 / 3; grid-row: 3; justify-self: start; align-self: start; }
+.profile-card:has(.level-badge) .level-badge   { grid-column: 1; grid-row: 1; }
+.profile-card:has(.level-badge) .xp            { grid-column: 2; grid-row: 1; }
+.profile-card:has(.level-badge) .profile-stats { grid-column: 1 / 3; grid-row: 2; }
+.profile-card:has(.level-badge) #stats-btn     { grid-column: 1 / 3; grid-row: 3; justify-self: start; align-self: start; }
 
 /* The character column spans every row of the progress side, so the two
    regions are the same height however many rows the left one grows to. */
-.profile-card .wardrobe-bay {
+/* Only in a game's profile card. The hub's locker also carries .profile-card —
+   that is how wardrobe.js finds it — but holds nothing except the character,
+   so the three-column grid reserved three quarters of it for nothing. */
+.profile-card:has(.level-badge) .wardrobe-bay {
   grid-column: 3;
   grid-row: 1 / -1;
   align-self: stretch;
@@ -430,7 +433,7 @@ button.ghost:hover { background: var(--paper-2); color: var(--ink); }
 
 /* No character (a game without the wardrobe): the third column collapses and
    the progress side simply takes the whole card. */
-.profile-card:not(:has(.wardrobe-bay)) {
+.profile-card:has(.level-badge):not(:has(.wardrobe-bay)) {
   grid-template-columns: auto minmax(0, 1fr);
 }
 
@@ -438,7 +441,7 @@ button.ghost:hover { background: var(--paper-2); color: var(--ink); }
    the card and pushing each stat onto its own line. A lower floor and a
    tighter stat rhythm keep the split near the intended quarter. */
 @media (max-width: 560px) {
-  .profile-card {
+  .profile-card:has(.level-badge) {
     grid-template-columns: auto minmax(0, 1fr) minmax(102px, 28%);
     column-gap: 14px;
   }
