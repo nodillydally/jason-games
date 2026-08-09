@@ -66,6 +66,7 @@
 /* A column: the figure on a small stage, its two controls stacked underneath.
    Bordered off from the progress side so the card reads as two panels. */
 .wardrobe-bay {
+  position: relative;   /* the panel anchors to this */
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -121,13 +122,32 @@
   background: var(--a1);
 }
 
+/* A popover hanging off the card, not a block inside the character column.
+   `flex: 1 0 100%` was written for the old full-width bay; once that column
+   became a quarter of the card the panel was 100% of *that* — a 190px-wide
+   shop nobody could read — and being in flow its height inflated the empty
+   space on the progress side too. Out of flow fixes both. */
+/* Every .card is position:relative with no z-index, so the setup card that
+   follows paints over anything hanging out of the profile card. Lift the whole
+   card while the panel is open — and only while it is open. */
+.profile-card:has(.wardrobe-panel:not(.hidden)) { z-index: 30; }
+
 .wardrobe-panel {
-  flex: 1 0 100%;
-  margin-top: 4px;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: min(340px, 80vw);
   border: 1px solid var(--rule);
   border-radius: var(--r-md);
-  background: var(--paper);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-lift);
   overflow: hidden;
+}
+
+@media (max-width: 560px) {
+  /* On a phone it spans the card rather than hugging one corner. */
+  .wardrobe-panel { width: min(340px, calc(100vw - 60px)); }
 }
 
 .wardrobe-head {
