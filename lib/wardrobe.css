@@ -377,6 +377,20 @@
    sidebar's framed tile just fights it. */
 .lobby-card .wardrobe-figure { background: none; border: none; }
 
+/* The popover is a sidebar answer: in a game the bay is a narrow column, so a
+   panel hanging off its right edge sits directly under the button that opened
+   it. The lobby's bay is the full width of the card, so right-aligning put the
+   panel in the far corner — detached from the button and hanging over the
+   scoreboard. Here it goes back to what the hub designed: a full-width row
+   inside the card, which simply makes the card taller. */
+.lobby-card .wardrobe-panel {
+  position: static;
+  width: 100%;
+  flex: 1 0 100%;
+  margin-top: 6px;
+  box-shadow: none;
+}
+
 /* The locker has room for the counts even where a game's sidebar does not. */
 @media (max-width: 430px) {
   .lobby-card .wd-count { display: inline; }
