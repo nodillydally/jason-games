@@ -318,6 +318,42 @@
   margin-bottom: 8px;
 }
 
+/* Weekly context bullets under the table. */
+.mkt-context {
+  margin: 0 0 8px 0;
+  padding-left: 16px;
+  border-left: 2px solid var(--p1);
+  list-style: none;
+}
+.mkt-context li {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+}
+.mkt-context li::before { content: "— "; color: var(--p1); }
+.mkt-context b, .grade-list b + ul b { color: var(--ink); font-weight: 650; }
+
+/* Connections — the dimension being trained gets its own ink. */
+.conn-list b { color: var(--p1); }
+.conn-suggest {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--paper-2);
+  border-left: 2px solid var(--a1);
+  border-radius: var(--r-md);
+}
+.conn-suggest b {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--a1);
+  margin-bottom: 6px;
+}
+.conn-suggest p { font-size: 13.5px; line-height: 1.6; color: var(--ink); }
+
 /* ------------------------------- stats ------------------------------- */
 
 #stats-week h3 {

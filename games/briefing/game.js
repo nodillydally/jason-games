@@ -328,7 +328,9 @@ function gradeCard(grade, revealHtml = '') {
       </div>
       <p class="grade-summary">${esc(grade.summary)}</p>
       ${grade.strengths.length ? `<div class="grade-list good-list"><b>What landed</b><ul>${grade.strengths.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>` : ''}
+      ${grade.connections_made && grade.connections_made.length ? `<div class="grade-list conn-list"><b>Connections you made</b><ul>${grade.connections_made.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>` : ''}
       ${grade.missed.length ? `<div class="grade-list miss-list"><b>${g.active === 'recall' ? 'What you didn\'t recall' : 'What you missed'}</b><ul>${grade.missed.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>` : ''}
+      ${grade.connection_suggested ? `<div class="conn-suggest"><b>One you could have made</b><p>${esc(grade.connection_suggested)}</p></div>` : ''}
       ${revealHtml}
     </div>`;
 }
@@ -349,7 +351,7 @@ function renderPanel() {
         <h2 class="panel-title">What do you remember from ${weekday(y.date)}'s brief?</h2>
         ${state.grade
           ? gradeCard(state.grade, `<div class="reveal-block"><b>${weekday(y.date)}'s stories were</b><ul>${y.items.map((it) => `<li>${esc(it.headline || it.what)}</li>`).join('')}</ul></div>`)
-          : promptBlock([`${y.items.length} stories`, 'What happened?', 'Why did it matter?'], state, 'Grade my recall', hintHtml)}
+          : promptBlock([`${y.items.length} stories`, 'What happened?', 'Why did it matter?'], state, 'Save & next', hintHtml)}
       </div>`;
   } else if (key === 'markets') {
     renderMarketsPanel(panel, state);
@@ -365,7 +367,7 @@ function renderPanel() {
         ${it.sources.length ? `<div class="sources">${it.sources.map((s) => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)} ↗</a>`).join('')}</div>` : ''}
         ${state.grade
           ? gradeCard(state.grade, `<div class="reveal-block"><b>The brief's take</b><p>${esc(it.why)}</p></div>`)
-          : promptBlock(['What happened?', 'Why does it matter?', 'What do you think?'], state, 'Grade it')}
+          : promptBlock(['What happened?', 'Why does it matter?', 'What do you think?', 'Connect it to anything you know'], state, 'Save & next')}
       </div>`;
   }
 
@@ -394,16 +396,27 @@ function renderMarketsPanel(panel, state) {
     <div class="card story-card">
       <div class="story-meta">Market pulse · as of ${esc(markets.rows[0]?.as_of || markets.date)}</div>
       <table class="mkt-table">
-        <thead><tr><th></th><th>Level</th><th>1D</th><th>WTD</th></tr></thead>
+        <thead><tr><th></th><th>Level</th><th>1D</th><th>WTD</th><th>YTD</th></tr></thead>
         <tbody>
-          ${markets.rows.map((r) => `<tr><td>${esc(r.label)}</td><td>${fmtLevel(r)}</td><td>${fmtMove(r.d1, r.kind)}</td><td>${fmtMove(r.wtd, r.kind)}</td></tr>`).join('')}
+          ${markets.rows.map((r) => `<tr><td>${esc(r.label)}</td><td>${fmtLevel(r)}</td><td>${fmtMove(r.d1, r.kind)}</td><td>${fmtMove(r.wtd, r.kind)}</td><td>${fmtMove(r.ytd, r.kind)}</td></tr>`).join('')}
         </tbody>
       </table>
-      ${markets.commentary ? `<p class="mkt-commentary">${esc(markets.commentary)}</p>` : ''}
+      ${renderCommentary(markets.commentary)}
       ${state.grade
         ? gradeCard(state.grade)
-        : promptBlock(['Recap the moves', 'What do you think?'], state, 'Grade my read')}
+        : promptBlock(['Recap the moves', 'What do you think?', 'Tie them to the week'], state, 'Save & next')}
     </div>`;
+}
+
+// Commentary arrives as "- " bullets (weekly context); older cached snapshots
+// were a single sentence. Render whichever shape is stored.
+function renderCommentary(text) {
+  if (!text) return '';
+  const bullets = text.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('- ')).map((l) => l.slice(2));
+  if (bullets.length) {
+    return `<ul class="mkt-context">${bullets.map((b) => `<li>${emphasize(b)}</li>`).join('')}</ul>`;
+  }
+  return `<p class="mkt-commentary">${esc(text)}</p>`;
 }
 
 function wirePanel() {
@@ -581,6 +594,7 @@ function renderResults(xpGain = 0, levelBefore = null, levelAfter = null) {
       </div>
       <p>${esc(grade.summary)}</p>
       ${grade.missed && grade.missed.length ? `<ul>${grade.missed.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>` : ''}
+      ${grade.connection_suggested ? `<div class="conn-suggest"><b>One you could have made</b><p>${esc(grade.connection_suggested)}</p></div>` : ''}
     </div>`;
   }).join('');
 }
