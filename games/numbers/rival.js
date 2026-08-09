@@ -288,6 +288,7 @@ window.Rival = (function () {
       gear: def.ghost ? opts.playerGear : def.gear,
       pal: def.pal,
       tint: def.ghost ? '' : def.id,
+      facing: 'e',
       ghost: !!def.ghost,
     });
     s.avatar.pose('run');

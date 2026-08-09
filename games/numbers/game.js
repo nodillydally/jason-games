@@ -120,7 +120,8 @@ function mountAvatars() {
   const isRace = g && g.mode === 'race';
   $('companion').classList.toggle('hidden', isRace);
   const host = isRace ? $('racer-you') : $('companion-avatar');
-  avatars.push(Avatar.create(host, { ink: Wardrobe.ink(), gear: Wardrobe.gear() }));
+  // Both hosts are lanes the runner travels along, so it runs in profile.
+  avatars.push(Avatar.create(host, { ink: Wardrobe.ink(), gear: Wardrobe.gear(), facing: 'e' }));
   poseAll('idle');
 }
 

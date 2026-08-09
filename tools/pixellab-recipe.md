@@ -22,3 +22,18 @@ Generated 2026-08-09. Free trial: 3 of 40 generations used.
 ## Notes
 - Output is raw RGBA base64, not PNG — decode with width from the response, height = len/(4*w)
 - Key is at C:\dev\.secrets\pixellab.env, deliberately outside every git repo
+
+## Facings
+
+Two are imported. `s` (south) faces the viewer and is used for portraits —
+menus, shop rows, the reveal card. `e` (east) is the profile view used wherever
+the runner is actually travelling, because a token sliding rightwards down a
+race lane should face the way it's going.
+
+Animations are generated per direction (`"directions": ["east"]`), so each pose
+costs one generation per facing. The east idle is the character's own static
+east frame from creation — a standing pose needs no animation, and reusing it
+saved a generation.
+
+Both facings are cropped against a **single** shared bounding box so the sprite
+does not change size when it turns. Import them together, never separately.
