@@ -22,7 +22,7 @@ const COUNT_IN_MS = 500;       // per digit of the 3-2-1 count-in
 
 const MODES = [
   { id: 'baseline',  label: 'Baseline',   icon: '⏱', hint: 'The test that comes first: read one passage at your natural pace — no flashing, no clock — then write what you remember and get graded on it. This sets your true starting speed.' },
-  { id: 'benchmark', label: 'Flash read', icon: '⚡', hint: 'Words flash one at a time at a speed you set, then a comprehension check.' },
+  { id: 'benchmark', label: 'Flash read', icon: '⚡', hint: 'Words flash one at a time at a speed you set, then you write what you remember — graded.' },
   { id: 'timed',     label: 'Timed read', icon: '📜', hint: 'The whole passage on screen, but the clock only gives you enough time for your target speed. Finish before it runs out.' },
   { id: 'ladder',    label: 'Ladder',     icon: '📈', hint: 'Flash speed climbs 50 wpm each passage until comprehension breaks. Finds your ceiling.' },
   { id: 'book',      label: 'Book passages', icon: '📚', hint: 'Hand-picked signature passages from your own library — the mirroring chapter, the weekly scorecard, the Fourth Tuesday — with a fill-the-blank check.' },
@@ -194,6 +194,19 @@ function makeClozeQuiz(text, n = 5) {
     questions.push({ q: `Fill the blank: “${blanked}”`, word: answer });
   }
   return questions;
+}
+
+// The authored question bank ships every answer at index 0, so options must
+// never be shown in authored order — re-deal them and recompute the index.
+function shuffledMcq(questions) {
+  return questions.map((q) => {
+    const order = q.options.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    return { q: q.q, options: order.map((i) => q.options[i]), answer: order.indexOf(q.answer) };
+  });
 }
 
 // Typed answers get one keystroke of grace on longer words — this tests
@@ -399,8 +412,14 @@ function beginRound() {
       questions: makeClozeQuiz(p.content, 5),
     };
   } else {
-    g.passage = pickPassage();
-    g.usedPassages.push(g.passage.id);
+    const p = pickPassage();
+    g.usedPassages.push(p.id);
+    // Typed cloze from the passage text replaces the authored multiple choice:
+    // producing the word can't be guessed, while every authored question
+    // shipped answer-first (the top option was ALWAYS right). The authored
+    // set survives only as a shuffled fallback for fragmented text.
+    const cloze = makeClozeQuiz(p.text, 5);
+    g.passage = { ...p, questions: cloze.length >= 3 ? cloze : shuffledMcq(p.questions) };
   }
 
   const words = tokenize(g.passage.text);
@@ -533,9 +552,11 @@ function finishReading() {
   g.lastElapsedMs = Date.now() - g.readStartedAt;
 
   if (g.mode === 'free') return endGame();
-  // The measurement modes get the un-gameable check: free recall, graded by
-  // AI against the passage. Multiple choice can be guessed; a blank box can't.
-  if (SCROLL_MODES.has(g.mode) && Sync.isEnabled()) return beginRecall();
+  // The measurement modes — Baseline, Timed, and Flash — get the un-gameable
+  // check: free recall, graded by AI against the passage. A quiz can be
+  // guessed; a blank box can't. (Ladder keeps typed cloze: recall latency
+  // between rungs would kill its rhythm.)
+  if ((SCROLL_MODES.has(g.mode) || g.mode === 'benchmark') && Sync.isEnabled()) return beginRecall();
   // Rare: a passage too fragmented for cloze generation. Bank the reading.
   if (g.mode === 'book' && g.passage.questions.length < 3) return endGame();
 
