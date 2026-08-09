@@ -27,13 +27,30 @@ const DIFFICULTIES = [
   { id: 'hard',   label: 'Hard',   level: 3, choices: 0, seconds: 25, mult: 2.4 },
 ];
 
-// Adaptive is the default: every TOPIC carries its own level (1-3), promoted
-// on 3 right in a row at that level, demoted on 2 wrong in a row. Addition
-// can sit at level 3 while fractions rebuild at level 1 — one Start button,
-// and the game meets each skill where it actually is.
+// Adaptive is the default, and it runs on ELO: every topic carries a chess-
+// style rating (start 1000). Each question's difficulty is a rating too —
+// derived from the operand sizes it was generated at — and answering is a
+// match: beat a question above your rating and yours jumps; drop one below it
+// and yours falls hard. Questions are served just above your rating, so the
+// game always sits at your edge, and there's no level cap — the generators
+// scale continuously, so a 1900 in multiplication is genuinely brutal.
+//
+// Rating <-> difficulty scalar: t = (R - 1000) / 300. Rating updates happen in
+// EVERY mode (each question knows its own difficulty); manual Easy/Normal/Hard
+// just serve at fixed t instead of tracking you.
 const ADAPTIVE = { id: 'adaptive', label: 'Adaptive', icon: '🎚' };
-const PROMOTE_RUN = 3;
-const DEMOTE_RUN = 2;
+const ELO_START = 1000;
+const ELO_PER_T = 300;
+const tOf = (r) => Math.max(0, (r - ELO_START) / ELO_PER_T);
+const dqOf = (t) => ELO_START + ELO_PER_T * t;
+// Continuous pacing: harder questions get more clock; past t≈1.6 the choices
+// disappear and answers are typed (recognition stops being worth anything).
+const pacingFor = (t) => ({
+  id: 'adaptive',
+  seconds: Math.min(30, Math.round(14 + 5 * t)),
+  choices: t < 1.6 ? 4 : 0,
+  mult: 1 + 0.6 * t,
+});
 
 // ---------------------------------------------------------------------------
 // DOM handles
@@ -55,9 +72,9 @@ const screens = {
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, levels: {}, ...JSON.parse(raw) };
+    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, levels: {}, elo: {}, ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
-  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, levels: {}, head: 'none' };
+  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, levels: {}, elo: {}, head: 'none' };
 }
 
 const store = loadStore();
@@ -80,9 +97,18 @@ const UNLEARN_RUN = 2;
 const isFact = (q) => q.topic === 'pow';
 const learnedFactCount = () => Object.values(store.facts).filter((f) => f.learned).length;
 
-// Per-topic adaptive level state. Reading never creates an entry.
-const topicLv = (id) => (store.levels[id] ? store.levels[id].lv : 1);
-const topicLevelState = (id) => store.levels[id] || (store.levels[id] = { lv: 1, run: 0 });
+// Per-topic Elo. A topic that lived under the old run-based level system is
+// seeded from its level (lv1 -> 1000, lv2 -> 1300, lv3 -> 1600) so nobody
+// restarts at the bottom of a hill they already climbed.
+function eloState(id) {
+  if (!store.elo[id]) {
+    const legacy = store.levels && store.levels[id] ? store.levels[id].lv : 1;
+    store.elo[id] = { r: ELO_START + ELO_PER_T * (legacy - 1), n: 0 };
+  }
+  return store.elo[id];
+}
+const eloOf = (id) => (store.elo[id] ? store.elo[id].r
+  : ELO_START + ELO_PER_T * ((store.levels && store.levels[id] ? store.levels[id].lv : 1) - 1));
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -381,12 +407,15 @@ function nextQuestion() {
   // Adaptive: the drawn topic brings its own level, and the level brings its
   // own pacing preset — fractions can play at level 1 in the same session
   // where multiplication plays at level 3.
+  // Adaptive serves each topic at its own rating, with a small spread that
+  // averages slightly ABOVE it — training just past the edge, chess-style.
+  // Manual difficulties and Ladder serve at fixed t (old level − 1).
   const draw = () => {
     const topicId = drawTopic();
-    const lv = g.adaptive ? topicLv(topicId) : g.level;
-    const q = makeQuestion(topicId, lv);
-    q.lv = lv;
-    return q;
+    const t = g.adaptive
+      ? tOf(eloOf(topicId)) + (Math.random() * 0.5 - 0.2)
+      : g.level - 1;
+    return makeQuestion(topicId, t);
   };
   g.current = draw();
   // Learned facts mostly stop appearing: re-roll up to twice when the draw
@@ -396,7 +425,7 @@ function nextQuestion() {
     if (!f || !f.learned) break;
     g.current = draw();
   }
-  if (g.adaptive) g.qdiff = DIFFICULTIES[g.current.lv - 1];
+  if (g.adaptive) g.qdiff = pacingFor(g.current.t);
   g.questionStartedAt = Date.now();
   g.hinted = false;
   g.strained = false;
@@ -405,7 +434,7 @@ function nextQuestion() {
 
   const topic = TOPICS.find((t) => t.id === g.current.topic);
   $('topic-tag').textContent = g.mode === 'ladder' ? `${topic.label} · level ${g.level}`
-    : g.adaptive ? `${topic.label} · level ${g.current.lv}`
+    : g.adaptive ? `${topic.label} · ${Math.round(eloOf(g.current.topic))}`
     : topic.label;
   $('question').innerHTML = questionHtml(g.current.text);
   replay($('question'), 'enter');
@@ -579,25 +608,24 @@ function recordAnswer(q, wasCorrect, elapsedMs) {
     }
   }
 
-  // Adaptive difficulty: runs count only at the topic's CURRENT level —
-  // acing leftovers from a lower level proves nothing about the next one.
-  if (g.adaptive && q.lv === topicLv(q.topic)) {
-    const L = topicLevelState(q.topic);
-    const label = TOPICS.find((t) => t.id === q.topic).label;
-    if (wasCorrect) {
-      L.run = L.run > 0 ? L.run + 1 : 1;
-      if (L.run >= PROMOTE_RUN && L.lv < 3) {
-        L.lv += 1;
-        L.run = 0;
-        if (window.Juice) Juice.toast(`➚ ${label} → level ${L.lv}`);
-      }
-    } else {
-      L.run = L.run < 0 ? L.run - 1 : -1;
-      if (-L.run >= DEMOTE_RUN && L.lv > 1) {
-        L.lv -= 1;
-        L.run = 0;
-        if (window.Juice) Juice.toast(`➘ ${label} → back to level ${L.lv}`);
-      }
+  // The Elo match: this question carried a rating (from the size it was
+  // generated at); win or lose, the topic's rating moves by the SURPRISE.
+  // Beating a question you were expected to beat pays almost nothing; losing
+  // one costs a lot. K shrinks once the rating has settled (30+ answers).
+  if (q.t !== undefined) {
+    const e = eloState(q.topic);
+    const dq = dqOf(q.t);
+    const expected = 1 / (1 + Math.pow(10, (dq - e.r) / 400));
+    const K = e.n < 30 ? 32 : 16;
+    const before = e.r;
+    e.r = Math.round((e.r + K * ((wasCorrect ? 1 : 0) - expected)) * 10) / 10;
+    e.n += 1;
+    g.eloMoves = g.eloMoves || {};
+    g.eloMoves[q.topic] = (g.eloMoves[q.topic] || 0) + (e.r - before);
+    // Century crossings are the milestone moments.
+    if (Math.floor(before / 100) !== Math.floor(e.r / 100) && window.Juice) {
+      const label = TOPICS.find((t) => t.id === q.topic).label;
+      Juice.toast(`${e.r > before ? '➚' : '➘'} ${label} rating ${Math.round(e.r)}`);
     }
   }
 
@@ -828,7 +856,16 @@ function endGame(aborted = false) {
     `<div class="stat"><b>${(avgMs / 1000).toFixed(1)}s</b><span>avg time</span></div>` +
     `<div class="stat"><b>${g.bestStreak}</b><span>best streak</span></div>` +
     (g.newlyLearned ? `<div class="stat"><b>+${g.newlyLearned}</b><span>facts learned 🎉</span></div>` : '') +
-    (g.newlyLost ? `<div class="stat"><b>−${g.newlyLost}</b><span>slipped</span></div>` : '');
+    (g.newlyLost ? `<div class="stat"><b>−${g.newlyLost}</b><span>slipped</span></div>` : '') +
+    // The session's biggest rating move — the number that actually measures
+    // whether today made you better.
+    (() => {
+      const moves = Object.entries(g.eloMoves || {}).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+      if (!moves.length || Math.abs(moves[0][1]) < 1) return '';
+      const [topicId, d] = moves[0];
+      const label = TOPICS.find((t) => t.id === topicId).label;
+      return `<div class="stat"><b>${d > 0 ? '+' : '−'}${Math.abs(Math.round(d))}</b><span>${label} rating → ${Math.round(eloOf(topicId))}</span></div>`;
+    })();
 
   $('results-xp').innerHTML = levelAfter > levelBefore
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`
@@ -890,7 +927,7 @@ function renderStats() {
     const pct = Math.round(masteryOf(t.id) * 100);
     const time = avgMsOf(t.id);
     return `<div class="topic-row">
-      <span class="topic-name"><b>${t.icon}</b> ${t.label} <em class="topic-lv">Lv ${topicLv(t.id)}</em></span>
+      <span class="topic-name"><b>${t.icon}</b> ${t.label} <em class="topic-lv">${Math.round(eloOf(t.id))}</em></span>
       <span class="bar"><i style="width:${s.seen ? pct : 0}%"></i></span>
       <span class="topic-num">${s.seen ? `${pct}% · ${(time / 1000).toFixed(1)}s` : '—'}</span>
     </div>`;
