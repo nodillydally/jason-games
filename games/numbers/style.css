@@ -120,9 +120,11 @@
 .hint-sheet {
   position: fixed;
   inset: 0;
-  background: #14111066;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  /* A plain black scrim rather than an ink tint: on the dark theme the tint was
+     barely darker than the page, so the sheet had nothing to sit against. */
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -130,44 +132,73 @@
   animation: fade-soft .25s var(--ease) both;
 }
 
+/* The sheet is a column: a header that stays put and a body that scrolls.
+   Scrolling the whole panel took the close button with it, which is how you
+   end up looking at a wall of method text with no way out. */
 .hint-inner {
   position: relative;
-  background: var(--card-bg);
-  border: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-2);
+  border: 1px solid var(--stroke-hi);
   border-bottom: none;
   border-radius: 22px 22px 0 0;
-  padding: 30px 24px calc(26px + env(safe-area-inset-bottom));
   width: 100%;
   max-width: 600px;
-  max-height: 84vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-lift);
+  max-height: 86vh;
+  overflow: hidden;
+  box-shadow: 0 -24px 60px -20px rgba(0, 0, 0, .7);
   animation: sheet-up .35s var(--ease) both;
-}
-/* The grab handle that says "this is a sheet". */
-.hint-inner::before {
-  content: "";
-  position: absolute;
-  top: 11px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 38px;
-  height: 3px;
-  border-radius: var(--r-pill);
-  background: var(--rule);
 }
 @keyframes sheet-up {
   from { opacity: 0; transform: translateY(100%); }
   to   { opacity: 1; transform: none; }
 }
 
-.hint-close {
+.hint-head {
+  flex: none;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 20px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+/* The grab handle that says "this is a sheet". */
+.hint-head::before {
+  content: "";
   position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  min-height: 32px;
+  top: 9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 38px;
+  height: 3px;
+  border-radius: var(--r-pill);
+  background: var(--stroke-hi);
+}
+.hint-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+#hint-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 22px 20px calc(24px + env(safe-area-inset-bottom));
+}
+
+.hint-close {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
   padding: 0;
   display: grid;
   place-items: center;
@@ -237,7 +268,9 @@
   #type-input { width: 100%; }
   #type-form { flex-wrap: wrap; }
   #type-form button { flex: 1; }
-  .hint-inner { padding: 28px 18px calc(22px + env(safe-area-inset-bottom)); max-height: 88vh; }
+  .hint-inner { max-height: 88vh; }
+  .hint-head { padding: 20px 16px 12px; }
+  #hint-body { padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); }
   .method-problem { font-size: 22px; }
   .topic-name { flex: 0 0 38%; font-size: 13px; }
 }
