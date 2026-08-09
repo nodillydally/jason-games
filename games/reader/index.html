@@ -21,7 +21,11 @@
     </header>
 
     <div class="card profile-card">
-      <div class="level-badge"><span id="menu-best">—</span><small>best ewpm</small></div>
+      <div class="level-badge">Lv&nbsp;<span id="menu-level">1</span></div>
+      <div class="xp">
+        <div class="xp-bar"><div id="xp-fill"></div></div>
+        <span id="xp-label"></span>
+      </div>
       <div class="profile-stats" id="profile-stats"></div>
       <button id="stats-btn" title="Your stats">📊 Stats</button>
     </div>
@@ -103,6 +107,7 @@
       <h2 id="results-title"></h2>
       <div id="results-score"></div>
       <div id="results-stats" class="results-stats"></div>
+      <div id="results-xp" class="results-xp"></div>
       <div id="results-note" class="results-note"></div>
       <div id="results-review"></div>
       <div class="results-actions">
@@ -117,6 +122,7 @@
     <div class="card stats-card">
       <h2>Your reading</h2>
       <div id="stats-summary" class="profile-stats"></div>
+      <div id="stats-projection" class="projection"></div>
       <div id="stats-history"></div>
       <div id="stats-levels"></div>
       <button id="stats-back" class="primary">Back</button>

@@ -54,13 +54,25 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => (
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { sessions: 0, wordsRead: 0, bestEffective: 0, history: [], byLevel: {}, ...JSON.parse(raw) };
+    if (raw) return { xp: 0, sessions: 0, wordsRead: 0, bestEffective: 0, history: [], byLevel: {}, ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
-  return { sessions: 0, wordsRead: 0, bestEffective: 0, history: [], byLevel: {} };
+  return { xp: 0, sessions: 0, wordsRead: 0, bestEffective: 0, history: [], byLevel: {} };
 }
 
 const store = loadStore();
 const saveStore = () => localStorage.setItem(STORE_KEY, JSON.stringify(store));
+
+// Same curve as Mapmaster and Numbers, so a level means the same effort in
+// every game. XP here is comprehended words: words read × comprehension.
+// Reading faster earns XP faster only while understanding holds — the same
+// bargain as the effective-wpm score itself.
+const levelForXp = (xp) => 1 + Math.floor(Math.sqrt(xp / 100));
+const xpAtLevel = (lv) => 100 * (lv - 1) * (lv - 1);
+
+// The point of all this: a lifetime of books. ~90k words is a typical
+// nonfiction book; 30 min/day is the assumed reading habit.
+const BOOK_WORDS = 90000;
+const DAILY_MINUTES = 30;
 
 // ---------------------------------------------------------------------------
 // Text handling
@@ -111,8 +123,15 @@ function optionButton(item, group, active) {
 }
 
 function renderMenu() {
-  $('menu-best').textContent = store.bestEffective || '—';
+  const level = levelForXp(store.xp);
+  $('menu-level').textContent = level;
+  const cur = store.xp - xpAtLevel(level);
+  const need = xpAtLevel(level + 1) - xpAtLevel(level);
+  $('xp-fill').style.width = `${Math.min(100, (cur / need) * 100)}%`;
+  $('xp-label').textContent = `${cur} / ${need} XP to level ${level + 1}`;
+
   $('profile-stats').innerHTML =
+    `<span><b>${store.bestEffective || '—'}</b> best ewpm</span>` +
     `<span><b>${store.sessions}</b> sessions</span>` +
     `<span><b>${store.wordsRead.toLocaleString()}</b> words read</span>`;
 
@@ -376,7 +395,7 @@ function syncSession(aborted) {
       correct: g.log.filter((a) => a.correct).length,
       best_streak: g.rung,
       duration_ms: Date.now() - g.startedAt,
-      xp_gained: Math.round(g.wordsRead / 10),
+      xp_gained: g.xpGain || 0,
       aborted,
       played_at: new Date(g.startedAt).toISOString(),
     },
@@ -391,6 +410,17 @@ function endGame(aborted = false) {
 
   store.sessions += 1;
   store.wordsRead += g.wordsRead;
+
+  // XP = comprehended words / 10. Free reads earn at half rate since nothing
+  // verifies the comprehension.
+  const answered = g.log.length;
+  const compFactor = answered ? g.log.filter((a) => a.correct).length / answered : 0;
+  g.xpGain = g.mode === 'free'
+    ? Math.round(g.wordsRead / 20)
+    : Math.round((g.wordsRead / 10) * compFactor);
+  const levelBefore = levelForXp(store.xp);
+  store.xp += g.xpGain;
+  const levelAfter = levelForXp(store.xp);
 
   const last = g.rounds[g.rounds.length - 1];
   const best = g.rounds.reduce((m, r) => Math.max(m, r.effective), 0);
@@ -408,6 +438,10 @@ function endGame(aborted = false) {
     g = null;
     return;
   }
+
+  $('results-xp').innerHTML = levelAfter > levelBefore
+    ? `+${g.xpGain} XP — <b>level ${levelAfter}!</b>`
+    : `+${g.xpGain} XP`;
 
   if (g.mode === 'free') {
     const wpm = Math.round(g.words.length / (g.lastElapsedMs / 60000));
@@ -458,9 +492,26 @@ function renderStats() {
   const h = store.history;
   const avgEwpm = h.length ? Math.round(h.reduce((s, r) => s + r.ewpm, 0) / h.length) : 0;
   $('stats-summary').innerHTML =
+    `<span><b>Lv ${levelForXp(store.xp)}</b> · ${store.xp.toLocaleString()} XP</span>` +
     `<span><b>${store.bestEffective || '—'}</b> best ewpm</span>` +
     `<span><b>${avgEwpm || '—'}</b> average</span>` +
     `<span><b>${store.wordsRead.toLocaleString()}</b> words</span>`;
+
+  // The number this whole game exists to move. A typical nonfiction book is
+  // ~90k words; the projection assumes 30 minutes of reading a day.
+  if (avgEwpm) {
+    const booksPerYear = (avgEwpm * DAILY_MINUTES * 365) / BOOK_WORDS;
+    const lifetimeBooks = booksPerYear * 50;
+    const nextEwpm = avgEwpm + 50;
+    const extraBooks = ((nextEwpm * DAILY_MINUTES * 365) / BOOK_WORDS) - booksPerYear;
+    $('stats-projection').innerHTML =
+      `At your average effective speed, ${DAILY_MINUTES} min/day ≈ ` +
+      `<b>${booksPerYear.toFixed(1)} books a year</b> — about ` +
+      `<b>${Math.round(lifetimeBooks).toLocaleString()} over the next 50 years</b>. ` +
+      `Raising your effective speed by 50 wpm adds ~${extraBooks.toFixed(1)} books a year.`;
+  } else {
+    $('stats-projection').textContent = '';
+  }
 
   const recent = h.slice(-20);
   const peak = Math.max(1, ...recent.map((r) => r.ewpm));
