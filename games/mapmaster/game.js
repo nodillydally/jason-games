@@ -470,8 +470,9 @@ function renderMenu() {
   $('xp-label').textContent = `${cur} / ${need} XP to level ${level + 1}`;
 
   const acc = store.answered ? Math.round((store.correct / store.answered) * 100) : 0;
+  const geoElo = geoEloAvg();
   $('profile-stats').innerHTML =
-    `<span><b>${store.games}</b> games</span>` +
+    (geoElo !== null ? `<span><b>${geoElo}</b> elo</span>` : '') +
     `<span><b>${learnedCount()}</b> learned</span>` +
     `<span><b>${acc}%</b> accuracy</span>`;
 
@@ -775,7 +776,14 @@ function endGame(aborted = false) {
     `<div class="stat"><b>${g.bestStreak}</b><span>best streak</span></div>` +
     `<div class="stat"><b>${store.best[bestKey] || 0}</b><span>best score</span></div>` +
     (g.newlyLearned ? `<div class="stat"><b>+${g.newlyLearned}</b><span>learned 🎉</span></div>` : '') +
-    (g.newlyLost ? `<div class="stat"><b>−${g.newlyLost}</b><span>slipped — review them</span></div>` : '');
+    (g.newlyLost ? `<div class="stat"><b>−${g.newlyLost}</b><span>slipped — review them</span></div>` : '') +
+    // The session's rating movement — points are the reward, this is the truth.
+    (() => {
+      const moves = Object.entries(g.eloMoves || {}).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+      if (!moves.length || Math.abs(moves[0][1]) < 1) return '';
+      const [cont, d] = moves[0];
+      return `<div class="stat"><b>${d > 0 ? '+' : '−'}${Math.abs(Math.round(d))}</b><span>${cont} elo → ${Math.round(store.elo[cont].r)}</span></div>`;
+    })();
 
   const missedEl = $('results-missed');
   if (g.missed.length) {
@@ -803,6 +811,12 @@ function endGame(aborted = false) {
 // One rating per continent — the honest resolution for geography.
 const ELO_K = (n) => (n < 30 ? 32 : 16);
 
+// The domain rating shown on menus and results: mean across rated continents.
+function geoEloAvg() {
+  const rs = Object.values(store.elo).filter((e) => e && e.n > 0).map((e) => e.r);
+  return rs.length ? Math.round(rs.reduce((a, b) => a + b, 0) / rs.length) : null;
+}
+
 function questionRating() {
   if (g.mode === 'find') return 1250;   // map visible, but you must place it
   const base = { easy: 1000, medium: 1300, hard: 1600 }[g.difficulty.id] || 1000;
@@ -817,6 +831,8 @@ function updateElo(continent, wasCorrect) {
   const before = e.r;
   e.r = Math.round((e.r + ELO_K(e.n) * ((wasCorrect ? 1 : 0) - expected)) * 10) / 10;
   e.n += 1;
+  g.eloMoves = g.eloMoves || {};
+  g.eloMoves[continent] = (g.eloMoves[continent] || 0) + (e.r - before);
   if (Math.floor(before / 100) !== Math.floor(e.r / 100) && window.Juice) {
     Juice.toast(`${e.r > before ? '➚' : '➘'} ${continent} rating ${Math.round(e.r)}`);
   }

@@ -227,8 +227,10 @@ function renderMenu() {
   Wardrobe.check('numbers', level);
 
   const acc = store.answered ? Math.round((store.correct / store.answered) * 100) : 0;
+  const ratedTopics = Object.values(store.elo).filter((e) => e && e.n > 0).map((e) => e.r);
+  const avgElo = ratedTopics.length ? Math.round(ratedTopics.reduce((a, b) => a + b, 0) / ratedTopics.length) : null;
   $('profile-stats').innerHTML =
-    `<span><b>${store.games}</b> games</span>` +
+    (avgElo !== null ? `<span><b>${avgElo}</b> avg elo</span>` : `<span><b>${store.games}</b> games</span>`) +
     `<span><b>${learnedFactCount()}</b> facts learned</span>` +
     `<span><b>${acc}%</b> accuracy</span>`;
 
