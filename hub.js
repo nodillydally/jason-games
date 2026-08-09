@@ -304,6 +304,26 @@
   renderRank();
   renderStreak();
 
+  // The scoreboard: every domain on one Elo scale, plus the average.
+  function renderEloBoard() {
+    const host = document.getElementById('elo-board');
+    if (!host || !window.EloBoard) return;
+    const b = EloBoard.board();
+    if (!b.ratedCount) {
+      host.innerHTML = '<div class="elo-rows"><div class="elo-row unrated">Play anything — ratings appear as answers land.</div></div>';
+      return;
+    }
+    host.innerHTML = `
+      <div class="elo-overall"><b>${b.overall}</b><small>overall elo · ${b.ratedCount}/5 domains</small></div>
+      <div class="elo-rows">
+        ${b.domains.map((d) => d.rating !== null
+          ? `<div class="elo-row"><span class="er-label">${d.icon} ${d.label}</span><b>${Math.round(d.rating)}</b><small>${d.detail || ''}</small></div>`
+          : `<div class="elo-row unrated"><span class="er-label">${d.icon} ${d.label}</span><b>—</b><small>not yet rated</small></div>`).join('')}
+      </div>`;
+  }
+  renderEloBoard();
+  window.addEventListener('pageshow', (e) => { if (e.persisted) renderEloBoard(); });
+
   // The locker: the shared character stands in the hub like a lobby, with the
   // wardrobe (inventory) and shop attached. Chests earned in any game and not
   // yet opened greet you here — the lobby is where loot gets opened.

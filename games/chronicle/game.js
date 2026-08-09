@@ -53,6 +53,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => (
 const BLANK_STORE = {
   xp: 0, games: 0, correct: 0, answered: 0,
   best: {}, stats: {}, studied: {}, studiedAt: {}, pinned: {},
+  elo: { r: 1000, n: 0 },
 };
 
 function loadStore() {
@@ -505,9 +506,28 @@ function updateHud() {
 // Answering (choice questions)
 // ---------------------------------------------------------------------------
 
-function recordAnswer(ev, wasCorrect, elapsedMs) {
+// One History rating, same scale as Numbers and Mapmaster (1000 baseline).
+// Question difficulty by type: spotting an era is entry work, which-came-first
+// on neighbouring events is genuinely hard, exact years hardest.
+const Q_RATING = { era: 1000, inera: 1150, first: 1300, seq: 1250, year: 1550 };
+
+function updateElo(qtype, wasCorrect) {
+  const e = store.elo && typeof store.elo.r === 'number' ? store.elo : (store.elo = { r: 1000, n: 0 });
+  const dq = Q_RATING[qtype] || 1150;
+  const expected = 1 / (1 + Math.pow(10, (dq - e.r) / 400));
+  const K = e.n < 30 ? 32 : 16;
+  const before = e.r;
+  e.r = Math.round((e.r + K * ((wasCorrect ? 1 : 0) - expected)) * 10) / 10;
+  e.n += 1;
+  if (Math.floor(before / 100) !== Math.floor(e.r / 100) && window.Juice) {
+    Juice.toast(`${e.r > before ? '➚' : '➘'} History rating ${Math.round(e.r)}`);
+  }
+}
+
+function recordAnswer(ev, wasCorrect, elapsedMs, qtype) {
   g.answered += 1;
   store.answered += 1;
+  updateElo(qtype, wasCorrect);
   const s = store.stats[ev.id] || (store.stats[ev.id] = { seen: 0, correct: 0, run: 0 });
   s.seen += 1;
   if (wasCorrect) {
@@ -554,7 +574,7 @@ function answer(opt, btn) {
   const primary = q.qtype === 'first'
     ? q.options.find((o) => o.right).ev
     : q.events[0];
-  recordAnswer(primary, right, elapsed);
+  recordAnswer(primary, right, elapsed, q.qtype);
 
   const whyLine = (ev) => `${fmtYear(ev.y)} — ${esc(ev.why)}`;
 
@@ -662,7 +682,7 @@ function checkSequence() {
   g.seq.placed.forEach((ev, i) => {
     const right = correctOrder[i] === ev;
     if (right) rightCount += 1;
-    recordAnswer(ev, right, Math.round(elapsed / 4));
+    recordAnswer(ev, right, Math.round(elapsed / 4), 'seq');
     if (!right && !g.missed.includes(ev)) g.missed.push(ev);
   });
 
@@ -1503,6 +1523,7 @@ function renderStats() {
   const mastered = EVENTS.filter((e) => statFor(e.id).seen > 0 && masteryOf(e.id) >= MASTERY).length;
   $('stats-summary').innerHTML =
     `<span><b>Lv ${levelForXp(store.xp)}</b> · ${store.xp.toLocaleString()} XP</span>` +
+    (store.elo && store.elo.n ? `<span><b>${Math.round(store.elo.r)}</b> history elo</span>` : '') +
     `<span><b>${acc}%</b> accuracy</span>` +
     `<span><b>${mastered}/${EVENTS.length}</b> events mastered</span>`;
 

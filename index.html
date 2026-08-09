@@ -92,6 +92,31 @@
     font-size: 12.5px;
   }
 
+  /* The scoreboard — one rating per domain on one scale, and the average.
+     Ratings can fall; that's what makes the number mean something. */
+  .elo-card { display: flex; flex-wrap: wrap; align-items: center; gap: 26px; padding: 24px 28px; }
+  .elo-overall { flex: 0 0 auto; text-align: center; padding-right: 26px; border-right: 1px solid var(--rule); }
+  .elo-overall b {
+    display: block;
+    font-family: var(--serif);
+    font-size: 46px;
+    line-height: 1;
+    letter-spacing: -.02em;
+  }
+  .elo-overall small {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .elo-rows { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 8px; }
+  .elo-row { display: flex; align-items: baseline; gap: 10px; font-size: 14px; }
+  .elo-row .er-label { flex: 0 0 110px; }
+  .elo-row b { font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .elo-row small { color: var(--ink-3); font-size: 12px; }
+  .elo-row.unrated { opacity: .45; }
+
   /* Quick play — THE button: one tap, straight into a running session of
      whichever game is furthest behind. */
   .quick-cta[hidden] { display: none; }
@@ -516,6 +541,9 @@
   <div class="sec-head">The locker</div>
   <section class="card lobby-card profile-card" id="lobby"></section>
 
+  <div class="sec-head">The scoreboard</div>
+  <section class="card elo-card" id="elo-board"></section>
+
   <div class="card rank-card" id="rank-card">
     <div class="level-badge"><span id="rank-level">1</span><small>Overall level</small></div>
     <div class="xp">
@@ -609,6 +637,7 @@
 <script src="lib/roam.js"></script>
 <script src="lib/juice.js"></script>
 <script src="lib/next.js"></script>
+<script src="lib/elo.js"></script>
 <script src="lib/pixel.js"></script>
 <script src="lib/gear.js"></script>
 <script src="lib/avatar.js"></script>

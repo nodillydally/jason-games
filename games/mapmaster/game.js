@@ -80,9 +80,9 @@ const tip = $('map-tip');
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, pace: {}, ...JSON.parse(raw) };
+    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, pace: {}, elo: {}, ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
-  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, pace: {} };
+  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, pace: {}, elo: {} };
 }
 
 const store = loadStore();
@@ -544,7 +544,7 @@ function renderStats() {
         <div class="ring" style="--p:${mastery}"><span>${mastery}%</span></div>
         <div class="continent-info">
           <b>${badgeFor(mastery)} ${name}</b>
-          <span>${learned} learned · ${seen}/${pool.length} seen</span>
+          <span>${store.elo[name] ? `${Math.round(store.elo[name].r)} elo · ` : ''}${learned} learned · ${seen}/${pool.length} seen</span>
         </div>
       </div>`;
   });
@@ -796,6 +796,32 @@ function endGame(aborted = false) {
   if (lvUp) setTimeout(() => Juice.levelUp(levelAfter), 500);
 }
 
+// Elo, on the same scale as Numbers (1000 baseline, ~300 a tier). Every
+// answer is a match against the question's implied difficulty: what mode of
+// recall it demanded (3 regional choices, 6 nearest, typed cold) and what
+// kind (flags carry less context than locations, capitals are pure recall).
+// One rating per continent — the honest resolution for geography.
+const ELO_K = (n) => (n < 30 ? 32 : 16);
+
+function questionRating() {
+  if (g.mode === 'find') return 1250;   // map visible, but you must place it
+  const base = { easy: 1000, medium: 1300, hard: 1600 }[g.difficulty.id] || 1000;
+  const kind = { location: 0, flag: 50, capital: 100 }[g.qtype] || 0;
+  return base + kind;
+}
+
+function updateElo(continent, wasCorrect) {
+  const e = store.elo[continent] || (store.elo[continent] = { r: 1000, n: 0 });
+  const dq = questionRating();
+  const expected = 1 / (1 + Math.pow(10, (dq - e.r) / 400));
+  const before = e.r;
+  e.r = Math.round((e.r + ELO_K(e.n) * ((wasCorrect ? 1 : 0) - expected)) * 10) / 10;
+  e.n += 1;
+  if (Math.floor(before / 100) !== Math.floor(e.r / 100) && window.Juice) {
+    Juice.toast(`${e.r > before ? '➚' : '➘'} ${continent} rating ${Math.round(e.r)}`);
+  }
+}
+
 function recordAnswer(country, wasCorrect) {
   g.answered += 1;
   store.answered += 1;
@@ -806,6 +832,8 @@ function recordAnswer(country, wasCorrect) {
   pace.ms += elapsed;
   pace.n += 1;
   if (!wasCorrect) pace.miss += 1;
+
+  updateElo(country.continent, wasCorrect);
 
   if (g.mode === 'race') {
     if (wasCorrect) Rival.advanceYou();
