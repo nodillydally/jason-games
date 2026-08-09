@@ -519,3 +519,17 @@
   .lane-legs { flex: 0 0 34px; }
   .verdict-head { font-size: 17px; }
 }
+
+/* per-topic adaptive level badge (stats screen) */
+.topic-lv {
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .05em;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule);
+  border-radius: 99px;
+  padding: 1px 7px;
+  margin-left: 4px;
+  vertical-align: 1px;
+}

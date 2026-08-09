@@ -27,6 +27,14 @@ const DIFFICULTIES = [
   { id: 'hard',   label: 'Hard',   level: 3, choices: 0, seconds: 25, mult: 2.4 },
 ];
 
+// Adaptive is the default: every TOPIC carries its own level (1-3), promoted
+// on 3 right in a row at that level, demoted on 2 wrong in a row. Addition
+// can sit at level 3 while fractions rebuild at level 1 — one Start button,
+// and the game meets each skill where it actually is.
+const ADAPTIVE = { id: 'adaptive', label: 'Adaptive', icon: '🎚' };
+const PROMOTE_RUN = 3;
+const DEMOTE_RUN = 2;
+
 // ---------------------------------------------------------------------------
 // DOM handles
 // ---------------------------------------------------------------------------
@@ -47,9 +55,9 @@ const screens = {
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, ...JSON.parse(raw) };
+    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, levels: {}, ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
-  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, head: 'none' };
+  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, levels: {}, head: 'none' };
 }
 
 const store = loadStore();
@@ -71,6 +79,10 @@ const LEARN_RUN = 3;
 const UNLEARN_RUN = 2;
 const isFact = (q) => q.topic === 'pow';
 const learnedFactCount = () => Object.values(store.facts).filter((f) => f.learned).length;
+
+// Per-topic adaptive level state. Reading never creates an entry.
+const topicLv = (id) => (store.levels[id] ? store.levels[id].lv : 1);
+const topicLevelState = (id) => store.levels[id] || (store.levels[id] = { lv: 1, run: 0 });
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -167,7 +179,7 @@ function drawTopic() {
 // Menu
 // ---------------------------------------------------------------------------
 
-const sel = { mode: 'classic', topic: 'mixed', difficulty: 'normal', rival: 'kid' };
+const sel = { mode: 'classic', topic: 'mixed', difficulty: 'adaptive', rival: 'kid' };
 
 function optionButton(item, group, active) {
   const b = document.createElement('button');
@@ -201,7 +213,7 @@ function renderMenu() {
 
   fill('mode-options', MODES, 'mode');
   fill('topic-options', [{ id: 'mixed', label: 'Mixed', icon: '🎲' }, ...TOPICS], 'topic');
-  fill('difficulty-options', DIFFICULTIES, 'difficulty');
+  fill('difficulty-options', [ADAPTIVE, ...DIFFICULTIES], 'difficulty');
 
   const isRace = sel.mode === 'race';
   $('rival-block').classList.toggle('hidden', !isRace);
@@ -233,7 +245,11 @@ let g = null;
 let ticker = null;
 
 function startGame() {
-  const difficulty = DIFFICULTIES.find((d) => d.id === sel.difficulty);
+  // Ladder has its own global ramp, so adaptive per-topic levels don't apply
+  // there — it falls back to the normal preset for pacing and scoring.
+  const adaptive = sel.difficulty === 'adaptive' && sel.mode !== 'ladder';
+  const preset = DIFFICULTIES.find((d) => d.id === sel.difficulty) || DIFFICULTIES[1];
+  const difficulty = adaptive ? ADAPTIVE : preset;
   const endless = sel.mode === 'blitz' || sel.mode === 'marathon'
     || sel.mode === 'ladder' || sel.mode === 'race';
 
@@ -252,8 +268,13 @@ function startGame() {
     topic: sel.topic,
     topicPool,
     difficulty,
+    adaptive,
+    // qdiff is the preset governing the CURRENT question (timer, choices,
+    // points). Fixed difficulties keep it constant; adaptive re-picks it per
+    // question from the drawn topic's level.
+    qdiff: preset,
     // Ladder ignores the picker and climbs on its own.
-    level: sel.mode === 'ladder' ? 1 : difficulty.level,
+    level: sel.mode === 'ladder' ? 1 : preset.level,
     round: 0,
     rounds: endless ? Infinity : QUIZ_ROUNDS,
     score: 0,
@@ -324,7 +345,7 @@ function tick() {
 
   if (g.locked || g.hintOpen) return;
 
-  const limit = g.difficulty.seconds * 1000;
+  const limit = g.qdiff.seconds * 1000;
   const spent = Date.now() - g.questionStartedAt;
   const frac = Math.max(0, 1 - spent / limit);
   const fill = $('timer-fill');
@@ -345,14 +366,25 @@ function nextQuestion() {
 
   g.round += 1;
   g.locked = false;
-  g.current = makeQuestion(drawTopic(), g.level);
+  // Adaptive: the drawn topic brings its own level, and the level brings its
+  // own pacing preset — fractions can play at level 1 in the same session
+  // where multiplication plays at level 3.
+  const draw = () => {
+    const topicId = drawTopic();
+    const lv = g.adaptive ? topicLv(topicId) : g.level;
+    const q = makeQuestion(topicId, lv);
+    q.lv = lv;
+    return q;
+  };
+  g.current = draw();
   // Learned facts mostly stop appearing: re-roll up to twice when the draw
   // lands on one. A third landing gets through — occasional defense reps.
   for (let reroll = 0; reroll < 2; reroll += 1) {
     const f = isFact(g.current) && store.facts[g.current.text];
     if (!f || !f.learned) break;
-    g.current = makeQuestion(drawTopic(), g.level);
+    g.current = draw();
   }
+  if (g.adaptive) g.qdiff = DIFFICULTIES[g.current.lv - 1];
   g.questionStartedAt = Date.now();
   g.hinted = false;
   g.strained = false;
@@ -360,7 +392,9 @@ function nextQuestion() {
   closeHint();
 
   const topic = TOPICS.find((t) => t.id === g.current.topic);
-  $('topic-tag').textContent = g.mode === 'ladder' ? `${topic.label} · level ${g.level}` : topic.label;
+  $('topic-tag').textContent = g.mode === 'ladder' ? `${topic.label} · level ${g.level}`
+    : g.adaptive ? `${topic.label} · level ${g.current.lv}`
+    : topic.label;
   $('question').innerHTML = questionHtml(g.current.text);
   replay($('question'), 'enter');
   $('feedback').textContent = '';
@@ -369,7 +403,7 @@ function nextQuestion() {
   $('timer-fill').style.width = '100%';
   $('timer-fill').className = '';
 
-  if (g.difficulty.choices) {
+  if (g.qdiff.choices) {
     $('type-form').classList.add('hidden');
     renderChoices();
   } else {
@@ -387,7 +421,7 @@ function nextQuestion() {
 function renderChoices() {
   const el = $('choices');
   el.innerHTML = '';
-  const wrong = wrongAnswers(g.current, g.difficulty.choices - 1);
+  const wrong = wrongAnswers(g.current, g.qdiff.choices - 1);
   const options = shuffle([g.current.answer, ...wrong]);
   options.forEach((value, i) => {
     const b = document.createElement('button');
@@ -480,12 +514,12 @@ function answer(given, btn) {
   }
 
   // Show which one was right when they picked wrong.
-  if (g.difficulty.choices && !right) {
+  if (g.qdiff.choices && !right) {
     [...$('choices').children].forEach((b) => {
       if (Number(b.dataset.value) === q.answer) b.classList.add('correct');
     });
   }
-  if (g.difficulty.choices) [...$('choices').children].forEach((b) => { b.disabled = true; });
+  if (g.qdiff.choices) [...$('choices').children].forEach((b) => { b.disabled = true; });
   $('type-input').disabled = true;
 
   if (g.lives !== null && g.lives <= 0) g.dead = true;
@@ -533,6 +567,28 @@ function recordAnswer(q, wasCorrect, elapsedMs) {
     }
   }
 
+  // Adaptive difficulty: runs count only at the topic's CURRENT level —
+  // acing leftovers from a lower level proves nothing about the next one.
+  if (g.adaptive && q.lv === topicLv(q.topic)) {
+    const L = topicLevelState(q.topic);
+    const label = TOPICS.find((t) => t.id === q.topic).label;
+    if (wasCorrect) {
+      L.run = L.run > 0 ? L.run + 1 : 1;
+      if (L.run >= PROMOTE_RUN && L.lv < 3) {
+        L.lv += 1;
+        L.run = 0;
+        if (window.Juice) Juice.toast(`➚ ${label} → level ${L.lv}`);
+      }
+    } else {
+      L.run = L.run < 0 ? L.run - 1 : -1;
+      if (-L.run >= DEMOTE_RUN && L.lv > 1) {
+        L.lv -= 1;
+        L.run = 0;
+        if (window.Juice) Juice.toast(`➘ ${label} → back to level ${L.lv}`);
+      }
+    }
+  }
+
   if (wasCorrect) {
     g.correct += 1;
     store.correct += 1;
@@ -558,14 +614,14 @@ function recordAnswer(q, wasCorrect, elapsedMs) {
 }
 
 function awardPoints(elapsedMs) {
-  const limit = g.difficulty.seconds * 1000;
+  const limit = g.qdiff.seconds * 1000;
   // A hinted question still counts as correct — the point is learning the
   // method — but it forfeits the speed bonus rather than being penalised.
   const speed = g.hinted ? 0 : Math.max(0, 1 - elapsedMs / limit);
   const base = 60 + Math.round(60 * speed);
   const streakBonus = 10 * Math.min(g.streak, 10);
   const ladderBonus = g.mode === 'ladder' ? 1 + (g.level - 1) * 0.3 : 1;
-  const pts = Math.round((base + streakBonus) * g.difficulty.mult * ladderBonus);
+  const pts = Math.round((base + streakBonus) * g.qdiff.mult * ladderBonus);
   g.score += pts;
   return pts;
 }
@@ -708,7 +764,7 @@ function endGame(aborted = false) {
   // A win pays out, and a comfortable win pays more than a scrape — but the
   // margin is capped, so thrashing a rival can't dwarf the round itself.
   const raceBonus = race && race.won
-    ? Math.round((250 + 70 * clamp(race.margin, 0, 3)) * g.difficulty.mult)
+    ? Math.round((250 + 70 * clamp(race.margin, 0, 3)) * g.qdiff.mult)
     : 0;
   g.score += raceBonus;
 
@@ -814,7 +870,7 @@ function renderStats() {
     const pct = Math.round(masteryOf(t.id) * 100);
     const time = avgMsOf(t.id);
     return `<div class="topic-row">
-      <span class="topic-name"><b>${t.icon}</b> ${t.label}</span>
+      <span class="topic-name"><b>${t.icon}</b> ${t.label} <em class="topic-lv">Lv ${topicLv(t.id)}</em></span>
       <span class="bar"><i style="width:${s.seen ? pct : 0}%"></i></span>
       <span class="topic-num">${s.seen ? `${pct}% · ${(time / 1000).toFixed(1)}s` : '—'}</span>
     </div>`;
