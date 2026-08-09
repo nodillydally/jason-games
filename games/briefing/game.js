@@ -23,6 +23,7 @@
 'use strict';
 
 const STORE_KEY = 'briefing.profile.v1';
+const DAY_KEY = 'briefing.day.v1';   // in-progress day: drafts + grades, per story
 const FETCH_DAYS = 14;
 const MIN_WORDS = 15;
 
@@ -177,14 +178,39 @@ let g = null;
 let markets = null;      // fetched lazily on first Markets tab open
 let marketsError = null;
 
+// Every draft keystroke and every landed grade goes straight to localStorage,
+// keyed by the brief's date — leaving mid-session loses nothing.
+function saveDay() {
+  if (!g) return;
+  try {
+    localStorage.setItem(DAY_KEY, JSON.stringify({
+      date: g.brief.date,
+      id: g.id,
+      startedAt: g.startedAt,
+      score: g.score,
+      log: g.log,
+      finished: g.finished || false,
+      tabs: Object.fromEntries(Object.entries(g.tabs).map(([k, t]) =>
+        [k, { text: t.text, grade: t.grade, hinted: t.hinted || false }])),
+    }));
+  } catch { /* storage full/private mode — session still works in memory */ }
+}
+
+function loadDay(date) {
+  try {
+    const s = JSON.parse(localStorage.getItem(DAY_KEY));
+    return s && s.date === date ? s : null;
+  } catch { return null; }
+}
+
 function startDay() {
   if (!briefs || !briefs.length) return;
   const brief = briefs[0];
 
   const tabs = {};
-  if (briefs[1]) tabs.recall = { text: '', grade: null, busy: false };
-  brief.items.forEach((_, i) => { tabs[`s${i}`] = { text: '', grade: null, busy: false }; });
-  tabs.markets = { text: '', grade: null, busy: false };
+  if (briefs[1]) tabs.recall = { text: '', grade: null, pending: false, hinted: false, error: null };
+  brief.items.forEach((_, i) => { tabs[`s${i}`] = { text: '', grade: null, pending: false, error: null }; });
+  tabs.markets = { text: '', grade: null, pending: false, error: null };
 
   g = {
     id: (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`),
@@ -194,13 +220,32 @@ function startDay() {
     tabs,
     active: briefs[1] ? 'recall' : 's0',
     score: 0,
+    finished: false,
   };
+
+  // Pick up where the day left off.
+  const saved = loadDay(brief.date);
+  if (saved) {
+    g.id = saved.id || g.id;
+    g.startedAt = saved.startedAt || g.startedAt;
+    g.score = saved.score || 0;
+    g.log = saved.log || [];
+    g.finished = saved.finished || false;
+    for (const [k, t] of Object.entries(saved.tabs || {})) {
+      if (g.tabs[k]) Object.assign(g.tabs[k], { text: t.text || '', grade: t.grade || null, hinted: t.hinted || false });
+    }
+    // Resume on the first thing still unwritten.
+    const next = tabKeysOf(g).find((k) => !g.tabs[k].grade);
+    if (next) g.active = next;
+  }
 
   $('day-meta').textContent = `${weekday(brief.date)} · ${brief.topic}`;
   showScreen('day');
   renderTabs();
   renderPanel();
 }
+
+const tabKeysOf = (session) => Object.keys(session.tabs);
 
 const tabKeys = () => Object.keys(g.tabs);
 const gradedCount = () => tabKeys().filter((k) => g.tabs[k].grade).length;
@@ -219,32 +264,54 @@ function renderTabs() {
     const t = g.tabs[key];
     const b = document.createElement('button');
     b.className = `day-tab${g.active === key ? ' active' : ''}${t.grade ? ' done' : ''}`;
-    b.innerHTML = `${tabLabel(key)}${t.grade ? ` <em>${t.grade.letter}</em>` : ''}`;
+    const mark = t.grade ? ` <em>${t.grade.letter}</em>` : t.pending ? ' <em>…</em>' : t.error ? ' <em>!</em>' : '';
+    b.innerHTML = `${tabLabel(key)}${mark}`;
     b.addEventListener('click', () => { saveDraft(); g.active = key; renderTabs(); renderPanel(); });
     nav.appendChild(b);
   });
 
   $('day-score').textContent = `${g.score} pts`;
   const n = gradedCount();
+  const pending = tabKeys().filter((k) => g.tabs[k].pending).length;
   const finish = $('finish-day');
-  finish.disabled = n === 0;
-  finish.textContent = n === 0 ? 'Grade something first' : `Finish the day (${n}/${tabKeys().length} graded)`;
+  finish.disabled = n === 0 || pending > 0;
+  finish.textContent = pending > 0 ? `Grading ${pending} in the background…`
+    : n === 0 ? 'Grade something first'
+    : `Finish the day (${n}/${tabKeys().length} graded)`;
 }
 
 function saveDraft() {
   const ta = $('take-input');
   if (ta && g) g.tabs[g.active].text = ta.value;
+  saveDay();
+}
+
+// The first tab after `fromKey` that still needs writing.
+function nextUnwritten(fromKey) {
+  const keys = tabKeys();
+  const start = keys.indexOf(fromKey);
+  for (let step = 1; step <= keys.length; step += 1) {
+    const k = keys[(start + step) % keys.length];
+    if (!g.tabs[k].grade && !g.tabs[k].pending) return k;
+  }
+  return null;
 }
 
 // ---- panel renderers ------------------------------------------------------
 
 function promptBlock(prompts, state, cta, extra = '') {
+  if (state.pending) {
+    return `
+      <p class="take-prompts">${prompts.map((p) => `<span>${esc(p)}</span>`).join('')}</p>
+      <div class="pending-note">Grading in the background — keep going.</div>
+      <p class="submitted-text">${esc(state.text)}</p>`;
+  }
   return `
     <p class="take-prompts">${prompts.map((p) => `<span>${esc(p)}</span>`).join('')}</p>
     ${extra}
     <textarea id="take-input" rows="5" placeholder="">${esc(state.text)}</textarea>
-    <button id="grade-btn" class="primary big" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Grading…' : cta}</button>
-    <div id="grade-error" class="grade-error"></div>`;
+    <button id="grade-btn" class="primary big">${state.error ? 'Retry grade' : cta}</button>
+    <div id="grade-error" class="grade-error">${state.error ? esc(state.error) : ''}</div>`;
 }
 
 // Bold the load-bearing specifics — figures, magnitudes, acronyms — which are
@@ -343,20 +410,25 @@ function wirePanel() {
   const ta = $('take-input');
   if (ta) ta.addEventListener('input', () => { g.tabs[g.active].text = ta.value; });
   const btn = $('grade-btn');
-  if (btn) btn.addEventListener('click', gradeActive);
+  if (btn) btn.addEventListener('click', submitTake);
   const hint = $('hint-btn');
   if (hint) hint.addEventListener('click', () => {
     saveDraft();
     g.tabs.recall.hinted = true;
+    saveDay();
     renderPanel();
   });
 }
 
 // ---- grading --------------------------------------------------------------
 
-async function gradeActive() {
-  const key = g.active;
-  const state = g.tabs[key];
+// Submit and move on — grading happens in the background while the next story
+// is being read. The tab picks up its letter when the grade lands; the full
+// feedback waits on the tab and in the end-of-day review.
+function submitTake() {
+  const session = g;
+  const key = session.active;
+  const state = session.tabs[key];
   saveDraft();
   const text = state.text.trim();
 
@@ -365,23 +437,23 @@ async function gradeActive() {
     return;
   }
 
-  state.busy = true;
-  renderPanel();
+  state.pending = true;
+  state.error = null;
 
   const payload = key === 'recall'
     ? { kind: 'recall', date: briefs[1].date, user_text: text, hinted: Boolean(state.hinted) }
     : key === 'markets'
     ? { kind: 'markets', user_text: text }
-    : { kind: 'story', date: g.brief.date, idx: Number(key.slice(1)), user_text: text };
+    : { kind: 'story', date: session.brief.date, idx: Number(key.slice(1)), user_text: text };
 
-  try {
-    const grade = await apiPost('game-grade', payload);
+  apiPost('game-grade', payload).then((grade) => {
+    state.pending = false;
     state.grade = grade;
+    if (g !== session) return;  // day was closed while grading — take is safe server-side
     g.score += grade.score;
     store.scoreSum += grade.score;
     store.gradedCount += 1;
     saveStore();
-
     g.log.push({
       item_id: key === 'recall' ? `${briefs[1].date}#recall` : key === 'markets' ? `${g.brief.date}#markets` : `${g.brief.date}#${key.slice(1)}`,
       item_name: (key.startsWith('s') ? (g.brief.items[Number(key.slice(1))].headline || '') : tabLabel(key)).slice(0, 120) || tabLabel(key),
@@ -389,19 +461,20 @@ async function gradeActive() {
       ms: 0,
       answered_at: new Date().toISOString(),
     });
+    saveDay();
+    renderTabs();
+    if (g.active === key) renderPanel();
+  }).catch((err) => {
+    state.pending = false;
+    state.error = err.message;
+    if (g !== session) return;
+    renderTabs();
+    if (g.active === key) renderPanel();
+  });
 
-    if (window.Juice) {
-      if (grade.score >= 70) Juice.good({ points: grade.score, anchor: $('grade-btn') });
-      else Juice.bad();
-    }
-  } catch (err) {
-    state.busy = false;
-    renderPanel();
-    $('grade-error').textContent = err.message;
-    return;
-  }
-
-  state.busy = false;
+  // Straight to the next unwritten thing — no waiting on the grader.
+  const next = nextUnwritten(key);
+  if (next) g.active = next;
   renderTabs();
   renderPanel();
 }
@@ -433,15 +506,24 @@ function syncSession(aborted, xpGain) {
   });
 }
 
+// Leaving mid-day is not quitting — everything is saved per story, and the
+// session resumes exactly where it left off.
+function leaveDay() {
+  saveDraft();
+  showScreen('menu');
+  renderMenu();
+  g = null;
+}
+
 function endGame(aborted = false) {
   if (!g) return;
 
-  if (aborted) {
-    syncSession(true, 0);
-    saveStore();
-    showScreen('menu');
-    renderMenu();
-    g = null;
+  if (aborted) return leaveDay();
+
+  // Finishing twice (reopening a finished day) must not double-count.
+  if (g.finished) {
+    renderResults();
+    showScreen('results');
     return;
   }
 
@@ -454,12 +536,28 @@ function endGame(aborted = false) {
   // and markets are bonuses, not gates.
   if (storiesAllGraded()) store.doneDates[g.brief.date] = true;
 
+  g.finished = true;
+  saveDay();
   saveStore();
   syncSession(false, xpGain);
 
+  const levelAfter = levelForXp(store.xp);
+  renderResults(xpGain, levelBefore, levelAfter);
+
+  showScreen('results');
+  if (window.Juice) {
+    const graded = tabKeys().filter((k) => g.tabs[k].grade);
+    const avg = graded.length ? Math.round(graded.reduce((s, k) => s + g.tabs[k].grade.score, 0) / graded.length) : 0;
+    if (avg >= 80) Juice.celebrate($('results-score'));
+    if (levelAfter > levelBefore) setTimeout(() => Juice.levelUp(levelAfter), 450);
+  }
+}
+
+// The end-of-day review: the aggregate up top, then every grade and its
+// feedback in one scroll — the "look back at the grades and the thoughts".
+function renderResults(xpGain = 0, levelBefore = null, levelAfter = null) {
   const graded = tabKeys().filter((k) => g.tabs[k].grade);
   const avg = graded.length ? Math.round(graded.reduce((s, k) => s + g.tabs[k].grade.score, 0) / graded.length) : 0;
-  const levelAfter = levelForXp(store.xp);
 
   $('results-title').textContent = storiesAllGraded() ? 'Brief kept' : 'Progress banked';
   $('results-score').innerHTML = `${letterFor(avg)}<span> · ${avg}/100 average</span>`;
@@ -467,19 +565,24 @@ function endGame(aborted = false) {
     `<div class="stat"><b>${graded.length}/${tabKeys().length}</b><span>graded</span></div>` +
     `<div class="stat"><b>${g.score.toLocaleString()}</b><span>points</span></div>` +
     `<div class="stat"><b>${briefStreak()}</b><span>day streak</span></div>`;
-  $('results-xp').innerHTML = levelAfter > levelBefore
+  $('results-xp').innerHTML = (levelAfter !== null && levelAfter > levelBefore)
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`
-    : `+${xpGain} XP`;
+    : xpGain ? `+${xpGain} XP` : '';
   $('results-note').textContent = storiesAllGraded()
     ? 'Tomorrow opens with cold recall of today.'
     : 'Streak counts full briefs — some stories are still ungraded.';
 
-  showScreen('results');
-  if (window.Juice) {
-    if (avg >= 80) Juice.celebrate($('results-score'));
-    if (levelAfter > levelBefore) setTimeout(() => Juice.levelUp(levelAfter), 450);
-  }
-  g = null;
+  $('results-review').innerHTML = graded.map((k) => {
+    const grade = g.tabs[k].grade;
+    return `<div class="review-item">
+      <div class="review-head">
+        <span class="review-tab">${tabLabel(k)}</span>
+        <span class="review-grade">${esc(grade.letter)} <small>${grade.score}</small></span>
+      </div>
+      <p>${esc(grade.summary)}</p>
+      ${grade.missed && grade.missed.length ? `<ul>${grade.missed.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>` : ''}
+    </div>`;
+  }).join('');
 }
 
 // ---------------------------------------------------------------------------

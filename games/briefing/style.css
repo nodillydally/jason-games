@@ -123,6 +123,53 @@
 
 #hint-btn { width: 100%; margin-bottom: 12px; font-size: 13px; }
 
+.pending-note {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--p1);
+  margin: 4px 0 10px;
+  animation: pulse-soft 1.4s ease-in-out infinite;
+}
+.submitted-text {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  background: var(--paper-2);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  white-space: pre-wrap;
+}
+
+/* ------------------------- end-of-day review ------------------------- */
+
+.review-item {
+  text-align: left;
+  padding: 16px 0;
+  border-top: 1px solid var(--rule);
+  margin-top: 4px;
+}
+.review-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.review-tab {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.review-grade { font-family: var(--serif); font-size: 24px; color: var(--p1); }
+.review-grade small { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.review-item p { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); margin-bottom: 8px; }
+.review-item ul { margin: 0 0 0 18px; }
+.review-item li { font-size: 12.5px; line-height: 1.55; color: var(--ink-3); margin-bottom: 3px; }
+
 .sources { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
 .sources a {
   font-size: 12.5px;
