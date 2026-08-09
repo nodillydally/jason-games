@@ -56,6 +56,39 @@
     flex: none;
   }
   .streak-line.cold .dot { background: var(--rule); box-shadow: none; }
+  /* Quick play — THE button: one tap, straight into a running session of
+     whichever game is furthest behind. */
+  .quick-cta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 26px;
+    padding: 16px 20px;
+    max-width: 420px;
+    border-radius: var(--r-md);
+    background: var(--ink);
+    color: var(--paper);
+    text-decoration: none;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .quick-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+  .quick-cta .qc-bolt { font-size: 20px; flex: none; }
+  .quick-cta .qc-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .quick-cta .qc-body b {
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: 400;
+    letter-spacing: -.01em;
+  }
+  .quick-cta .qc-body small {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    opacity: .7;
+  }
+  .quick-cta .qc-go { font-size: 18px; flex: none; opacity: .8; }
+
   .streak-line .dot.fire {
     width: auto;
     height: auto;
@@ -224,13 +257,6 @@
     transition: background .2s ease, border-color .2s ease;
   }
   .duty:hover { background: var(--paper-2); border-color: var(--ink-3); }
-  .duty.quick-play { border-style: dashed; }
-  .duty.quick-play .check {
-    background: none;
-    border: none;
-    font-size: 15px;
-    color: inherit;
-  }
   .duty .check {
     width: 26px;
     height: 26px;
@@ -437,6 +463,11 @@
       <div id="streak" class="streak-line cold">
         <span class="dot"></span> <b id="streak-n">0</b> day streak
       </div>
+      <a id="quick-cta" class="quick-cta" hidden>
+        <span class="qc-bolt">⚡</span>
+        <span class="qc-body"><b>Quick play</b><small id="quick-cta-sub"></small></span>
+        <span class="qc-go">→</span>
+      </a>
     </header>
 
     <div class="hub-today">

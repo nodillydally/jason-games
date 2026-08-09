@@ -182,24 +182,29 @@
         <span class="d-go">${done ? doneLabel : 'Play →'}</span>
       </a>`;
 
-    // Both duties done → the day's obligations are met, and the card flips to
-    // offering more: one tap into whichever game is furthest behind.
-    const bonus = (window.NextGame && bothDone) ? NextGame.pick(null) : null;
-
     host.innerHTML = `
       <div class="today-label">${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][dayIdx]}${bothDone ? ' — day complete' : ''}</div>
       ${duty('briefing', GAMES.briefing, 'The Brief',
         briefDone ? 'Kept — every story graded.' : briefStarted ? 'Started — some stories still ungraded.' : 'Recall yesterday · keep today · graded.',
         briefDone, 'Kept ✓')}
       ${duty(pick.key, pick.game, `${pick.game.name} · ${pick.mode}`, pick.why, gameDone, 'Played ✓')}
-      ${bonus ? `
-      <a class="duty quick-play" href="${bonus.href}" data-key="${bonus.key}">
-        <span class="check">⚡</span>
-        <span class="d-icon">${bonus.icon}</span>
-        <span class="d-body"><b>Quick play — ${bonus.name}</b><small>Your lowest-level game. Extra reps where you're weakest.</small></span>
-        <span class="d-go">Play →</span>
-      </a>` : ''}
       <div class="week-strip">${strip}</div>`;
+
+    renderQuickPlay();
+  }
+
+  // THE button: always visible, and it doesn't open a menu — it lands already
+  // playing (?play=1) whichever game is furthest behind.
+  function renderQuickPlay() {
+    const cta = document.getElementById('quick-cta');
+    if (!cta || !window.NextGame) return;
+    const next = NextGame.pick(null);
+    if (!next) { cta.hidden = true; return; }
+    cta.hidden = false;
+    cta.href = next.playHref;
+    cta.dataset.key = next.key;
+    document.getElementById('quick-cta-sub').textContent =
+      `${next.icon} ${next.name} — your lowest level · starts instantly`;
   }
 
   /* ------------------------- combined progress ------------------------- */
@@ -306,7 +311,7 @@
   // Launching a game is the thing that counts. Delay the navigation just long
   // enough for the streak to light up — the payoff has to be visible.
   document.addEventListener('click', (e) => {
-    const link = e.target.closest('a.game:not(.soon), a.duty, a.today-play');
+    const link = e.target.closest('a.game:not(.soon), a.duty, a.today-play, a.quick-cta');
     if (!link) return;
     const before = loadStreak().streak;
     const after = bumpStreak().streak;

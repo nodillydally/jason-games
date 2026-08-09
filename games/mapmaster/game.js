@@ -1195,3 +1195,7 @@ buildMap();
 Wardrobe.attach('mapmaster');
 renderMenu();
 Sync.mountUI();
+
+// Quick play (hub / next-game links carry ?play=1): arriving means START —
+// straight into a session with the defaults, no menu stop.
+if (new URLSearchParams(location.search).has('play')) startGame();

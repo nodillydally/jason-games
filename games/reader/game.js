@@ -1050,3 +1050,16 @@ document.addEventListener('keydown', (e) => {
 Wardrobe.attach('reader');
 renderMenu();
 Sync.mountUI();
+
+// Quick play (hub / next-game links carry ?play=1): arriving means START.
+// No baseline yet -> the audit comes first; otherwise a flash read just above
+// the natural pace — the same recommendation the menu would make.
+if (new URLSearchParams(location.search).has('play')) {
+  if (store.baselineWpm) {
+    sel.mode = 'benchmark';
+    sel.wpm = Math.min(900, Math.max(150, Math.round((store.baselineWpm + 50) / 25) * 25));
+  } else {
+    sel.mode = 'baseline';
+  }
+  startGame();
+}
