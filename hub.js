@@ -22,7 +22,7 @@
     reader: { name: 'Reader', href: 'games/reader/', icon: '📖', store: 'reader.profile.v1' },
     chronicle: { name: 'Chronicle', href: 'games/chronicle/', icon: '🏛️', store: 'chronicle.profile.v1' },
     // elements:  { name: 'Elements',  href: 'games/elements/',  icon: '🧪' },  // science
-    // briefing:  { name: 'Briefing',  href: 'games/briefing/',  icon: '📰' },  // news + expression
+    briefing: { name: 'Briefing', href: 'games/briefing/', icon: '📰', store: 'briefing.profile.v1' },
   };
 
   // Mon..Sun. Each slot lists candidates in priority order, each carrying its

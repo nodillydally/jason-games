@@ -35,6 +35,7 @@ const screens = {
   game: $('screen-game'),
   results: $('screen-results'),
   stats: $('screen-stats'),
+  learn: $('screen-learn'),
 };
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => (
@@ -259,10 +260,14 @@ function renderMenu() {
   const mode = MODES.find((m) => m.id === sel.mode);
   const rCount = sel.mode === 'review' ? reviewPool().length : null;
   $('start-btn').disabled = rCount === 0;
+  // You can't retrieve what was never stored — until something has been
+  // answered, the honest recommendation is input first, quiz second.
+  const firstRun = store.answered === 0
+    ? 'New here? Start with 📖 Learn an era — read the story, then quiz exactly what you read. '
+    : '';
   $('setup-hint').textContent = rCount === 0
     ? 'Nothing to review yet — play a round first and come back.'
-    : rCount !== null ? `${mode.hint} ${rCount} event${rCount === 1 ? '' : 's'} in the deck.`
-    : mode.hint;
+    : firstRun + (rCount !== null ? `${mode.hint} ${rCount} event${rCount === 1 ? '' : 's'} in the deck.` : mode.hint);
 }
 
 function showScreen(name) {
@@ -653,6 +658,45 @@ function endGame(aborted = false) {
 }
 
 // ---------------------------------------------------------------------------
+// Learn — the input layer
+// ---------------------------------------------------------------------------
+
+let learnEra = ERAS[0].id;
+
+function renderLearn(eraId) {
+  learnEra = eraId;
+  const era = ERAS.find((e) => e.id === eraId);
+
+  const chips = $('learn-eras');
+  chips.innerHTML = '';
+  ERAS.forEach((e) => chips.appendChild(
+    optionButton(e.name, e.id === eraId, () => renderLearn(e.id))
+  ));
+
+  const events = EVENTS.filter((e) => e.era === eraId).sort((a, b) => a.y - b.y);
+  $('learn-body').innerHTML =
+    `<div class="story-head"><b>${esc(era.name)}</b><small>${fmtEraSpan(era)}</small></div>` +
+    `<div class="story">${era.story.split('\n\n').map((p) => `<p>${esc(p)}</p>`).join('')}</div>` +
+    `<div class="story-events"><h3>The events, in order</h3>` +
+    events.map((ev) => {
+      const s = statFor(ev.id);
+      const mark = s.seen ? (masteryOf(ev.id) >= MASTERY ? ' ✓' : '') : '';
+      return `<div class="learn-event">
+        <b>${fmtYear(ev.y)}</b>
+        <span><strong>${esc(ev.name)}${mark}</strong><em>${esc(ev.why)}</em></span>
+      </div>`;
+    }).join('') + '</div>';
+}
+
+// Quiz exactly what was just read — the read → retrieve loop in one tap.
+function quizLearnedEra() {
+  sel.era = learnEra;
+  sel.mode = 'classic';
+  renderMenu();
+  startGame();
+}
+
+// ---------------------------------------------------------------------------
 // Stats
 // ---------------------------------------------------------------------------
 
@@ -701,6 +745,9 @@ $('again-btn').addEventListener('click', startGame);
 $('menu-btn').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
 $('stats-btn').addEventListener('click', () => { renderStats(); showScreen('stats'); });
 $('stats-back').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
+$('learn-btn').addEventListener('click', () => { renderLearn(learnEra); showScreen('learn'); });
+$('learn-quiz').addEventListener('click', quizLearnedEra);
+$('learn-back').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
 
 document.addEventListener('keydown', (e) => {
   if (!screens.game.classList.contains('active')) return;

@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#F6EFE2">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>Chronicle — Learn the Timeline of History</title>
+  <title>Briefing — The News, Kept</title>
   <link rel="stylesheet" href="../../lib/theme.css">
   <link rel="stylesheet" href="../../lib/sync.css">
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
 </head>
 <body>
 <div id="app">
@@ -19,8 +19,8 @@
     <a class="hub-link" href="../../">← All games</a>
 
     <header class="title">
-      <h1>🏛️ Chronicle</h1>
-      <p>Own the timeline — what happened when, and why it mattered.</p>
+      <h1>📰 Briefing</h1>
+      <p>Reading the news is easy. Keeping it is the game.</p>
     </header>
 
     <div class="card profile-card">
@@ -36,13 +36,8 @@
     <div class="card setup-card">
       <h2>Mode</h2>
       <div class="opt-grid" id="mode-options"></div>
-
-      <h2>Era</h2>
-      <div class="opt-grid" id="era-options"></div>
-
       <div id="setup-hint" class="setup-hint"></div>
       <button id="start-btn" class="primary big">Start</button>
-      <button id="learn-btn" class="ghost big">📖 Learn an era first</button>
     </div>
 
     <div class="card sync-card">
@@ -62,33 +57,59 @@
     </div>
   </section>
 
-  <!-- ============================= Game ============================= -->
-  <section id="screen-game" class="screen">
+  <!-- ============================= Today ============================= -->
+  <section id="screen-today" class="screen">
     <div class="hud">
-      <button id="quit-btn" title="Back to menu">✕</button>
-      <span id="hud-progress"></span>
-      <span id="hud-clock" class="hidden"></span>
+      <button id="today-quit" title="Back to menu">✕</button>
+      <span id="today-progress"></span>
       <span class="hud-spacer"></span>
-      <span id="hud-streak"></span>
-      <b id="hud-score">0 pts</b>
+      <b id="today-score">0 pts</b>
     </div>
 
-    <div class="timer-track"><div id="timer-fill"></div></div>
+    <div class="card story-card">
+      <div id="story-meta" class="story-meta"></div>
+      <h2 id="story-headline"></h2>
+      <p id="story-what"></p>
+      <ul id="story-details"></ul>
 
-    <div class="card question-card">
-      <div id="topic-tag" class="topic-tag"></div>
-      <div id="question"></div>
-
-      <div id="choices"></div>
-
-      <div id="seq-area" class="hidden">
-        <div id="seq-slots" class="seq-slots"></div>
-        <div id="seq-pool" class="seq-pool"></div>
-        <button id="seq-check" class="primary" disabled>Check order</button>
+      <div id="why-ask">
+        <div class="why-label">Why does this matter?</div>
+        <p class="why-coach">Say it out loud or type it — committing to an answer
+          first is what makes the reveal stick.</p>
+        <textarea id="why-input" rows="3" placeholder="Because…"></textarea>
+        <button id="reveal-btn" class="primary big">Reveal the why</button>
       </div>
 
-      <div id="feedback"></div>
-      <button id="next-btn" class="primary hidden">Next</button>
+      <div id="why-reveal" class="hidden">
+        <div class="why-label">The brief's take</div>
+        <p id="story-why" class="story-why"></p>
+        <div id="your-why-echo" class="your-why hidden"></div>
+        <div class="why-label">How close were you?</div>
+        <div class="score-row">
+          <button id="score-nailed" class="primary">Nailed it</button>
+          <button id="score-close">Close</button>
+          <button id="score-missed">Missed it</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= Recall ============================= -->
+  <section id="screen-recall" class="screen">
+    <div class="hud">
+      <button id="recall-quit" title="Back to menu">✕</button>
+      <span id="recall-progress"></span>
+      <span class="hud-spacer"></span>
+      <span id="hud-streak"></span>
+      <b id="recall-score">0 pts</b>
+    </div>
+
+    <div class="card question-card">
+      <div id="recall-meta" class="topic-tag"></div>
+      <div id="recall-question"></div>
+      <div id="recall-choices"></div>
+      <div id="recall-feedback"></div>
+      <button id="recall-next" class="primary hidden">Next</button>
     </div>
   </section>
 
@@ -99,35 +120,20 @@
       <div id="results-score"></div>
       <div id="results-stats" class="results-stats"></div>
       <div id="results-xp" class="results-xp"></div>
-      <div id="results-missed"></div>
+      <div id="results-note" class="results-note"></div>
       <div class="results-actions">
-        <button id="again-btn" class="primary big">Play again</button>
+        <button id="again-btn" class="primary big">Again</button>
         <button id="menu-btn">Menu</button>
       </div>
-    </div>
-  </section>
-
-  <!-- ============================= Learn ============================= -->
-  <section id="screen-learn" class="screen">
-    <div class="card stats-card">
-      <h2>The story so far</h2>
-      <p class="learn-intro">You can't be quizzed on history you never took in.
-        Read an era as one connected story — a few minutes each — then quiz
-        yourself on exactly what you just read.</p>
-      <div class="opt-grid" id="learn-eras"></div>
-      <div id="learn-body"></div>
-      <button id="learn-quiz" class="primary big">Quiz me on this era</button>
-      <button id="learn-back" class="ghost big">Back</button>
     </div>
   </section>
 
   <!-- ============================= Stats ============================= -->
   <section id="screen-stats" class="screen">
     <div class="card stats-card">
-      <h2>Your timeline</h2>
+      <h2>Your news memory</h2>
       <div id="stats-summary" class="profile-stats"></div>
-      <div id="stats-eras"></div>
-      <div id="stats-weakest"></div>
+      <div id="stats-week"></div>
       <button id="stats-back" class="primary">Back</button>
     </div>
   </section>
@@ -136,7 +142,6 @@
 
 <script src="../../lib/sync.js"></script>
 <script src="../../lib/juice.js"></script>
-<script src="data/events.js"></script>
 <script src="game.js"></script>
 </body>
 </html>
