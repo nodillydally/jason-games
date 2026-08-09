@@ -6,49 +6,58 @@
 
 /* ------------------------------- figure -------------------------------- */
 
-/* An 8-bit sprite: every frame is drawn into the same <svg> and the pose class
-   picks which one is visible. Swapping frames is how sprite animation has
-   always worked, and it costs one class change rather than a transform per
-   limb. */
+/* Generated PNG frames stacked on top of each other; the active one is the
+   only opaque one. Swapping opacity rather than the <img> src avoids a flash
+   the first time each frame appears, which at 11fps is constant. */
 
-.avatar { display: inline-block; line-height: 0; }
-.px-svg {
+/* Every child is absolutely positioned, so the wrapper needs to be told to
+   fill its host or it collapses to nothing. */
+.avatar {
+  position: relative;
   display: block;
   width: 100%;
   height: 100%;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  line-height: 0;
 }
 
-.px-frame { display: none; }
-.pose-idle    .px-idle    { display: block; animation: px-breathe 2.6s steps(1) infinite; }
-.pose-strain  .px-strain  { display: block; animation: px-brace .5s steps(1) infinite; }
-.pose-stumble .px-stumble { display: block; }
-.pose-cheer   .px-cheer   { display: block; animation: px-hop .42s steps(1) infinite; }
+.avatar .av-f {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.avatar .av-f.on { opacity: 1; }
 
-/* Two frames alternating is the run cycle. */
-.pose-run .px-runA { display: block; animation: px-flip-a .3s steps(1) infinite; }
-.pose-run .px-runB { display: block; animation: px-flip-b .3s steps(1) infinite; }
-@keyframes px-flip-a { 0%, 49.9% { opacity: 1; } 50%, 100% { opacity: 0; } }
-@keyframes px-flip-b { 0%, 49.9% { opacity: 0; } 50%, 100% { opacity: 1; } }
-
-/* Whole-pixel movement only — a sprite that slides by fractions of a pixel
-   shimmers, which is exactly the tell that it isn't really pixel art. */
-@keyframes px-breathe { 0%, 70% { transform: translateY(0); } 71%, 100% { transform: translateY(-1px); } }
-@keyframes px-brace   { 0%, 49% { transform: translateY(0); } 50%, 100% { transform: translateY(-1px); } }
-@keyframes px-hop     { 0%, 49% { transform: translateY(-2px); } 50%, 100% { transform: translateY(0); } }
+/* Gear rides above the sprite, positioned per frame from JS. */
+.av-gearlayer {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+.av-gearlayer .av-under { opacity: .95; }
 
 /* Front-facing sprites can't turn their heads, so being chased reads as a lean
    away from whatever is gaining on you. */
-.avatar.behind .px-svg { transform: rotate(-7deg); }
+.avatar.behind { transform: rotate(-7deg); }
 
-/* Your Ghost: the same sprite, drained and translucent. */
+/* Your Ghost: the same runner, drained and translucent. */
 .av-ghost { opacity: .5; }
-.av-ghost .px-svg { filter: grayscale(.55); }
+.av-ghost .av-f { filter: grayscale(.6); }
+
+/* Rival tints. Until each rival has its own generated sprite these are palette
+   swaps of one figure — which is what arcade games did to get four fighters
+   out of one sheet, so it reads as intent rather than as a shortcut. */
+.av-tint-metronome .av-f { filter: grayscale(.85) brightness(1.12); }
+.av-tint-kid .av-f       { filter: hue-rotate(-28deg) saturate(1.45) brightness(1.08); }
+.av-tint-professor .av-f { filter: hue-rotate(28deg) saturate(.72) brightness(.94); }
 
 @media (prefers-reduced-motion: reduce) {
-  .px-frame { animation: none !important; }
-  .pose-run .px-runB { display: none; }
+  .avatar .av-f { transition: none; }
 }
 
 /* -------------------------------- bay ---------------------------------- */
@@ -60,7 +69,7 @@
   flex-wrap: wrap;
   margin-top: 6px;
 }
-.wardrobe-figure { width: 32px; height: 44px; flex: 0 0 auto; }  /* 2x */
+.wardrobe-figure { width: 28px; height: 42px; flex: 0 0 auto; }  /* 1x */
 
 .wardrobe-btn {
   padding: 7px 14px;
@@ -200,7 +209,7 @@
 }
 .shop-row:last-of-type { border-bottom: none; }
 .shop-row.broke { opacity: .55; }
-.shop-preview { width: 32px; height: 44px; flex: 0 0 auto; }  /* 2x */
+.shop-preview { width: 28px; height: 42px; flex: 0 0 auto; }  /* 1x */
 .shop-meta { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .shop-name { font-size: 13.5px; }
 .shop-slot {
@@ -260,7 +269,7 @@
   color: var(--a2);
   margin-bottom: 14px;
 }
-.reveal-figure { display: block; width: 80px; height: 110px; margin: 0 auto 12px; }  /* 5x */
+.reveal-figure { display: block; width: 84px; height: 126px; margin: 0 auto 12px; }  /* 3x */
 .reveal-name {
   font-family: var(--serif);
   font-size: 25px;

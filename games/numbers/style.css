@@ -365,7 +365,7 @@
   display: flex;
   align-items: flex-end;
   gap: 10px;
-  height: 52px;
+  height: 50px;
 }
 .lane-tag {
   flex: 0 0 34px;
@@ -414,8 +414,8 @@
   bottom: 0;
   left: 0;
   transform: translateX(-50%);
-  width: 32px;   /* 2x the 16x22 sprite — fractional scales shimmer */
-  height: 44px;
+  width: 28px;   /* 1x the 28x42 sprite — fractional scales shimmer */
+  height: 42px;
 }
 
 /* You leap a whole leg at a time; the rival creeps. The difference in easing

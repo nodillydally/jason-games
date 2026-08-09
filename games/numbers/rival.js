@@ -287,6 +287,7 @@ window.Rival = (function () {
       ink: def.ghost ? opts.playerInk : def.color,
       gear: def.ghost ? opts.playerGear : def.gear,
       pal: def.pal,
+      tint: def.ghost ? '' : def.id,
       ghost: !!def.ghost,
     });
     s.avatar.pose('run');
