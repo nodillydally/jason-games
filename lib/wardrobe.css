@@ -63,31 +63,46 @@
 
 /* -------------------------------- bay ---------------------------------- */
 
+/* A column: the figure on a small stage, its two controls stacked underneath.
+   Bordered off from the progress side so the card reads as two panels. */
 .wardrobe-bay {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 6px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding-left: 22px;
+  border-left: 1px solid var(--rule);
 }
-.wardrobe-figure { width: 28px; height: 42px; flex: 0 0 auto; }  /* 1x */
 
-.wardrobe-btn {
-  padding: 7px 14px;
-  min-height: 32px;
+.wardrobe-figure {
+  width: 100%;
+  height: 66px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-md);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  margin-bottom: 2px;
+}
+/* The figure is drawn at 1x; give it room without stretching the sprite. */
+.wardrobe-figure .avatar { transform: scale(1.25); transform-origin: center; }
+
+.wardrobe-btn, .wardrobe-purse {
+  width: 100%;
+  padding: 8px 10px;
+  min-height: 34px;
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: .06em;
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .wardrobe-purse {
   position: relative;
-  padding: 7px 13px;
-  min-height: 32px;
-  font-family: var(--mono);
-  font-size: 11px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: .04em;
   color: var(--ink-2);
 }
 /* Lit only when today's three are actually within reach. */
@@ -308,4 +323,18 @@
 
 @media (prefers-reduced-motion: reduce) {
   .reveal-card { animation: none; }
+}
+
+/* On a phone the two regions stay side by side — the character column is only
+   as wide as its buttons — but the figure loses its stage to save height. */
+@media (max-width: 560px) {
+  .wardrobe-bay { padding-left: 14px; gap: 6px; }
+  .wardrobe-figure { height: 54px; }
+  .wardrobe-btn, .wardrobe-purse { font-size: 9.5px; padding: 7px 6px; min-height: 32px; }
+}
+
+/* Below this the count is the first thing to go — the button still says what
+   it opens, which is the part that matters. */
+@media (max-width: 430px) {
+  .wd-count { display: none; }
 }
