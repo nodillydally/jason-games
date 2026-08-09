@@ -7,6 +7,12 @@
 :root {
   --p1: #3E5E3A;          /* moss */
   --p2: #6E8C63;
+
+  /* One ink per rival, so a race is legible at a glance. Themed like every
+     other colour here rather than hardcoded in rival.js. */
+  --rival-metronome: #86796E;
+  --rival-kid: #C9860F;
+  --rival-professor: #8A6A4F;
 }
 
 /* Loaded after lib/theme.css, so this keeps Numbers green at night rather than
@@ -14,6 +20,11 @@
 :root[data-theme="dark"] {
   --p1: #93C583;
   --p2: #6E8C63;
+
+  /* Lifted for the dark ground — the brown and the grey go muddy otherwise. */
+  --rival-metronome: #ADA095;
+  --rival-kid: #E8A82C;
+  --rival-professor: #BE9670;
 }
 
 #app { max-width: 680px; }
@@ -281,6 +292,140 @@
 .method-extras { margin: 20px 0 0 20px; }
 .method-extras li { font-size: 13.5px; line-height: 1.7; color: var(--ink-2); margin-bottom: 7px; }
 
+/* ------------------------------ avatar ------------------------------- */
+
+/* Line art in the page's own ink, so the runner is the same drawing as the
+   hairline rules around it rather than a cartoon dropped on top. */
+
+.avatar { display: inline-block; line-height: 0; }
+.av-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.av-svg path, .av-svg circle {
+  fill: none;
+  stroke: var(--av-ink, var(--ink));
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Variable weight is what separates a drawn figure from a default stick one:
+   a heavy trunk, lighter limbs, a fine outline on the head. */
+.av-svg .av-torso { stroke-width: 4.2; }
+.av-svg .av-leg { stroke-width: 2.9; }
+.av-svg .av-arm { stroke-width: 2.5; }
+.av-svg .av-head { fill: var(--card-bg); stroke-width: 2.3; }
+.av-svg .av-eye { fill: var(--av-ink, var(--ink)); stroke: none; }
+.av-svg .av-fill { fill: var(--av-ink, var(--ink)); }
+.av-svg .av-thick { stroke-width: 3.6; }
+.av-svg .av-cape {
+  fill: color-mix(in srgb, var(--av-ink, var(--ink)) 20%, transparent);
+  stroke-width: 1.6;
+}
+
+/* Your Ghost is drawn as your own figure, dashed and faded. */
+.av-ghost { opacity: .52; }
+.av-ghost .av-svg path, .av-ghost .av-svg circle { stroke-dasharray: 3.4 2.6; }
+
+.av-lean, .av-body, .av-head-group, .av-arm, .av-leg { transform-box: view-box; }
+.av-lean, .av-body { transform-origin: 20px 45.5px; } /* the feet */
+.av-head-group { transform-origin: 20px 16px; }      /* the neck */
+.av-arm { transform-origin: 20px 20px; }             /* the shoulder */
+.av-leg { transform-origin: 20px 33px; }             /* the hip */
+
+.av-lean, .av-head-group, .av-arm, .av-leg {
+  transition: transform .22s var(--ease);
+}
+
+/* --- idle: standing, breathing --- */
+.pose-idle .av-body { animation: av-breathe 3.2s ease-in-out infinite; }
+.pose-idle .av-arm-l { transform: rotate(-6deg); }
+.pose-idle .av-arm-r { transform: rotate(6deg); }
+
+/* --- run: the default while a question is live --- */
+.pose-run .av-leg-l { animation: av-swing-a .46s linear infinite; }
+.pose-run .av-leg-r { animation: av-swing-b .46s linear infinite; }
+.pose-run .av-arm-l { animation: av-pump-b .46s linear infinite; }
+.pose-run .av-arm-r { animation: av-pump-a .46s linear infinite; }
+.pose-run .av-body  { animation: av-bob .23s linear infinite; }
+
+/* --- strain: the clock is nearly out. Anticipation, not reaction. --- */
+.pose-strain .av-lean { transform: rotate(13deg); }
+.pose-strain .av-leg-l { animation: av-swing-a .28s linear infinite; }
+.pose-strain .av-leg-r { animation: av-swing-b .28s linear infinite; }
+.pose-strain .av-arm-l { animation: av-pump-b .28s linear infinite; }
+.pose-strain .av-arm-r { animation: av-pump-a .28s linear infinite; }
+.pose-strain .av-body  { animation: av-bob .14s linear infinite; }
+
+/* --- stumble --- */
+.pose-stumble .av-lean { transform: rotate(34deg); }
+.pose-stumble .av-arm-l { transform: rotate(-118deg); }
+.pose-stumble .av-arm-r { transform: rotate(-48deg); }
+.pose-stumble .av-leg-l { transform: rotate(26deg); }
+.pose-stumble .av-leg-r { transform: rotate(-14deg); }
+
+/* --- cheer --- */
+.pose-cheer .av-arm-l { transform: rotate(74deg); }
+.pose-cheer .av-arm-r { transform: rotate(-74deg); }
+.pose-cheer .av-leg-l { transform: rotate(-12deg); }
+.pose-cheer .av-leg-r { transform: rotate(12deg); }
+.pose-cheer .av-body { animation: av-hop .5s var(--ease) 2; }
+
+/* Glancing back at whoever is catching you. */
+.avatar.behind .av-head-group { transform: rotate(-22deg); }
+
+@keyframes av-swing-a { 0%, 100% { transform: rotate(-24deg); } 50% { transform: rotate(22deg); } }
+@keyframes av-swing-b { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-24deg); } }
+@keyframes av-pump-a  { 0%, 100% { transform: rotate(20deg); } 50% { transform: rotate(-22deg); } }
+@keyframes av-pump-b  { 0%, 100% { transform: rotate(-22deg); } 50% { transform: rotate(20deg); } }
+@keyframes av-bob     { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.4px); } }
+@keyframes av-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.7px); } }
+@keyframes av-hop     { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-5px); } }
+
+/* The runner stands on the question card in every non-race mode, on the same
+   hairline the race lanes use — so switching into Race reads as the same
+   character moving onto a track. */
+/* The same rail the race uses, minus a rival — so the runner is one character
+   who happens to have company in Race, not two different ideas. */
+.companion {
+  display: flex;
+  align-items: flex-end;
+  height: 44px;
+  margin: 12px 14px 0;
+}
+.companion .rail { flex: 1; }
+/* Marathon and Ladder have no finish to run at, so they get no post. */
+.companion .rail.open::after { display: none; }
+
+.avatar-bay {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+}
+#menu-avatar { width: 34px; height: 44px; flex: 0 0 auto; }
+
+.cosmetic-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.cosmetic-row button {
+  padding: 6px 12px;
+  min-height: 30px;
+  font-size: 12px;
+}
+.cosmetic-row button:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+}
+.cosmetic-lock {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .06em;
+  margin-left: 5px;
+  color: var(--ink-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .av-body, .av-leg, .av-arm { animation: none !important; }
+  .av-lean, .av-head-group, .av-arm, .av-leg { transition: none; }
+}
+
 /* ------------------------------- race -------------------------------- */
 
 /* The track sits between the question clock and the question itself, so the
@@ -312,12 +457,13 @@
 .race-gap { font-weight: 500; transition: color .3s var(--ease); }
 .race-gap.ahead  { color: var(--good); }
 .race-gap.behind { color: var(--bad); }
+.race-gap.level  { color: var(--ink-2); }
 
 .race-lane {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 10px;
-  height: 26px;
+  height: 44px;
 }
 .lane-tag {
   flex: 0 0 34px;
@@ -353,54 +499,30 @@
   content: '';
   position: absolute;
   right: -1px;
-  top: -7px;
+  bottom: -3px;
   width: 2px;
-  height: 16px;
+  height: 20px;
   background: var(--ink);
   opacity: .5;
 }
 
+/* Feet on the rail, not a counter riding it. */
 .racer {
   position: absolute;
-  top: 50%;
+  bottom: 0;
   left: 0;
-  transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  font-size: 14px;
-  line-height: 1;
-  border-radius: 50%;
-  background: var(--paper);
-  border: 1px solid var(--rule);
+  transform: translateX(-50%);
+  width: 26px;
+  height: 34px;
 }
 
 /* You leap a whole leg at a time; the rival creeps. The difference in easing
    is doing real work — the snap forward is the reward for a right answer. */
-.racer.you {
-  border-color: var(--p1);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p1) 12%, transparent);
-  transition: left .42s var(--ease);
-}
-.racer.rival {
-  border-color: var(--ink-3);
-  transition: left .1s linear; /* smooths the 100ms game ticker */
-}
+.racer.you { transition: left .42s var(--ease); }
+.racer.rival { transition: left .1s linear; } /* smooths the 100ms game ticker */
 
-.racer.stumbling { animation: racer-fumble .5s var(--ease); }
-.racer.won { animation: racer-win .6s var(--ease); }
-
-@keyframes racer-fumble {
-  0%, 100% { transform: translate(-50%, -50%) rotate(0); }
-  30%      { transform: translate(-50%, -35%) rotate(-16deg); }
-  60%      { transform: translate(-50%, -50%) rotate(9deg); }
-}
-@keyframes racer-win {
-  0%   { transform: translate(-50%, -50%) scale(1); }
-  45%  { transform: translate(-50%, -70%) scale(1.25); }
-  100% { transform: translate(-50%, -50%) scale(1); }
-}
+/* The stumble and the win are carried by the figure's own pose — animating the
+   token as well would fight its translateX and jitter it off the rail. */
 
 .race-note {
   height: 14px;

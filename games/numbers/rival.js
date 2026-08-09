@@ -55,6 +55,8 @@ window.Rival = (function () {
   const RIVALS = [
     {
       id: 'metronome',
+      color: 'var(--rival-metronome)',
+      head: 'tick',
       name: 'The Metronome',
       icon: '⏱',
       blurb: 'Seven and a half seconds a question, forever, and never wrong. The only rival that ignores your history — a fixed bar, so on Hard it is genuinely brutal.',
@@ -64,6 +66,8 @@ window.Rival = (function () {
     },
     {
       id: 'kid',
+      color: 'var(--rival-kid)',
+      head: 'bolt',
       name: 'Kid Lightning',
       icon: '⚡',
       blurb: 'Faster than you and knows it — but rushes one in four and then loses more time sulking than it ever gained. Wild swings, big comebacks.',
@@ -74,6 +78,8 @@ window.Rival = (function () {
     },
     {
       id: 'professor',
+      color: 'var(--rival-professor)',
+      head: 'mortar',
       name: 'The Professor',
       icon: '🎓',
       blurb: 'Laborious at plain arithmetic, near-instant at anything with structure. Take your lead on × and ÷ before it takes it all back on √ and ( ).',
@@ -88,6 +94,8 @@ window.Rival = (function () {
     },
     {
       id: 'ghost',
+      color: 'var(--p1)',
+      ghost: true,
       name: 'Your Ghost',
       icon: '👤',
       blurb: 'You, on an average day — your own pace and your own miss rate, topic by topic. No rubber-banding. Beating it means today was genuinely better.',
@@ -136,11 +144,13 @@ window.Rival = (function () {
     els.rivalLegs.textContent = `${Math.floor(s.rivalPos)}/${s.legs}`;
 
     const gap = s.you - s.rivalPos;
-    const ahead = gap >= 0;
-    els.gap.textContent = Math.abs(gap) < 0.15
+    // A dead heat is neither good news nor bad, and colouring it red made the
+    // most tense moment of a race read as if you were already losing.
+    const level = Math.abs(gap) < 0.15;
+    els.gap.textContent = level
       ? 'Neck and neck'
-      : `${ahead ? 'Leading' : 'Behind'} by ${Math.abs(gap).toFixed(1)}`;
-    els.gap.className = `race-gap ${ahead ? 'ahead' : 'behind'}`;
+      : `${gap > 0 ? 'Leading' : 'Behind'} by ${Math.abs(gap).toFixed(1)}`;
+    els.gap.className = `race-gap ${level ? 'level' : gap > 0 ? 'ahead' : 'behind'}`;
   }
 
   // A stumble is the comeback moment, so it gets said out loud.
@@ -250,7 +260,16 @@ window.Rival = (function () {
     els.name.textContent = def.name;
     els.you.classList.remove('stumbling', 'won');
     els.rival.classList.remove('stumbling', 'won');
-    els.rival.querySelector('.racer-icon').textContent = def.icon;
+
+    // Both lanes are drawn figures, so a race reads as two runners rather than
+    // a runner and a dot. Your Ghost borrows your own cosmetic — it is you.
+    s.avatar = Avatar.create(els.rival, {
+      color: def.color,
+      head: def.ghost ? opts.playerHead : def.head,
+      ghost: !!def.ghost,
+    });
+    s.avatar.pose('run');
+
     if (els.note) { els.note.textContent = ''; els.note.className = 'race-note'; }
     render();
     return s;
@@ -272,15 +291,18 @@ window.Rival = (function () {
         leg.held = true;
         s.stumbleCount += 1;
         els.rival.classList.add('stumbling');
+        if (s.avatar) s.avatar.flash('stumble', s.def.stumbleScale ? 1400 : 800);
         flashNote(`${s.def.name} fumbled it — go!`, 'good');
       }
     } else {
       s.rivalLegs += 1;
       s.rivalPos = s.rivalLegs;
       els.rival.classList.remove('stumbling');
+      if (s.avatar) s.avatar.pose('run');
       if (s.rivalLegs >= s.legs) {
         s.finishedBy = 'rival';
         els.rival.classList.add('won');
+        if (s.avatar) s.avatar.flash('cheer', 4000);
       } else {
         scheduleLeg(now);
       }
@@ -361,5 +383,6 @@ window.Rival = (function () {
     stop,
     result,
     active: () => !!s,
+    gap: () => (s ? s.you - s.rivalPos : 0),
   };
 })();

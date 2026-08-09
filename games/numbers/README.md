@@ -61,6 +61,37 @@ Rubber-banding is mild (±14%) and switchable per rival. Simulated across weak,
 average and strong players, Your Ghost lands at 42–52% wins with roughly one
 race in eight decided inside half a leg.
 
+## The runner
+
+A small line-art figure in `avatar.js`, drawn as inline SVG so it takes the
+page's ink colour, scales to any size and costs nothing to ship. Five poses,
+switched by a class: **idle**, **run**, **strain**, **stumble**, **cheer**.
+
+The half that matters is *anticipation*, not reaction. The runner leans into it
+when your question clock drops below 30% — before you've answered, not after —
+and glances back over its shoulder when a rival is catching you. A character
+that only responds after the fact reads as decoration; one that leans in reads
+as a companion.
+
+It runs on the same rail everywhere. In Race that rail is a lane with a rival
+in the one below. In Classic, Review and Blitz it's a lane with a finish post
+and no opponent, and the runner walks it as you progress — through the ten
+questions, or along the sixty seconds. Marathon and Ladder have no finish to
+run at, so they get no post and the runner runs on the spot.
+
+Rivals are the same figure in their own ink with their own headgear, so a race
+is two characters rather than a character and a dot. Your Ghost is literally
+your own figure, dashed and faded, wearing whatever you're wearing.
+
+Two drawing details do more than they look: **variable stroke weight** (a heavy
+trunk, lighter limbs, a fine head outline) is most of what separates a drawn
+figure from a default stick one, and the head is *filled* with the card colour
+so it stays a head when it crosses a rail.
+
+Cosmetics unlock by level — Cap at 3, Headband at 5, Cape at 8, Shades at 11,
+Crown at 15. That's the point of them: before this, levelling up made a number
+go up and nothing else.
+
 ## Two design rules
 
 **Every answer is a whole number.** That keeps typed answers unambiguous (no

@@ -31,6 +31,10 @@
         <span id="xp-label"></span>
       </div>
       <div class="profile-stats" id="profile-stats"></div>
+      <div class="avatar-bay">
+        <span id="menu-avatar"></span>
+        <div class="cosmetic-row" id="cosmetic-options"></div>
+      </div>
       <button id="stats-btn" title="Your stats">📊 Stats</button>
     </div>
 
@@ -94,16 +98,20 @@
       <div class="race-track">
         <div class="race-lane">
           <span class="lane-tag">You</span>
-          <span class="rail"><span id="racer-you" class="racer you"><span class="racer-icon">🏃</span></span></span>
+          <span class="rail"><span id="racer-you" class="racer you"></span></span>
           <span id="race-you-legs" class="lane-legs"></span>
         </div>
         <div class="race-lane">
           <span class="lane-tag">Them</span>
-          <span class="rail"><span id="racer-rival" class="racer rival"><span class="racer-icon"></span></span></span>
+          <span class="rail"><span id="racer-rival" class="racer rival"></span></span>
           <span id="race-rival-legs" class="lane-legs"></span>
         </div>
       </div>
       <div id="race-note" class="race-note"></div>
+    </div>
+
+    <div id="companion" class="companion hidden">
+      <span id="companion-rail" class="rail"><span id="companion-avatar" class="racer you"></span></span>
     </div>
 
     <div class="card question-card">
@@ -179,6 +187,7 @@
 <script src="../../lib/next.js"></script>
 <script src="questions.js"></script>
 <script src="methods.js"></script>
+<script src="avatar.js"></script>
 <script src="rival.js"></script>
 <script src="game.js"></script>
 </body>

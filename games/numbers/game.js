@@ -47,9 +47,9 @@ const screens = {
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, ...JSON.parse(raw) };
+    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, head: 'none', ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
-  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {} };
+  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, head: 'none' };
 }
 
 const store = loadStore();
@@ -79,6 +79,73 @@ const questionHtml = (text) => esc(text).replace(
   /(\d+)\/(\d+)/g,
   '<span class="frac"><b>$1</b><i>$2</i></span>'
 );
+
+// ---------------------------------------------------------------------------
+// The runner
+// ---------------------------------------------------------------------------
+
+// One figure, mounted wherever the current mode wants it: on the race track in
+// Race, on a hairline above the question everywhere else. Poses are broadcast
+// rather than addressed, so the game loop never has to know which is on screen.
+
+let avatars = [];
+let menuAvatar = null;
+
+const poseAll = (name) => avatars.forEach((a) => a.pose(name));
+const flashAll = (name, ms) => avatars.forEach((a) => a.flash(name, ms));
+
+function mountAvatars() {
+  avatars = [];
+  const isRace = g && g.mode === 'race';
+  $('companion').classList.toggle('hidden', isRace);
+  const host = isRace ? $('racer-you') : $('companion-avatar');
+  avatars.push(Avatar.create(host, { color: 'var(--p1)', head: store.head }));
+  poseAll('idle');
+}
+
+// How far along its rail the companion should stand. Modes with a known end
+// measure against it; Marathon and Ladder have no finish, so they return null
+// and the runner simply runs on the spot.
+function companionProgress() {
+  if (!g) return 0;
+  if (g.mode === 'blitz') {
+    const left = Math.max(0, g.endsAt - Date.now());
+    return 1 - left / (BLITZ_SECONDS * 1000);
+  }
+  if (!Number.isFinite(g.rounds)) return null;
+  return (g.round - 1 + (g.locked ? 1 : 0)) / g.rounds;
+}
+
+function placeCompanion() {
+  if (!g || g.mode === 'race') return;
+  const p = companionProgress();
+  $('companion-rail').classList.toggle('open', p === null);
+  $('companion-avatar').style.left = `${clamp(p === null ? 0 : p, 0, 1) * 100}%`;
+}
+
+function renderCosmetics() {
+  const level = levelForXp(store.xp);
+  const el = $('cosmetic-options');
+  el.innerHTML = '';
+
+  Avatar.cosmetics().forEach((c) => {
+    const locked = c.level > level;
+    const b = document.createElement('button');
+    b.className = store.head === c.id ? 'active' : '';
+    b.disabled = locked;
+    b.innerHTML = locked
+      ? `${c.label}<span class="cosmetic-lock">LV ${c.level}</span>`
+      : c.label;
+    b.title = locked ? `Unlocks at level ${c.level}` : c.label;
+    b.addEventListener('click', () => {
+      store.head = c.id;
+      saveStore();
+      if (menuAvatar) menuAvatar.setHead(c.id);
+      renderCosmetics();
+    });
+    el.appendChild(b);
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Adaptive topic selection
@@ -132,6 +199,12 @@ function renderMenu() {
   const need = xpAtLevel(level + 1) - xpAtLevel(level);
   $('xp-fill').style.width = `${Math.min(100, (cur / need) * 100)}%`;
   $('xp-label').textContent = `${cur} / ${need} XP to level ${level + 1}`;
+
+  if (!menuAvatar) {
+    menuAvatar = Avatar.create($('menu-avatar'), { color: 'var(--p1)', head: store.head });
+    menuAvatar.pose('idle');
+  }
+  renderCosmetics();
 
   const acc = store.answered ? Math.round((store.correct / store.answered) * 100) : 0;
   $('profile-stats').innerHTML =
@@ -230,6 +303,7 @@ function startGame() {
       difficultyId: difficulty.id,
       difficultySeconds: difficulty.seconds,
       drawTopic,
+      playerHead: store.head,
       baseMsFor: avgMsOf,
       missRateFor: (id) => {
         const s = statFor(id);
@@ -240,6 +314,8 @@ function startGame() {
     Rival.stop();
   }
 
+  mountAvatars();
+  placeCompanion();
   startTicker();
   nextQuestion();
 }
@@ -262,6 +338,7 @@ function tick() {
   // Deliberately ahead of the `locked` guard: the rival keeps running while
   // you read why you got one wrong. That pause is the cost of the mistake.
   if (g.mode === 'race' && Rival.tick() === 'rival') return endGame();
+  placeCompanion();
 
   if (g.locked || g.hintOpen) return;
 
@@ -271,6 +348,11 @@ function tick() {
   const fill = $('timer-fill');
   fill.style.width = `${frac * 100}%`;
   fill.className = frac < 0.25 ? 'low' : '';
+
+  // The runner leans into it before the clock is out, not after — reaction
+  // reads as decoration, anticipation reads as a companion.
+  if (!g.strained && frac < 0.3) { g.strained = true; poseAll('strain'); }
+  if (g.mode === 'race') avatars.forEach((a) => a.behind(Rival.gap() < -0.2));
   // Running out of time counts as a miss — hesitating is the thing being trained.
   if (spent >= limit) answer(null);
 }
@@ -284,6 +366,8 @@ function nextQuestion() {
   g.current = makeQuestion(drawTopic(), g.level);
   g.questionStartedAt = Date.now();
   g.hinted = false;
+  g.strained = false;
+  poseAll('run');
   closeHint();
 
   const topic = TOPICS.find((t) => t.id === g.current.topic);
@@ -391,6 +475,7 @@ function answer(given, btn) {
     const pts = awardPoints(elapsed);
     if (btn) btn.classList.add('correct');
     Juice.good({ points: pts, anchor: btn || $('question'), streak: g.streak });
+    flashAll('cheer', 900);
     replay($('question'), 'pop');
     showFeedback(true, `✓ +${pts} pts${g.hinted ? ' (method used)' : ''}`);
   } else {
@@ -400,6 +485,7 @@ function answer(given, btn) {
     if (g.lives !== null) g.lives -= 1;
     const lead = given === null ? "⏱ Time's up —" : '✗';
     Juice.bad();
+    flashAll('stumble', 1100);
     replay($('question'), 'shake');
     showFeedback(false, `${lead} ${q.text} = <b>${q.answer.toLocaleString()}</b>. ${esc(q.why)}`);
   }
@@ -602,6 +688,7 @@ function endGame(aborted = false) {
   Rival.stop();
 
   if (aborted) {
+    poseAll('idle');
     syncSession(true, 0);
     saveStore();
     showScreen('menu');
@@ -659,6 +746,9 @@ function endGame(aborted = false) {
     ? '<h3>Worth a second look</h3>' + g.missed.slice(0, 6).map((m) =>
       `<div class="missed-row"><code>${esc(m.text)} = ${m.answer.toLocaleString()}</code><span>${esc(m.why)}</span></div>`).join('')
     : '<p class="clean-sweep">Clean sweep — nothing missed.</p>';
+
+  avatars.forEach((a) => a.behind(false));
+  if (race && race.won) flashAll('cheer', 3200); else poseAll('idle');
 
   showScreen('results');
   // Count the final score up from zero — the one moment in the game where a
