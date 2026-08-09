@@ -271,13 +271,6 @@ function renderTabs() {
   });
 
   $('day-score').textContent = `${g.score} pts`;
-  const n = gradedCount();
-  const pending = tabKeys().filter((k) => g.tabs[k].pending).length;
-  const finish = $('finish-day');
-  finish.disabled = n === 0 || pending > 0;
-  finish.textContent = pending > 0 ? `Grading ${pending} in the background…`
-    : n === 0 ? 'Grade something first'
-    : `Finish the day (${n}/${tabKeys().length} graded)`;
 }
 
 function saveDraft() {
@@ -304,7 +297,9 @@ function promptBlock(prompts, state, cta, extra = '') {
     return `
       <p class="take-prompts">${prompts.map((p) => `<span>${esc(p)}</span>`).join('')}</p>
       <div class="pending-note">Grading in the background — keep going.</div>
-      <p class="submitted-text">${esc(state.text)}</p>`;
+      <p class="submitted-text">${esc(state.text)}</p>
+      <button id="done-btn" class="ghost big done-below">✓ Done for the day</button>
+      <div id="grade-error" class="grade-error"></div>`;
   }
   return `
     <p class="take-prompts">${prompts.map((p) => `<span>${esc(p)}</span>`).join('')}</p>
@@ -349,6 +344,7 @@ function gradeCard(grade, revealHtml = '') {
       ${grade.missed.length ? `<div class="grade-list miss-list"><b>${g.active === 'recall' ? 'What you didn\'t recall' : 'What you missed'}</b><ul>${grade.missed.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>` : ''}
       ${grade.connection_suggested ? `<div class="conn-suggest"><b>One you could have made</b><p>${esc(grade.connection_suggested)}</p></div>` : ''}
       ${revealHtml}
+      <button id="done-btn" class="ghost big done-below">✓ Done for the day</button>
     </div>`;
 }
 
@@ -647,7 +643,6 @@ function renderStats() {
 
 $('start-btn').addEventListener('click', startDay);
 $('day-quit').addEventListener('click', () => endGame(true));
-$('finish-day').addEventListener('click', () => endGame(false));
 $('menu-btn').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
 $('stats-btn').addEventListener('click', () => { renderStats(); showScreen('stats'); });
 $('stats-back').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
