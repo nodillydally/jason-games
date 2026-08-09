@@ -219,8 +219,10 @@ function renderMenu() {
   const isRace = sel.mode === 'race';
   $('rival-block').classList.toggle('hidden', !isRace);
   if (isRace) {
-    fill('rival-options', Rival.list(), 'rival');
-    $('rival-blurb').textContent = Rival.find(sel.rival).blurb;
+    fill('rival-options', [...Rival.list(), { id: 'random', label: 'Random', icon: '🎲' }], 'rival');
+    $('rival-blurb').textContent = sel.rival === 'random'
+      ? 'Take whoever shows up at the line — the rival is revealed when the race starts.'
+      : Rival.find(sel.rival).blurb;
   }
 
   const mode = MODES.find((m) => m.id === sel.mode);
@@ -299,9 +301,17 @@ function startGame() {
   // The rival paces itself off your own history, so it needs read access to
   // the same numbers the stats screen shows — not to the store itself.
   if (g.mode === 'race') {
-    g.rivalId = sel.rival;
+    // Random resolves at the line — g.rivalId always holds the REAL rival, so
+    // the ghost/metronome achievements stay earnable through a lucky draw.
+    g.rivalId = sel.rival === 'random'
+      ? Rival.list()[Math.floor(Math.random() * Rival.list().length)].id
+      : sel.rival;
+    if (sel.rival === 'random' && window.Juice) {
+      const def = Rival.find(g.rivalId);
+      Juice.toast(`🎲 ${def.icon} ${def.name} steps up`);
+    }
     Rival.start({
-      rivalId: sel.rival,
+      rivalId: g.rivalId,
       legs: RACE_LEGS,
       difficultyId: difficulty.id,
       difficultySeconds: difficulty.seconds,

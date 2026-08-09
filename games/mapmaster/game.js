@@ -488,8 +488,11 @@ function renderMenu() {
   const isRace = sel.mode === 'race';
   $('rival-block').classList.toggle('hidden', !isRace);
   if (isRace && window.Rival) {
-    renderOptionGroup($('rival-options'), Rival.list().map((r) => ({ id: r.id, label: `${r.icon} ${r.label}` })), sel.rival, (id) => { sel.rival = id; renderMenu(); });
-    $('rival-blurb').textContent = Rival.find(sel.rival).blurb;
+    const rivalOpts = [...Rival.list().map((r) => ({ id: r.id, label: `${r.icon} ${r.label}` })), { id: 'random', label: '🎲 Random' }];
+    renderOptionGroup($('rival-options'), rivalOpts, sel.rival, (id) => { sel.rival = id; renderMenu(); });
+    $('rival-blurb').textContent = sel.rival === 'random'
+      ? 'Take whoever shows up at the line — the rival is revealed when the race starts.'
+      : Rival.find(sel.rival).blurb;
   }
 
   const isExplore = sel.mode === 'explore';
@@ -649,8 +652,15 @@ function startGame() {
     $('racer-you').innerHTML = '';
     const you = Avatar.create($('racer-you'), { ink: Wardrobe.ink(), gear: Wardrobe.gear(), facing: 'e' });
     you.pose('run');
+    const rivalId = sel.rival === 'random'
+      ? Rival.list()[Math.floor(Math.random() * Rival.list().length)].id
+      : sel.rival;
+    if (sel.rival === 'random' && window.Juice) {
+      const def = Rival.find(rivalId);
+      Juice.toast(`🎲 ${def.icon} ${def.name} steps up`);
+    }
     Rival.start({
-      rivalId: sel.rival,
+      rivalId,
       legs: RACE_LEGS,
       difficultyId: sel.difficulty,
       // Mapmaster has no question clock; this only feeds the no-history
