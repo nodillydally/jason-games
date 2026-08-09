@@ -89,11 +89,20 @@ function poolFor(eraId) {
   return eraId === 'all' ? EVENTS.slice() : EVENTS.filter((e) => e.era === eraId);
 }
 
-// Events you've never seen, or often miss, get a higher weight.
+// Learned/unlearned, same rule as Mapmaster: three right in a row marks an
+// event learned, two wrong in a row takes it back. Runs, not lifetime
+// accuracy — current ability is what counts.
+const LEARN_RUN = 3;
+const UNLEARN_RUN = 2;
+const learnedCount = () => Object.values(store.stats).filter((s) => s.learned).length;
+
+// Events you've never seen, or often miss, get a higher weight. Learned ones
+// still appear occasionally — a date you never have to defend isn't held.
 function weightFor(ev) {
   const s = statFor(ev.id);
   if (!s.seen) return 2.5;
-  return 1 + 3 * (1 - s.correct / s.seen);
+  if (s.learned) return 0.4;
+  return 1 + 3 * (1 - s.correct / s.seen) + (s.run < 0 ? 1 : 0);
 }
 
 function weightedDraw(pool, exclude = new Set()) {
@@ -112,7 +121,9 @@ function weightedDraw(pool, exclude = new Set()) {
 function reviewPool() {
   return EVENTS.filter((e) => {
     const s = statFor(e.id);
-    return s.seen > 0 && s.correct / s.seen < MASTERY;
+    if (!s.seen) return false;
+    if (s.learned === false) return true;   // slipped — exactly what Review is for
+    return !s.learned && s.correct / s.seen < MASTERY;
   });
 }
 
@@ -241,7 +252,7 @@ function renderMenu() {
   const acc = store.answered ? Math.round((store.correct / store.answered) * 100) : 0;
   $('profile-stats').innerHTML =
     `<span><b>${store.games}</b> games</span>` +
-    `<span><b>${store.correct}</b> correct</span>` +
+    `<span><b>${learnedCount()}</b> learned</span>` +
     `<span><b>${acc}%</b> accuracy</span>`;
 
   const modes = $('mode-options');
@@ -398,9 +409,24 @@ function updateHud() {
 function recordAnswer(ev, wasCorrect, elapsedMs) {
   g.answered += 1;
   store.answered += 1;
-  const s = store.stats[ev.id] || (store.stats[ev.id] = { seen: 0, correct: 0 });
+  const s = store.stats[ev.id] || (store.stats[ev.id] = { seen: 0, correct: 0, run: 0 });
   s.seen += 1;
-  if (wasCorrect) { store.correct += 1; s.correct += 1; }
+  if (wasCorrect) {
+    store.correct += 1;
+    s.correct += 1;
+    s.run = (s.run || 0) > 0 ? s.run + 1 : 1;
+    if (!s.learned && s.run >= LEARN_RUN) {
+      s.learned = true;
+      g.newlyLearned = (g.newlyLearned || 0) + 1;
+      if (window.Juice) Juice.toast(`✓ ${ev.name} learned — ${learnedCount()} total`);
+    }
+  } else {
+    s.run = (s.run || 0) < 0 ? s.run - 1 : -1;
+    if (s.learned && -s.run >= UNLEARN_RUN) {
+      s.learned = false;
+      g.newlyLost = (g.newlyLost || 0) + 1;
+    }
+  }
   g.log.push({
     item_id: ev.id,
     item_name: ev.name,
@@ -642,7 +668,9 @@ function endGame(aborted = false) {
   $('results-stats').innerHTML =
     `<div class="stat"><b>${g.correct}/${g.answered}</b><span>correct</span></div>` +
     `<div class="stat"><b>${acc}%</b><span>accuracy</span></div>` +
-    `<div class="stat"><b>${g.bestStreak}</b><span>best streak</span></div>`;
+    `<div class="stat"><b>${g.bestStreak}</b><span>best streak</span></div>` +
+    (g.newlyLearned ? `<div class="stat"><b>+${g.newlyLearned}</b><span>learned 🎉</span></div>` : '') +
+    (g.newlyLost ? `<div class="stat"><b>−${g.newlyLost}</b><span>slipped — review them</span></div>` : '');
 
   $('results-xp').innerHTML = levelAfter > levelBefore
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`

@@ -47,9 +47,9 @@ const screens = {
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, head: 'none', ...JSON.parse(raw) };
+    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, head: 'none', ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
-  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, head: 'none' };
+  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, head: 'none' };
 }
 
 const store = loadStore();
@@ -61,6 +61,16 @@ const xpAtLevel = (lv) => 100 * (lv - 1) * (lv - 1);
 const statFor = (id) => store.stats[id] || { seen: 0, correct: 0, ms: 0 };
 const masteryOf = (id) => { const s = statFor(id); return s.seen ? s.correct / s.seen : 0; };
 const avgMsOf = (id) => { const s = statFor(id); return s.seen ? Math.round(s.ms / s.seen) : 0; };
+
+// Learned facts — same rule as Mapmaster and Chronicle: 3 right in a row
+// learns it, 2 wrong in a row takes it back. Only Powers & roots qualifies:
+// its questions are a finite set of FACTS (17², √289, 7³, 2⁸) that repeat
+// verbatim, unlike the other topics' randomly generated arithmetic, where the
+// skill is the thing being trained rather than any single item.
+const LEARN_RUN = 3;
+const UNLEARN_RUN = 2;
+const isFact = (q) => q.topic === 'pow';
+const learnedFactCount = () => Object.values(store.facts).filter((f) => f.learned).length;
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -209,7 +219,7 @@ function renderMenu() {
   const acc = store.answered ? Math.round((store.correct / store.answered) * 100) : 0;
   $('profile-stats').innerHTML =
     `<span><b>${store.games}</b> games</span>` +
-    `<span><b>${store.correct}</b> correct</span>` +
+    `<span><b>${learnedFactCount()}</b> facts learned</span>` +
     `<span><b>${acc}%</b> accuracy</span>`;
 
   const fill = (elId, items, group) => {
@@ -364,6 +374,13 @@ function nextQuestion() {
   g.round += 1;
   g.locked = false;
   g.current = makeQuestion(drawTopic(), g.level);
+  // Learned facts mostly stop appearing: re-roll up to twice when the draw
+  // lands on one. A third landing gets through — occasional defense reps.
+  for (let reroll = 0; reroll < 2; reroll += 1) {
+    const f = isFact(g.current) && store.facts[g.current.text];
+    if (!f || !f.learned) break;
+    g.current = makeQuestion(drawTopic(), g.level);
+  }
   g.questionStartedAt = Date.now();
   g.hinted = false;
   g.strained = false;
@@ -525,6 +542,25 @@ function recordAnswer(q, wasCorrect, elapsedMs) {
   const s = store.stats[q.topic] || (store.stats[q.topic] = { seen: 0, correct: 0, ms: 0 });
   s.seen += 1;
   s.ms += elapsedMs;
+
+  if (isFact(q)) {
+    const f = store.facts[q.text] || (store.facts[q.text] = { run: 0 });
+    if (wasCorrect) {
+      f.run = f.run > 0 ? f.run + 1 : 1;
+      if (!f.learned && f.run >= LEARN_RUN) {
+        f.learned = true;
+        g.newlyLearned = (g.newlyLearned || 0) + 1;
+        if (window.Juice) Juice.toast(`✓ ${q.text} learned — ${learnedFactCount()} facts`);
+      }
+    } else {
+      f.run = f.run < 0 ? f.run - 1 : -1;
+      if (f.learned && -f.run >= UNLEARN_RUN) {
+        f.learned = false;
+        g.newlyLost = (g.newlyLost || 0) + 1;
+      }
+    }
+  }
+
   if (wasCorrect) {
     g.correct += 1;
     store.correct += 1;
@@ -736,7 +772,9 @@ function endGame(aborted = false) {
     `<div class="stat"><b>${g.correct}/${g.answered}</b><span>correct</span></div>` +
     `<div class="stat"><b>${acc}%</b><span>accuracy</span></div>` +
     `<div class="stat"><b>${(avgMs / 1000).toFixed(1)}s</b><span>avg time</span></div>` +
-    `<div class="stat"><b>${g.bestStreak}</b><span>best streak</span></div>`;
+    `<div class="stat"><b>${g.bestStreak}</b><span>best streak</span></div>` +
+    (g.newlyLearned ? `<div class="stat"><b>+${g.newlyLearned}</b><span>facts learned 🎉</span></div>` : '') +
+    (g.newlyLost ? `<div class="stat"><b>−${g.newlyLost}</b><span>slipped</span></div>` : '');
 
   $('results-xp').innerHTML = levelAfter > levelBefore
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`

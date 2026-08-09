@@ -230,9 +230,20 @@
     const fill = document.getElementById('xp-fill');
     const label = document.getElementById('rank-label');
     if (lvEl) lvEl.textContent = level;
+
+    // The truest single scoreboard: everything currently learned, across all
+    // games — countries + events (per-item stats) + math facts. Each game
+    // marks items learned on a 3-in-a-row run and unlearns on 2 misses, so
+    // this number can go down — that's the point.
+    const learned =
+      Object.values((read('mapmaster-v1') || {}).stats || {}).filter((s) => s.learned).length +
+      Object.values((read('chronicle.profile.v1') || {}).stats || {}).filter((s) => s.learned).length +
+      Object.values((read('numbers.profile.v1') || {}).facts || {}).filter((f) => f.learned).length;
+
     if (label) {
       label.textContent = totalXp
-        ? `${totalXp.toLocaleString()} XP total · ${(ceil - totalXp).toLocaleString()} to level ${level + 1}`
+        ? `${totalXp.toLocaleString()} XP total · ${(ceil - totalXp).toLocaleString()} to level ${level + 1}` +
+          (learned ? ` · 🧠 ${learned.toLocaleString()} things learned` : '')
         : 'No XP yet — play a round and this fills up.';
     }
     // Paint on the next frame so the bar visibly grows rather than appearing full.
