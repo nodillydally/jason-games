@@ -1,0 +1,20 @@
+Sound effects in this folder come from Kenney's "Interface Sounds" pack (v1.0).
+
+    Source:  https://kenney.nl/assets/interface-sounds
+    Licence: Creative Commons Zero (CC0 1.0)
+             http://creativecommons.org/publicdomain/zero/1.0/
+
+CC0 places the work in the public domain: free to use in personal, educational
+and commercial projects, with no attribution required. Kenney asks only that
+you credit him if you feel like it — hence this file.
+
+The originals are Ogg Vorbis. They were converted here to mono 44.1 kHz MP3
+(96 kbps) so that Web Audio's decodeAudioData handles them everywhere, iOS
+included, and so the whole set costs about 16 KB.
+
+    level.mp3   <- confirmation_002.ogg   (level up)
+    win.mp3     <- confirmation_004.ogg   (clean round / personal best)
+    streak.mp3  <- glass_002.ogg          (streak milestone)
+
+To swap any of them, drop a replacement in with the same name, or point
+SAMPLES in lib/juice.js at a different file.
