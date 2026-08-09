@@ -866,30 +866,49 @@ input:focus, textarea:focus {
   100% { opacity: 0; transform: translate(-50%, -10px); }
 }
 
-/* Sound and theme toggles — two quiet discs in the corner, not a control bar. */
+/* Sound and theme toggles — two discs in the thumb corner. Quiet, but they
+   have to be *findable*: at half opacity in a hairline border they read as
+   smudges on cream, which is exactly how the first version failed. */
 .fx-sound, .fx-theme {
   position: fixed;
   right: calc(16px + env(safe-area-inset-right));
   bottom: calc(16px + env(safe-area-inset-bottom));
   z-index: 60;
-  width: 38px;
-  height: 38px;
-  min-height: 38px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   padding: 0;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  font-size: 13px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink-2);
   background: var(--card-bg);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--stroke-hi);
   box-shadow: var(--shadow);
-  opacity: .5;
-  transition: opacity .2s ease, box-shadow .2s ease;
+  transition: color .2s ease, box-shadow .2s ease, transform .15s ease;
 }
-.fx-sound:hover, .fx-theme:hover { opacity: 1; box-shadow: var(--shadow-lift); }
+.fx-sound:hover, .fx-theme:hover {
+  color: var(--ink);
+  box-shadow: var(--shadow-lift);
+}
 
 /* The theme disc sits inboard of the sound one. */
-.fx-theme { right: calc(62px + env(safe-area-inset-right)); font-size: 14px; }
+.fx-theme { right: calc(64px + env(safe-area-inset-right)); }
+
+/* Muted is drawn, not implied by dimness — a struck-through note. */
+.fx-sound.muted { color: var(--ink-3); }
+.fx-sound.muted::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 20px;
+  height: 1px;
+  background: currentColor;
+  transform: translate(-50%, -50%) rotate(-40deg);
+}
 
 /* ====================== small screens ====================== */
 

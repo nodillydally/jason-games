@@ -169,75 +169,141 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ------------------------------- learn ------------------------------- */
+/* ------------------------------- study ------------------------------- */
 
-.learn-intro { color: var(--ink-2); font-size: 14px; line-height: 1.65; margin-bottom: 18px; }
+.learn-intro { color: var(--ink-2); font-size: 14px; line-height: 1.65; margin-bottom: 20px; }
 
-.story-head {
+.study-list { display: flex; flex-direction: column; border-top: 1px solid var(--rule); }
+
+.study-row {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin: 26px 0 12px;
-  padding-bottom: 10px;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  padding: 16px 4px;
+  min-height: 66px;
+  border: none;
   border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  transition: background .2s ease, padding-left .2s ease;
 }
-.story-head b { font-family: var(--serif); font-size: 26px; letter-spacing: -.02em; font-weight: 400; }
-.story-head small {
+.study-row:hover { background: var(--paper-2); box-shadow: none; padding-left: 10px; }
+
+.study-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.study-row-body b {
+  font-family: var(--serif);
+  font-size: 21px;
+  font-weight: 400;
+  letter-spacing: -.015em;
+}
+.study-row-body em {
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.study-row-mark {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.study-row.done .study-row-mark { color: var(--good); }
+
+/* The overview is the recommended entry point, so it is the one row that
+   carries the accent — and its subtitle is a sentence, not a date span. */
+.study-row.primer { box-shadow: inset 2px 0 0 var(--p1); padding-left: 14px; }
+.study-row.primer .study-row-body b { color: var(--p1); }
+.study-row.primer .study-row-body em {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-2);
+}
+
+/* ---------------------------- reading card ---------------------------- */
+
+.study-card { padding: 30px 26px; margin-top: 6px; }
+
+#study-fill {
+  height: 100%;
+  width: 0;
+  background: var(--p1);
+  border-radius: var(--r-pill);
+  transition: width .45s var(--ease);
+}
+
+/* The passage is set as a page, not as UI text: this is the part that has to
+   be pleasant to actually read on a phone. */
+.study-passage p {
+  font-family: var(--serif);
+  font-size: 18.5px;
+  line-height: 1.62;
+  letter-spacing: -.005em;
+  margin-bottom: .9em;
+  max-width: 60ch;
+}
+.study-passage p:last-child { margin-bottom: 0; }
+.study-passage p:first-child::first-letter {
+  font-size: 2.4em;
+  float: left;
+  line-height: .86;
+  padding: 2px 9px 0 0;
+  color: var(--p1);
+}
+
+.study-q { margin: 2px 0 22px; }
+
+#study-choices { display: grid; grid-template-columns: 1fr; gap: 8px; }
+#study-choices button {
+  padding: 14px 18px;
+  min-height: 54px;
+  font-size: 14.5px;
+  text-align: left;
+  line-height: 1.4;
+  border-radius: var(--r-md);
+}
+#study-choices button.enter { animation: rise .3s var(--ease) both; }
+#study-choices button:disabled { opacity: 1; }
+#study-choices button:disabled:not(.correct):not(.wrong) { opacity: .32; }
+
+#study-feedback {
+  margin-top: 18px;
+  min-height: 1.6em;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+#study-feedback.good { color: var(--good); }
+#study-feedback.bad { color: var(--bad); }
+#study-feedback.good, #study-feedback.bad { animation: fade-up .3s var(--ease) both; }
+
+#study-next { margin-top: 20px; width: 100%; }
+#study-reread {
+  width: 100%;
+  margin-top: 8px;
+  min-height: 40px;
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--ink-3);
 }
-
-/* The narrative reads like a page, not an app. */
-.story p {
-  font-family: var(--serif);
-  font-size: 17.5px;
-  line-height: 1.7;
-  margin: 0 0 1em;
-  max-width: 62ch;
-}
-.story p:first-child::first-letter {
-  font-size: 2.6em;
-  float: left;
-  line-height: .85;
-  padding-right: 8px;
-  color: var(--p1);
-}
-
-.story-events h3 {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  margin: 26px 0 6px;
-}
-.learn-event {
-  display: flex;
-  gap: 14px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--rule-2);
-}
-.learn-event b {
-  flex: 0 0 74px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--p1);
-  padding-top: 3px;
-  font-variant-numeric: tabular-nums;
-}
-.learn-event span { display: flex; flex-direction: column; gap: 2px; }
-.learn-event strong { font-size: 14.5px; font-weight: 600; }
-.learn-event em { font-style: normal; color: var(--ink-2); font-size: 13px; line-height: 1.5; }
-
-#learn-quiz { margin-top: 24px; }
 
 /* --------------------------- small screens --------------------------- */
 
 @media (max-width: 560px) {
   .question-card { padding: 28px 16px 24px; }
+  .study-card { padding: 24px 18px; }
+  .study-passage p { font-size: 17.5px; }
+  .study-row-body b { font-size: 19px; }
   .era-name { flex: 0 0 42%; }
   .seq-chip, .seq-pool button { font-size: 13px; }
 }

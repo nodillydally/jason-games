@@ -34,7 +34,19 @@
       <button id="stats-btn" title="Your stats">📊 Stats</button>
     </div>
 
+    <!-- Study comes before the quiz setup on purpose: you cannot retrieve
+         what was never stored, and "The shape of history" is the map that
+         makes every individual date mean something. -->
+    <div class="card study-menu">
+      <h2 class="section">Study</h2>
+      <p class="learn-intro">Read a short passage, get quizzed on that passage,
+        move on. New here? Start at the top — it teaches what the ages are
+        before asking you to place anything inside them.</p>
+      <div id="study-list" class="study-list"></div>
+    </div>
+
     <div class="card setup-card">
+      <h2 class="section">Or quiz yourself</h2>
       <h2>Mode</h2>
       <div class="opt-grid" id="mode-options"></div>
 
@@ -43,7 +55,6 @@
 
       <div id="setup-hint" class="setup-hint"></div>
       <button id="start-btn" class="primary big">Start</button>
-      <button id="learn-btn" class="ghost big">📖 Learn an era first</button>
     </div>
 
     <div class="card sync-card">
@@ -109,16 +120,28 @@
   </section>
 
   <!-- ============================= Learn ============================= -->
-  <section id="screen-learn" class="screen">
-    <div class="card stats-card">
-      <h2>The story so far</h2>
-      <p class="learn-intro">You can't be quizzed on history you never took in.
-        Read an era as one connected story — a few minutes each — then quiz
-        yourself on exactly what you just read.</p>
-      <div class="opt-grid" id="learn-eras"></div>
-      <div id="learn-body"></div>
-      <button id="learn-quiz" class="primary big">Quiz me on this era</button>
-      <button id="learn-back" class="ghost big">Back</button>
+  <!-- ============================= Study ============================= -->
+  <section id="screen-study" class="screen">
+    <div class="hud">
+      <button id="study-quit" title="Back to menu">✕</button>
+      <span id="study-progress"></span>
+      <span class="hud-spacer"></span>
+      <span id="study-score"></span>
+    </div>
+    <div class="progress-track"><div id="study-fill"></div></div>
+
+    <div class="card study-card">
+      <div id="study-tag" class="topic-tag"></div>
+      <div id="study-passage" class="study-passage"></div>
+      <button id="study-ready" class="primary big">Got it — quiz me</button>
+
+      <div id="study-quiz" class="hidden">
+        <div id="study-q" class="study-q"></div>
+        <div id="study-choices"></div>
+        <div id="study-feedback"></div>
+        <button id="study-next" class="primary hidden">Next question</button>
+        <button id="study-reread" class="ghost">Re-read the passage</button>
+      </div>
     </div>
   </section>
 
@@ -138,6 +161,7 @@
 <script src="../../lib/sync.js"></script>
 <script src="../../lib/juice.js"></script>
 <script src="data/events.js"></script>
+<script src="data/ages.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

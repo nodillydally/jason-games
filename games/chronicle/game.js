@@ -35,7 +35,7 @@ const screens = {
   game: $('screen-game'),
   results: $('screen-results'),
   stats: $('screen-stats'),
-  learn: $('screen-learn'),
+  study: $('screen-study'),
 };
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => (
@@ -49,9 +49,9 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => (
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, ...JSON.parse(raw) };
+    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, studied: {}, ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
-  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {} };
+  return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, studied: {} };
 }
 
 const store = loadStore();
@@ -253,8 +253,12 @@ function renderMenu() {
 
   const eras = $('era-options');
   eras.innerHTML = '';
+  // The span is the whole point of the label: "Age of Discovery" tells you
+  // nothing on its own; "Age of Discovery / 1450 – 1700" places it immediately.
+  const eraChip = (e) => esc(e.name) +
+    `<span class="sub">${e.id === 'all' ? '3200 BC – today' : fmtEraSpan(e)}</span>`;
   [{ id: 'all', name: 'All of history' }, ...ERAS].forEach((e) => eras.appendChild(
-    optionButton(e.name, sel.era === e.id, () => { sel.era = e.id; renderMenu(); })
+    optionButton(eraChip(e), sel.era === e.id, () => { sel.era = e.id; renderMenu(); })
   ));
 
   const mode = MODES.find((m) => m.id === sel.mode);
@@ -263,7 +267,7 @@ function renderMenu() {
   // You can't retrieve what was never stored — until something has been
   // answered, the honest recommendation is input first, quiz second.
   const firstRun = store.answered === 0
-    ? 'New here? Start with 📖 Learn an era — read the story, then quiz exactly what you read. '
+    ? 'New here? Study “The shape of history” below — it teaches what the ages actually are. '
     : '';
   $('setup-hint').textContent = rCount === 0
     ? 'Nothing to review yet — play a round first and come back.'
@@ -649,6 +653,7 @@ function endGame(aborted = false) {
       `<div class="missed-row"><code>${fmtYear(ev.y)} · ${esc(ev.name)}</code><span>${esc(ev.why)}</span></div>`).join('')
     : '<p class="clean-sweep">Clean sweep — the timeline held.</p>';
 
+  $('again-btn').textContent = 'Play again';
   showScreen('results');
   if (window.Juice) {
     if (isBest || acc >= 80) Juice.celebrate($('results-score'));
@@ -658,42 +663,321 @@ function endGame(aborted = false) {
 }
 
 // ---------------------------------------------------------------------------
-// Learn — the input layer
+// Study — read a passage, then immediately retrieve it
 // ---------------------------------------------------------------------------
+// The old Learn screen put every paragraph of an era up front and the quiz at
+// the end, which is the shape of homework rather than of learning: by question
+// four you are recalling paragraph one from ten minutes ago. Study interleaves
+// it — one passage, questions on that passage only, then the next passage.
+//
+// Two kinds of syllabus share the loop:
+//   AGES  — the overview course, with hand-written questions about the ages
+//           themselves. A new player should start here, because a date means
+//           nothing until you know which age it lands in.
+//   eras  — an era's story split into its paragraphs, with questions generated
+//           from exactly the events that paragraph named.
 
-let learnEra = ERAS[0].id;
-
-function renderLearn(eraId) {
-  learnEra = eraId;
-  const era = ERAS.find((e) => e.id === eraId);
-
-  const chips = $('learn-eras');
-  chips.innerHTML = '';
-  ERAS.forEach((e) => chips.appendChild(
-    optionButton(e.name, e.id === eraId, () => renderLearn(e.id))
-  ));
-
-  const events = EVENTS.filter((e) => e.era === eraId).sort((a, b) => a.y - b.y);
-  $('learn-body').innerHTML =
-    `<div class="story-head"><b>${esc(era.name)}</b><small>${fmtEraSpan(era)}</small></div>` +
-    `<div class="story">${era.story.split('\n\n').map((p) => `<p>${esc(p)}</p>`).join('')}</div>` +
-    `<div class="story-events"><h3>The events, in order</h3>` +
-    events.map((ev) => {
-      const s = statFor(ev.id);
-      const mark = s.seen ? (masteryOf(ev.id) >= MASTERY ? ' ✓' : '') : '';
-      return `<div class="learn-event">
-        <b>${fmtYear(ev.y)}</b>
-        <span><strong>${esc(ev.name)}${mark}</strong><em>${esc(ev.why)}</em></span>
-      </div>`;
-    }).join('') + '</div>';
+function syllabusFor(id) {
+  if (id === AGES.id) return AGES;
+  const era = ERAS.find((e) => e.id === id);
+  if (!era) return null;
+  const paras = era.story.split('\n\n');
+  return {
+    id: era.id,
+    name: era.name,
+    blurb: fmtEraSpan(era),
+    era,
+    sections: paras.map((text, i) => ({
+      title: `${era.name} · part ${i + 1} of ${paras.length}`,
+      text,
+      ids: (ERA_SECTION_IDS[era.id] || [])[i] || [],
+    })),
+  };
 }
 
-// Quiz exactly what was just read — the read → retrieve loop in one tap.
-function quizLearnedEra() {
-  sel.era = learnEra;
+const SYLLABUS_IDS = [AGES.id, ...ERAS.map((e) => e.id)];
+
+let st = null;
+
+function renderStudyList() {
+  const host = $('study-list');
+  if (!host) return;
+  host.innerHTML = '';
+  SYLLABUS_IDS.forEach((id) => {
+    const syl = syllabusFor(id);
+    const done = store.studied && store.studied[id];
+    const b = document.createElement('button');
+    b.className = `study-row${id === AGES.id ? ' primer' : ''}${done ? ' done' : ''}`;
+    b.innerHTML =
+      '<span class="study-row-body">'
+        + `<b>${esc(syl.name)}</b>`
+        + `<em>${esc(syl.blurb || '')}</em>`
+      + '</span>'
+      + `<span class="study-row-mark">${done ? '✓ studied' : `${syl.sections.length} parts`}</span>`;
+    b.addEventListener('click', () => startStudy(id));
+    host.appendChild(b);
+  });
+}
+
+function startStudy(id) {
+  const syl = syllabusFor(id);
+  if (!syl) return;
+  st = {
+    syl, si: 0, qi: 0, questions: [], locked: false,
+    correct: 0, answered: 0, missed: [], log: [],
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    startedAt: Date.now(),
+  };
+  showScreen('study');
+  renderPassage();
+}
+
+const totalSections = () => st.syl.sections.length;
+
+function updateStudyHud() {
+  $('study-progress').textContent = `Part ${st.si + 1} of ${totalSections()}`;
+  $('study-score').textContent = st.answered ? `${st.correct}/${st.answered}` : '';
+  const done = st.si + (st.questions.length ? st.qi / st.questions.length : 0);
+  $('study-fill').style.width = `${Math.min(100, (done / totalSections()) * 100)}%`;
+}
+
+function renderPassage() {
+  const sec = st.syl.sections[st.si];
+  st.questions = buildStudyQuestions(sec);
+  st.qi = 0;
+  st.locked = false;
+
+  $('study-tag').textContent = sec.title || st.syl.name;
+  $('study-passage').innerHTML = sec.text.split('\n\n')
+    .map((para) => `<p>${esc(para)}</p>`).join('');
+  $('study-passage').classList.remove('hidden');
+  $('study-quiz').classList.add('hidden');
+  $('study-ready').classList.remove('hidden');
+  $('study-ready').textContent = st.questions.length
+    ? `Got it — ask me ${st.questions.length} question${st.questions.length === 1 ? '' : 's'}`
+    : 'Continue';
+  updateStudyHud();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// A study question can only ask about what the passage just said — that is the
+// contract of this mode, and why era sections carry an explicit event list.
+function buildStudyQuestions(sec) {
+  if (sec.questions) {
+    return sec.questions.map((sq) => ({
+      qtype: 'age',
+      text: sq.q,
+      // The written answer is always index 0 in the data; shuffling here is
+      // what stops "it's the first one" from being a winning strategy.
+      options: shuffle(sq.options.map((label, i) => ({ label, right: i === sq.answer }))),
+      why: sq.why,
+      events: [],
+    }));
+  }
+  const pool = (sec.ids || []).map((id) => EVENTS.find((e) => e.id === id)).filter(Boolean);
+  if (pool.length < 2) return [];
+  const asked = new Set();
+  const out = [];
+  for (let i = 0; i < Math.min(3, pool.length); i += 1) {
+    const q = makeQuestion(pool, asked);
+    q.events.forEach((e) => asked.add(e.id));
+    if (asked.size >= pool.length) asked.clear();
+    out.push(q);
+  }
+  return out;
+}
+
+function showStudyQuestion() {
+  const q = st && st.questions[st.qi];
+  if (!st) return;
+  if (!q) return nextStudySection();
+
+  // The passage goes away while you answer: retrieval is the point, and
+  // reading the answer off the page teaches nothing. Re-read is one tap away.
+  $('study-passage').classList.add('hidden');
+  $('study-ready').classList.add('hidden');
+  $('study-quiz').classList.remove('hidden');
+  $('study-reread').textContent = 'Re-read the passage';
+
+  // Event questions are a lead-in plus the event ("When was this? / Hastings"),
+  // so the lead is small and the event is the headline. An overview question is
+  // a single sentence and *is* the headline.
+  const qLines = q.text.split('\n');
+  $('study-q').innerHTML = qLines
+    .map((line, i) => (qLines.length > 1 && i === 0
+      ? `<span class="q-lead">${esc(line)}</span>`
+      : `<span class="q-event">${esc(line)}</span>`))
+    .join('');
+
+  const el = $('study-choices');
+  el.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const b = document.createElement('button');
+    b.textContent = opt.label;
+    b.style.animationDelay = `${i * 45}ms`;
+    b.classList.add('enter');
+    b.addEventListener('click', () => answerStudy(opt, b));
+    el.appendChild(b);
+  });
+
+  $('study-feedback').textContent = '';
+  $('study-feedback').className = '';
+  $('study-next').classList.add('hidden');
+  st.locked = false;
+  st.qStartedAt = Date.now();
+  updateStudyHud();
+}
+
+function toggleReread() {
+  const p = $('study-passage');
+  const hidden = p.classList.toggle('hidden');
+  $('study-reread').textContent = hidden ? 'Re-read the passage' : 'Hide the passage';
+}
+
+function answerStudy(opt, btn) {
+  if (!st || st.locked) return;
+  st.locked = true;
+
+  const q = st.questions[st.qi];
+  const right = Boolean(opt && opt.right);
+  const elapsed = Date.now() - st.qStartedAt;
+  st.answered += 1;
+  if (right) st.correct += 1;
+
+  // Event questions feed the same per-event mastery the quiz modes use, so
+  // studying an era genuinely moves Review and the stats screen.
+  const primary = q.qtype === 'first'
+    ? q.options.find((o) => o.right).ev
+    : q.events[0];
+  if (primary) {
+    store.answered += 1;
+    const rec = store.stats[primary.id] || (store.stats[primary.id] = { seen: 0, correct: 0 });
+    rec.seen += 1;
+    if (right) { store.correct += 1; rec.correct += 1; }
+    st.log.push({
+      item_id: primary.id,
+      item_name: primary.name,
+      correct: right,
+      ms: elapsed,
+      answered_at: new Date().toISOString(),
+    });
+  }
+  if (!right) st.missed.push(primary ? primary.name : q.text.split('\n')[0]);
+
+  [...$('study-choices').children].forEach((b, i) => {
+    if (q.options[i] && q.options[i].right) b.classList.add('correct');
+    b.disabled = true;
+  });
+  if (!right && btn) btn.classList.add('wrong');
+
+  const why = q.qtype === 'age' ? q.why : `${fmtYear(primary.y)} — ${primary.why}`;
+  const fb = $('study-feedback');
+  fb.className = right ? 'good' : 'bad';
+  fb.innerHTML = `${right ? '✓' : '✗'} ${esc(why)}`;
+
+  if (window.Juice) {
+    if (right) Juice.good({ anchor: btn });
+    else Juice.bad();
+  }
+
+  const last = st.qi + 1 >= st.questions.length;
+  $('study-next').textContent = !last
+    ? 'Next question'
+    : (st.si + 1 < totalSections() ? 'Next passage →' : 'Finish');
+  $('study-next').classList.remove('hidden');
+  saveStore();
+  updateStudyHud();
+}
+
+function studyNext() {
+  if (!st) return;
+  st.qi += 1;
+  if (st.qi < st.questions.length) return showStudyQuestion();
+  nextStudySection();
+}
+
+function nextStudySection() {
+  st.si += 1;
+  if (st.si < totalSections()) return renderPassage();
+  finishStudy();
+}
+
+// Reading is worth something on its own — you can't retrieve what was never
+// stored — so passages pay a flat rate and recall pays the rest.
+const studyXp = () => Math.round(st.correct * 12 + totalSections() * 10);
+
+function syncStudy(aborted) {
+  if (!st || !st.log.length) return;
+  Sync.record({
+    game: 'chronicle',
+    session: {
+      client_session_id: st.id,
+      mode: 'study',
+      continent: st.syl.era ? st.syl.id : null,
+      difficulty: null,
+      question_type: 'study',
+      score: aborted ? 0 : st.correct * 100,
+      answered: st.answered,
+      correct: st.correct,
+      best_streak: 0,
+      duration_ms: Date.now() - st.startedAt,
+      xp_gained: aborted ? 0 : studyXp(),
+      aborted: Boolean(aborted),
+      played_at: new Date(st.startedAt).toISOString(),
+    },
+    answers: st.log,
+  });
+}
+
+function finishStudy() {
+  const xpGain = studyXp();
+  const levelBefore = levelForXp(store.xp);
+  store.xp += xpGain;
+  store.games += 1;
+  store.studied = store.studied || {};
+  store.studied[st.syl.id] = true;
+  saveStore();
+  const levelAfter = levelForXp(store.xp);
+  syncStudy(false);
+
+  const acc = st.answered ? Math.round((st.correct / st.answered) * 100) : 0;
+  $('results-title').textContent = `${st.syl.name} — studied`;
+  $('results-score').innerHTML = `${st.correct}/${st.answered}<span>recalled</span>`;
+  $('results-stats').innerHTML =
+    `<div class="stat"><b>${totalSections()}</b><span>passages</span></div>`
+    + `<div class="stat"><b>${acc}%</b><span>accuracy</span></div>`
+    + `<div class="stat"><b>+${xpGain}</b><span>XP</span></div>`;
+  $('results-xp').innerHTML = levelAfter > levelBefore
+    ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`
+    : `+${xpGain} XP`;
+  $('results-missed').innerHTML = st.missed.length
+    ? '<h3>Worth another pass</h3><div class="chips">'
+      + st.missed.slice(0, 8).map((m) => `<span class="chip">${esc(m)}</span>`).join('')
+      + '</div>'
+    : '<p class="clean-sweep">Everything held on the first ask.</p>';
+
+  // Straight from reading into testing: the repeat button becomes a quiz on
+  // exactly what was just studied.
   sel.mode = 'classic';
+  sel.era = st.syl.era ? st.syl.id : 'all';
+  $('again-btn').textContent = st.syl.era ? 'Quiz me on this era' : 'Quiz me on all of it';
+
+  showScreen('results');
+  if (window.Juice) {
+    if (acc >= 80) Juice.celebrate($('results-score'));
+    if (levelAfter > levelBefore) setTimeout(() => Juice.levelUp(levelAfter), 450);
+  }
+  st = null;
+}
+
+function quitStudy() {
+  if (!st) return;
+  syncStudy(true);
+  saveStore();
+  st = null;
+  showScreen('menu');
   renderMenu();
-  startGame();
+  renderStudyList();
 }
 
 // ---------------------------------------------------------------------------
@@ -742,14 +1026,29 @@ $('quit-btn').addEventListener('click', () => endGame(true));
 $('next-btn').addEventListener('click', nextRound);
 $('seq-check').addEventListener('click', checkSequence);
 $('again-btn').addEventListener('click', startGame);
-$('menu-btn').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
+$('menu-btn').addEventListener('click', () => { showScreen('menu'); renderMenu(); renderStudyList(); });
 $('stats-btn').addEventListener('click', () => { renderStats(); showScreen('stats'); });
 $('stats-back').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
-$('learn-btn').addEventListener('click', () => { renderLearn(learnEra); showScreen('learn'); });
-$('learn-quiz').addEventListener('click', quizLearnedEra);
-$('learn-back').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
+$('study-ready').addEventListener('click', showStudyQuestion);
+$('study-next').addEventListener('click', studyNext);
+$('study-reread').addEventListener('click', toggleReread);
+$('study-quit').addEventListener('click', quitStudy);
 
 document.addEventListener('keydown', (e) => {
+  if (screens.study.classList.contains('active')) {
+    if (e.key === 'Escape') return quitStudy();
+    const sn = parseInt(e.key, 10);
+    if (sn >= 1 && sn <= 9) {
+      const b = $('study-choices').children[sn - 1];
+      if (b && !b.disabled && !$('study-quiz').classList.contains('hidden')) b.click();
+    } else if (e.key === 'Enter') {
+      const ready = $('study-ready');
+      const nxt = $('study-next');
+      if (!ready.classList.contains('hidden')) ready.click();
+      else if (!nxt.classList.contains('hidden')) nxt.click();
+    }
+    return;
+  }
   if (!screens.game.classList.contains('active')) return;
   if (e.key === 'Escape') return endGame(true);
   const n = parseInt(e.key, 10);
@@ -766,4 +1065,5 @@ document.addEventListener('keydown', (e) => {
 // ---------------------------------------------------------------------------
 
 renderMenu();
+renderStudyList();
 Sync.mountUI();
