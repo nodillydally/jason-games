@@ -297,7 +297,7 @@
 .companion {
   display: flex;
   align-items: flex-end;
-  height: 44px;
+  height: 52px;
   margin: 12px 14px 0;
 }
 .companion .rail { flex: 1; }
@@ -367,7 +367,7 @@
   display: flex;
   align-items: flex-end;
   gap: 10px;
-  height: 44px;
+  height: 52px;
 }
 .lane-tag {
   flex: 0 0 34px;
@@ -416,8 +416,8 @@
   bottom: 0;
   left: 0;
   transform: translateX(-50%);
-  width: 26px;
-  height: 34px;
+  width: 32px;   /* 2x the 16x22 sprite — fractional scales shimmer */
+  height: 44px;
 }
 
 /* You leap a whole leg at a time; the rival creeps. The difference in easing

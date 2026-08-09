@@ -31,9 +31,21 @@ argument against it is offline capability and simplicity — not money.
 
 ## The runner and the wardrobe
 
-Every game shows the same character — a line-art figure in `lib/avatar.js`,
-drawn as inline SVG so it takes each game's own accent colour and ships no
-assets. It has five poses and six equipment slots.
+Every game shows the same character: an 8-bit chibi sprite in `lib/avatar.js`,
+with six frames and six equipment slots.
+
+The art is **text**. `lib/pixel.js` renders a sprite from an array of strings —
+one character per pixel, `.` for transparent — against a palette, collapsing
+horizontal runs into single `<rect>`s. That keeps every sprite in source
+control as something you can read, diff and edit in place instead of a binary
+sheet nobody can review, and it holds to the no-build-step rule: no packer, no
+image pipeline, no extra request. `lib/gear.js` holds the same for every
+wearable. The shirt is painted with a CSS custom property, so one sprite takes
+each game's accent — and an `ink` item repaints it without touching skin or
+hair.
+
+Sizes are always whole multiples of the 16x22 grid (2x on a race lane, 5x on a
+reveal card). Fractional scaling is what makes pixel art shimmer.
 
 Levels stay **per game**: each keeps its own XP on the same curve, so being
 level 12 at Numbers and level 2 at Chronicle is honest rather than averaged

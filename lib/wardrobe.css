@@ -6,88 +6,50 @@
 
 /* ------------------------------- figure -------------------------------- */
 
+/* An 8-bit sprite: every frame is drawn into the same <svg> and the pose class
+   picks which one is visible. Swapping frames is how sprite animation has
+   always worked, and it costs one class change rather than a transform per
+   limb. */
+
 .avatar { display: inline-block; line-height: 0; }
-.av-svg { display: block; width: 100%; height: 100%; overflow: visible; }
-
-.av-svg path, .av-svg circle, .av-svg ellipse {
-  fill: none;
-  stroke: var(--av-ink, var(--p1));
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.px-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
-/* Variable weight is most of what separates a drawn figure from a default
-   stick one: a heavy trunk, lighter limbs, a fine outline on the head. */
-.av-svg .av-torso { stroke-width: 4.2; }
-.av-svg .av-leg { stroke-width: 2.9; }
-.av-svg .av-arm, .av-svg .av-limb { stroke-width: 2.5; }
-.av-svg .av-head { fill: var(--card-bg, #fff); stroke-width: 2.3; }
-.av-svg .av-eye { fill: var(--av-ink, var(--p1)); stroke: none; }
-.av-svg .av-fill { fill: var(--av-ink, var(--p1)); }
-.av-svg .av-thick { stroke-width: 3.6; }
-.av-svg .av-cape {
-  fill: color-mix(in srgb, var(--av-ink, var(--p1)) 20%, transparent);
-  stroke-width: 1.6;
+.px-frame { display: none; }
+.pose-idle    .px-idle    { display: block; animation: px-breathe 2.6s steps(1) infinite; }
+.pose-strain  .px-strain  { display: block; animation: px-brace .5s steps(1) infinite; }
+.pose-stumble .px-stumble { display: block; }
+.pose-cheer   .px-cheer   { display: block; animation: px-hop .42s steps(1) infinite; }
+
+/* Two frames alternating is the run cycle. */
+.pose-run .px-runA { display: block; animation: px-flip-a .3s steps(1) infinite; }
+.pose-run .px-runB { display: block; animation: px-flip-b .3s steps(1) infinite; }
+@keyframes px-flip-a { 0%, 49.9% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes px-flip-b { 0%, 49.9% { opacity: 0; } 50%, 100% { opacity: 1; } }
+
+/* Whole-pixel movement only — a sprite that slides by fractions of a pixel
+   shimmers, which is exactly the tell that it isn't really pixel art. */
+@keyframes px-breathe { 0%, 70% { transform: translateY(0); } 71%, 100% { transform: translateY(-1px); } }
+@keyframes px-brace   { 0%, 49% { transform: translateY(0); } 50%, 100% { transform: translateY(-1px); } }
+@keyframes px-hop     { 0%, 49% { transform: translateY(-2px); } 50%, 100% { transform: translateY(0); } }
+
+/* Front-facing sprites can't turn their heads, so being chased reads as a lean
+   away from whatever is gaining on you. */
+.avatar.behind .px-svg { transform: rotate(-7deg); }
+
+/* Your Ghost: the same sprite, drained and translucent. */
+.av-ghost { opacity: .5; }
+.av-ghost .px-svg { filter: grayscale(.55); }
+
+@media (prefers-reduced-motion: reduce) {
+  .px-frame { animation: none !important; }
+  .pose-run .px-runB { display: none; }
 }
-/* Held things are small — full limb weight turns them into blobs. */
-.av-svg .av-slot-hand path,
-.av-svg .av-slot-hand circle,
-.av-svg .av-slot-hand ellipse { stroke-width: 1.9; }
-
-/* Your Ghost: your own figure, dashed and faded. */
-.av-ghost { opacity: .52; }
-.av-ghost .av-svg path, .av-ghost .av-svg circle { stroke-dasharray: 3.4 2.6; }
-
-.av-lean, .av-body, .av-head-group, .av-arm, .av-leg, .av-orbit { transform-box: view-box; }
-.av-lean, .av-body { transform-origin: 20px 45.5px; } /* the feet */
-.av-head-group { transform-origin: 20px 16px; }       /* the neck */
-.av-arm { transform-origin: 20px 20px; }              /* the shoulder */
-.av-leg { transform-origin: 20px 33px; }              /* the hip */
-.av-orbit { transform-origin: 20px 22px; animation: av-spin 9s linear infinite; }
-
-.av-lean, .av-head-group, .av-arm, .av-leg { transition: transform .22s var(--ease, ease); }
-
-.pose-idle .av-body { animation: av-breathe 3.2s ease-in-out infinite; }
-.pose-idle .av-arm-l { transform: rotate(-6deg); }
-.pose-idle .av-arm-r { transform: rotate(6deg); }
-
-.pose-run .av-leg-l { animation: av-swing-a .46s linear infinite; }
-.pose-run .av-leg-r { animation: av-swing-b .46s linear infinite; }
-.pose-run .av-arm-l { animation: av-pump-b .46s linear infinite; }
-.pose-run .av-arm-r { animation: av-pump-a .46s linear infinite; }
-.pose-run .av-body  { animation: av-bob .23s linear infinite; }
-
-/* Anticipation: the lean happens before the clock runs out, not after. */
-.pose-strain .av-lean { transform: rotate(13deg); }
-.pose-strain .av-leg-l { animation: av-swing-a .28s linear infinite; }
-.pose-strain .av-leg-r { animation: av-swing-b .28s linear infinite; }
-.pose-strain .av-arm-l { animation: av-pump-b .28s linear infinite; }
-.pose-strain .av-arm-r { animation: av-pump-a .28s linear infinite; }
-.pose-strain .av-body  { animation: av-bob .14s linear infinite; }
-
-.pose-stumble .av-lean { transform: rotate(26deg); }
-.pose-stumble .av-arm-l { transform: rotate(-78deg); }
-.pose-stumble .av-arm-r { transform: rotate(-24deg); }
-.pose-stumble .av-leg-l { transform: rotate(34deg); }
-.pose-stumble .av-leg-r { transform: rotate(-20deg); }
-
-.pose-cheer .av-arm-l { transform: rotate(74deg); }
-.pose-cheer .av-arm-r { transform: rotate(-74deg); }
-.pose-cheer .av-leg-l { transform: rotate(-12deg); }
-.pose-cheer .av-leg-r { transform: rotate(12deg); }
-.pose-cheer .av-body { animation: av-hop .5s var(--ease, ease) 2; }
-
-.avatar.behind .av-head-group { transform: rotate(-22deg); }
-
-@keyframes av-swing-a { 0%, 100% { transform: rotate(-24deg); } 50% { transform: rotate(22deg); } }
-@keyframes av-swing-b { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-24deg); } }
-@keyframes av-pump-a  { 0%, 100% { transform: rotate(20deg); } 50% { transform: rotate(-22deg); } }
-@keyframes av-pump-b  { 0%, 100% { transform: rotate(-22deg); } 50% { transform: rotate(20deg); } }
-@keyframes av-bob     { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.4px); } }
-@keyframes av-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.7px); } }
-@keyframes av-hop     { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-5px); } }
-@keyframes av-spin    { from { transform: rotate(0); } to { transform: rotate(360deg); } }
 
 /* -------------------------------- bay ---------------------------------- */
 
@@ -98,7 +60,7 @@
   flex-wrap: wrap;
   margin-top: 6px;
 }
-.wardrobe-figure { width: 36px; height: 46px; flex: 0 0 auto; }
+.wardrobe-figure { width: 32px; height: 44px; flex: 0 0 auto; }  /* 2x */
 
 .wardrobe-btn {
   padding: 7px 14px;
@@ -238,7 +200,7 @@
 }
 .shop-row:last-of-type { border-bottom: none; }
 .shop-row.broke { opacity: .55; }
-.shop-preview { width: 30px; height: 40px; flex: 0 0 auto; }
+.shop-preview { width: 32px; height: 44px; flex: 0 0 auto; }  /* 2x */
 .shop-meta { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .shop-name { font-size: 13.5px; }
 .shop-slot {
@@ -298,7 +260,7 @@
   color: var(--a2);
   margin-bottom: 14px;
 }
-.reveal-figure { display: block; width: 78px; height: 100px; margin: 0 auto 12px; }
+.reveal-figure { display: block; width: 80px; height: 110px; margin: 0 auto 12px; }  /* 5x */
 .reveal-name {
   font-family: var(--serif);
   font-size: 25px;
@@ -316,7 +278,5 @@
 .reveal-ok { margin-top: 20px; padding: 12px 30px; width: 100%; }
 
 @media (prefers-reduced-motion: reduce) {
-  .av-body, .av-leg, .av-arm, .av-orbit { animation: none !important; }
-  .av-lean, .av-head-group, .av-arm, .av-leg { transition: none; }
   .reveal-card { animation: none; }
 }
