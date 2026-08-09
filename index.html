@@ -224,6 +224,13 @@
     transition: background .2s ease, border-color .2s ease;
   }
   .duty:hover { background: var(--paper-2); border-color: var(--ink-3); }
+  .duty.quick-play { border-style: dashed; }
+  .duty.quick-play .check {
+    background: none;
+    border: none;
+    font-size: 15px;
+    color: inherit;
+  }
   .duty .check {
     width: 26px;
     height: 26px;
@@ -529,6 +536,7 @@
      localStorage is origin-wide, so arming it once arms every game. -->
 <script src="lib/sync.js"></script>
 <script src="lib/juice.js"></script>
+<script src="lib/next.js"></script>
 <script src="hub.js"></script>
 </body>
 </html>

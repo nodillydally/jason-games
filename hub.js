@@ -182,12 +182,23 @@
         <span class="d-go">${done ? doneLabel : 'Play →'}</span>
       </a>`;
 
+    // Both duties done → the day's obligations are met, and the card flips to
+    // offering more: one tap into whichever game is furthest behind.
+    const bonus = (window.NextGame && bothDone) ? NextGame.pick(null) : null;
+
     host.innerHTML = `
       <div class="today-label">${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][dayIdx]}${bothDone ? ' — day complete' : ''}</div>
       ${duty('briefing', GAMES.briefing, 'The Brief',
         briefDone ? 'Kept — every story graded.' : briefStarted ? 'Started — some stories still ungraded.' : 'Recall yesterday · keep today · graded.',
         briefDone, 'Kept ✓')}
       ${duty(pick.key, pick.game, `${pick.game.name} · ${pick.mode}`, pick.why, gameDone, 'Played ✓')}
+      ${bonus ? `
+      <a class="duty quick-play" href="${bonus.href}" data-key="${bonus.key}">
+        <span class="check">⚡</span>
+        <span class="d-icon">${bonus.icon}</span>
+        <span class="d-body"><b>Quick play — ${bonus.name}</b><small>Your lowest-level game. Extra reps where you're weakest.</small></span>
+        <span class="d-go">Play →</span>
+      </a>` : ''}
       <div class="week-strip">${strip}</div>`;
   }
 
@@ -300,7 +311,7 @@
         chip.getBoundingClientRect().top + chip.offsetHeight / 2,
         36, { spread: Math.PI * 2, speed: 9, colors: ['#ffc53d', '#ff6b9d', '#ffffff'] }
       );
-      Juice.chord([523, 784, 1046], { dur: .2, type: 'triangle', gain: .05, stagger: .06 });
+      Juice.play('streak', 0.5);
     }
     setTimeout(() => { window.location.href = link.href; }, 480);
   });
