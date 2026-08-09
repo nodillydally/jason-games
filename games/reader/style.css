@@ -141,7 +141,16 @@
 }
 .projection b { color: var(--a1); }
 
-/* ---------------------------- RSVP stage ---------------------------- */
+/* ---------------------------- RSVP stage ----------------------------
+   While words are flashing, the room goes dark: the aurora drops to almost
+   nothing so the only bright thing on the phone is the fixation point. */
+
+body:has(#screen-read.active)::before,
+body:has(#screen-scroll.active)::before { opacity: .10; }
+body:has(#screen-read.active)::after,
+body:has(#screen-scroll.active)::after { opacity: .06; }
+body:has(#screen-read.active) .fx-sound { opacity: .12; }
+
 
 .reader-stage {
   margin: 13vh 0 0;

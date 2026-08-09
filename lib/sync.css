@@ -1,8 +1,8 @@
 /* lib/sync.css — styles for the shared Cloud sync card.
  *
- * Deliberately palette-agnostic: it consumes the CSS custom properties each
- * game defines on :root (--card, --card-edge, --text, --text-dim, --primary,
- * --good, --bad, --bg), so it picks up whatever theme the game is wearing.
+ * Deliberately palette-agnostic: it consumes the custom properties lib/theme.css
+ * defines (--glass, --stroke, --text-dim, --p1, --good, --bad, --a1), so it
+ * picks up whatever gradient the game is wearing without knowing which one.
  */
 
 .sync-card { margin-top: 14px; }
@@ -14,29 +14,57 @@
   gap: 12px;
 }
 
-.sync-status { color: var(--text-dim); font-size: .88rem; }
+.sync-status {
+  color: var(--text-dim);
+  font-size: .86rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
 .sync-status.ok { color: var(--good); }
 .sync-status.bad { color: var(--bad); }
-.sync-status.busy { color: var(--accent); }
+.sync-status.busy { color: var(--a1); }
 
-.sync-btn { padding: 6px 14px; font-size: .85rem; }
+/* A pulsing dot while a sync is in flight — the only moving thing on a card
+   that is otherwise pure plumbing. */
+.sync-status.busy::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+  animation: sync-pulse .9s ease-in-out infinite;
+}
+@keyframes sync-pulse { 50% { opacity: .25; transform: scale(.7); } }
 
-.sync-panel { margin-top: 14px; }
+.sync-btn {
+  padding: 8px 16px;
+  min-height: 40px;
+  font-size: .82rem;
+  border-radius: var(--r-pill);
+  flex: none;
+}
+
+.sync-panel {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--stroke);
+  animation: fade-up .3s var(--ease) both;
+}
 .sync-panel p {
   color: var(--text-dim);
-  font-size: .85rem;
-  line-height: 1.5;
-  margin-bottom: 10px;
+  font-size: .84rem;
+  line-height: 1.6;
+  margin-bottom: 12px;
 }
 
 .sync-form { display: flex; gap: 8px; flex-wrap: wrap; }
-.sync-form input {
-  flex: 1 1 200px;
-  font: inherit;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--card-edge);
-  border-radius: 10px;
-  padding: 10px 12px;
+.sync-form input { flex: 1 1 200px; }
+.sync-form button { flex: 0 0 auto; }
+
+@media (max-width: 460px) {
+  .sync-form input { flex: 1 1 100%; }
+  .sync-form button { flex: 1; }
 }
-.sync-form input:focus { outline: none; border-color: var(--primary); }

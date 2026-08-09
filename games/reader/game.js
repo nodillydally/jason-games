@@ -405,7 +405,9 @@ function beginRound() {
   $('read-wpm').textContent = `${g.wpm} wpm`;
   $('progress-fill').style.width = '0%';
   $('paused-note').classList.add('hidden');
-  $('read-hint').textContent = 'Space to pause · Esc to quit';
+  $('read-hint').textContent = TOUCH
+    ? 'Tap anywhere to pause · ✕ to quit'
+    : 'Space to pause · Esc to quit';
 
   showScreen('read');
   countIn(3);
@@ -757,6 +759,15 @@ function endGame(aborted = false) {
   }
 
   showScreen('results');
+
+  // Full marks or a new personal best is the moment worth celebrating; a
+  // level-up gets its own beat after it.
+  const scoreEl = $('results-score');
+  Juice.replay(scoreEl, 'pop');
+  const perfect = last && last.answers.every((a) => a.right);
+  if (perfect || (last && last.effective >= store.bestEffective)) Juice.celebrate(scoreEl);
+  if (levelAfter > levelBefore) setTimeout(() => Juice.levelUp(levelAfter), 500);
+
   g = null;
 }
 
@@ -826,6 +837,15 @@ $('stats-back').addEventListener('click', () => { showScreen('menu'); renderMenu
 $('wpm-slider').addEventListener('input', (e) => {
   sel.wpm = Number(e.target.value);
   $('wpm-value').textContent = `${sel.wpm} wpm`;
+});
+
+// A phone has no space bar, so on touch the whole reading stage is the pause
+// control. Without this the RSVP screen simply can't be paused on mobile.
+const TOUCH = window.matchMedia('(hover: none)').matches;
+
+screens.read.addEventListener('click', (e) => {
+  if (e.target.closest('#quit-btn')) return;
+  togglePause();
 });
 
 document.addEventListener('keydown', (e) => {

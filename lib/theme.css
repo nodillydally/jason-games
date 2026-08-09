@@ -146,8 +146,10 @@ body::after {
 main.wrap {
   max-width: 780px;
   margin: 0 auto;
+  /* The generous bottom padding keeps the last control clear of the floating
+     sound toggle when the page is scrolled all the way down. */
   padding: max(14px, env(safe-area-inset-top)) 14px
-           calc(40px + env(safe-area-inset-bottom));
+           calc(78px + env(safe-area-inset-bottom));
   position: relative;
   z-index: 1;
 }
@@ -552,7 +554,8 @@ button.ghost:hover { background: var(--glass); color: var(--text); }
   color: var(--a1);
   transition: color .2s;
 }
-#hud-streak.flare { animation: flare .5s var(--spring) both; }
+/* .flare is also used by the hub's day-streak chip, which isn't a HUD. */
+#hud-streak.flare, .flare { animation: flare .5s var(--spring) both; }
 @keyframes flare {
   0%   { transform: scale(1); filter: brightness(1); }
   40%  { transform: scale(1.35) rotate(-4deg); filter: brightness(1.6) drop-shadow(0 0 12px var(--a1)); }

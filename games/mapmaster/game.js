@@ -752,6 +752,7 @@ function updateHud() {
   const wasStreak = streakEl.textContent;
   streakEl.textContent = g.streak >= 2 ? `🔥 ${g.streak}` : '';
   if (streakEl.textContent && streakEl.textContent !== wasStreak) {
+    Juice.replay(streakEl, 'flare');
     Juice.streak(g.streak, streakEl);
   }
   if (g.mode === 'blitz') {
