@@ -70,12 +70,67 @@
 
   footer { margin-top: 48px; color: var(--text-dim); font-size: .85rem; }
   footer a { color: var(--primary); }
+
+  /* ------------------------- Today's session ------------------------- */
+
+  .today {
+    background: var(--card);
+    border: 1px solid var(--primary);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-top: 28px;
+  }
+  .today:empty { display: none; }
+  .today-label {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .today-row { display: flex; align-items: center; gap: 16px; }
+  .today-icon { font-size: 2.2rem; line-height: 1; }
+  .today-body { flex: 1; min-width: 0; }
+  .today-pick { font-weight: 700; font-size: 1.15rem; }
+  .today-why { color: var(--text-dim); font-size: .88rem; line-height: 1.45; margin-top: 3px; }
+  .today-play {
+    background: var(--primary);
+    color: #06132b;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 10px;
+    padding: 10px 22px;
+    white-space: nowrap;
+  }
+  .today-play:hover { filter: brightness(1.12); }
+  .week-strip {
+    display: flex;
+    gap: 6px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .week-strip .day {
+    font-size: .74rem;
+    color: var(--text-dim);
+    border: 1px solid var(--card-edge);
+    border-radius: 999px;
+    padding: 3px 10px;
+    white-space: nowrap;
+  }
+  .week-strip .day.now {
+    border-color: var(--primary);
+    color: var(--text);
+    background: var(--bg);
+  }
 </style>
 </head>
 <body>
 <main>
   <h1>Jason's Learning Games</h1>
-  <p class="tagline">Custom games for deliberate practice. Pick something and play for ten minutes.</p>
+  <p class="tagline">Custom games for deliberate practice. The rotation below covers every domain if you show up daily.</p>
+
+  <section id="today" class="today"></section>
 
   <div class="grid">
     <a class="game" href="games/mapmaster/">
@@ -122,5 +177,6 @@
 <!-- Loaded here so a #sync= provisioning link works on the hub itself —
      localStorage is origin-wide, so arming it once arms every game. -->
 <script src="lib/sync.js"></script>
+<script src="hub.js"></script>
 </body>
 </html>
