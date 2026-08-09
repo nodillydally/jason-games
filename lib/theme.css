@@ -1,67 +1,80 @@
 /* lib/theme.css — the shared design system for Jason's Learning Games.
  *
- * One ground, three skins. Every game loads this first and then its own
- * style.css, which does nothing but set the two gradient stops that make it
- * feel like its own place (--p1/--p2) and style the parts only it has (the
- * map, the RSVP stage, the method sheet).
+ * The look is Revvive's: cream paper, near-black ink, hairline rules, a serif
+ * that does the talking and a mono that does the labelling. Colour is used
+ * once per screen, not everywhere — the restraint is the design.
  *
- * The old look was flat cards on a flat blue. This one is built for a phone in
- * the dark: a living aurora ground, glass panels that catch light on their top
- * edge, gradient primaries that glow, and motion on every state change so the
- * game feels like it's responding to you rather than repainting. Every effect
- * degrades to nothing under prefers-reduced-motion.
+ * One ground, four skins. Every game loads this first and then its own
+ * style.css, which sets its two accent stops (--p1/--p2) and styles the parts
+ * only it has (the map, the RSVP stage, the sequence builder).
  *
- * Legacy custom properties (--card, --card-edge, --primary, --accent, --bg)
- * are still defined here because lib/sync.css and three games' JS were written
- * against that contract.
+ * Token names are unchanged from the previous system on purpose: the games'
+ * skins, lib/sync.css and a few inline rules were written against --glass /
+ * --stroke / --sunk / --good, so those still resolve — they just point at
+ * paper and ink now instead of glass and neon.
  */
+
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
 
 /* ====================== tokens ====================== */
 
 :root {
-  /* The two stops each game overrides. Everything else is derived. */
-  --p1: #5b8cff;
-  --p2: #a855f7;
-  --a1: #ffc53d;
-  --a2: #ff6b9d;
+  /* Paper + ink — the whole ground. */
+  --paper: #F6EFE2;
+  --paper-2: #EFE6D4;
+  --card-bg: #FDF9F0;
+  --ink: #141110;
+  --ink-2: #4A433E;
+  --ink-3: #86796E;
+  --rule: #1411101a;
+  --rule-2: #14111014;
 
-  --bg: #070a14;
-  --bg-2: #0d1226;
-  --ink: #060914;            /* text that sits on a bright gradient */
+  /* Each game overrides these two. Defaults are Revvive's navy. */
+  --p1: #233142;
+  --p2: #6B8CAF;
 
-  --text: #eef1fb;
-  --text-dim: #8f9abb;
+  /* Shared highlight — XP, streaks, the things that only ever go up. */
+  --a1: #E8A82C;
+  --a2: #C68917;
 
-  --good: #22e39a;
-  --good-ink: #032417;
-  --bad: #ff4d6d;
-  --bad-ink: #2b0410;
+  --good: #3E5E3A;
+  --bad: #C76A5E;
 
-  /* Glass */
-  --glass: rgba(255, 255, 255, .055);
-  --glass-2: rgba(255, 255, 255, .085);
-  --stroke: rgba(255, 255, 255, .10);
-  --stroke-hi: rgba(255, 255, 255, .22);
-  --sunk: rgba(0, 0, 0, .30);
-
-  /* Legacy contract — kept so lib/sync.css and older rules still resolve. */
-  --bg-soft: var(--bg-2);
-  --card: var(--glass);
-  --card-edge: var(--stroke);
+  /* Legacy contract — the games' JS and older rules still ask for these. */
+  --bg: var(--paper);
+  --bg-2: var(--paper-2);
+  --text: var(--ink);
+  --text-dim: var(--ink-3);
+  --glass: var(--card-bg);
+  --glass-2: var(--paper-2);
+  --stroke: var(--rule);
+  --stroke-hi: #14111033;
+  --sunk: var(--paper);
+  --card: var(--card-bg);
+  --card-edge: var(--rule);
   --primary: var(--p1);
-  --primary-deep: var(--p2);
+  --primary-deep: #15202B;
   --accent: var(--a1);
+  --good-ink: #FFFFFF;
+  --bad-ink: #FFFFFF;
+  --on-ink: var(--paper);
 
-  --r-sm: 12px;
-  --r-md: 18px;
-  --r-lg: 26px;
+  --serif: "Instrument Serif", "Times New Roman", Georgia, serif;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
   --r-pill: 999px;
 
-  --shadow: 0 18px 50px -18px rgba(0, 0, 0, .85);
-  --ease: cubic-bezier(.2, .9, .25, 1);
-  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  --shadow: 0 1px 0 #14111014, 0 10px 24px -16px #14111028;
+  --shadow-lift: 0 1px 0 #14111014, 0 24px 44px -20px #1411103a;
 
-  --tap: 48px;               /* minimum comfortable thumb target */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --spring: cubic-bezier(.2, .8, .2, 1);   /* deliberately not springy */
+
+  --tap: 44px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -74,337 +87,255 @@ html {
 html, body { min-height: 100%; }
 
 body {
-  font-family: "Avenir Next", "Segoe UI Variable Display", "Segoe UI",
-               system-ui, -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.55;
   min-height: 100dvh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
 
-/* ====================== the living ground ======================
-   Two slow-drifting colour fields behind everything, tinted by the game's own
-   gradient stops, plus a fine grain so the large flat areas don't band on an
-   OLED phone. Fixed + pointer-events:none so they never interfere. */
+::selection { background: var(--p1); color: var(--paper); }
 
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  inset: -30vmax;
-  z-index: -2;
-  pointer-events: none;
-  background:
-    radial-gradient(38vmax 38vmax at 22% 18%, color-mix(in oklab, var(--p1) 55%, transparent), transparent 62%),
-    radial-gradient(34vmax 34vmax at 82% 8%,  color-mix(in oklab, var(--p2) 48%, transparent), transparent 60%),
-    radial-gradient(40vmax 40vmax at 62% 92%, color-mix(in oklab, var(--a2) 32%, transparent), transparent 62%);
-  filter: blur(40px) saturate(140%);
-  opacity: .34;
-  animation: aurora 26s var(--ease) infinite alternate;
-}
-
-body::after {
-  background:
-    radial-gradient(30vmax 30vmax at 78% 62%, color-mix(in oklab, var(--a1) 34%, transparent), transparent 62%),
-    radial-gradient(36vmax 36vmax at 12% 78%, color-mix(in oklab, var(--p2) 42%, transparent), transparent 60%);
-  opacity: .22;
-  animation: aurora-2 34s var(--ease) infinite alternate;
-}
-
-@keyframes aurora {
-  0%   { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
-  50%  { transform: translate3d(3vw, -4vh, 0) scale(1.12) rotate(6deg); }
-  100% { transform: translate3d(-4vw, 3vh, 0) scale(1.05) rotate(-5deg); }
-}
-@keyframes aurora-2 {
-  0%   { transform: translate3d(0, 0, 0) scale(1.1) rotate(0deg); }
-  100% { transform: translate3d(5vw, 4vh, 0) scale(1) rotate(9deg); }
-}
-
-/* Grain + a vignette that keeps the eye centred on a small screen. */
+/* Paper grain — the one texture in the system, and the reason the large flat
+   cream areas read as stock rather than as #F6EFE2. */
 .fx-grain {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
-  opacity: .05;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: .25;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.09  0 0 0 0 0.08  0 0 0 0 0.07  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
-.fx-vignette {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(120% 90% at 50% 12%, transparent 40%, rgba(0, 0, 0, .55) 100%);
-}
+.fx-vignette { display: none; }   /* the old dark-theme layer; nothing to fade on paper */
 
 /* ====================== layout ====================== */
 
 #app,
 main.wrap {
-  max-width: 780px;
+  max-width: 720px;
   margin: 0 auto;
-  /* The generous bottom padding keeps the last control clear of the floating
-     sound toggle when the page is scrolled all the way down. */
-  padding: max(14px, env(safe-area-inset-top)) 14px
-           calc(78px + env(safe-area-inset-bottom));
+  padding: max(20px, env(safe-area-inset-top)) 22px
+           calc(72px + env(safe-area-inset-bottom));
   position: relative;
   z-index: 1;
+}
+
+@media (max-width: 560px) {
+  #app, main.wrap { padding-left: 18px; padding-right: 18px; }
 }
 
 .hidden { display: none !important; }
 
 .screen { display: none; }
-.screen.active {
-  display: block;
-  animation: screen-in .38s var(--ease) both;
+.screen.active { display: block; animation: fade-up .4s var(--ease) both; }
+
+/* ====================== type ====================== */
+
+h1, h2, h3 { font-weight: 400; }
+
+.title { margin: 26px 0 34px; }
+
+.title h1 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.6rem, 11vw, 3.6rem);
+  line-height: .98;
+  letter-spacing: -.025em;
 }
-@keyframes screen-in {
-  from { opacity: 0; transform: translateY(14px) scale(.985); filter: blur(6px); }
-  to   { opacity: 1; transform: none; filter: none; }
+.title h1 em { font-style: italic; color: var(--p1); }
+
+.title p {
+  margin-top: 14px;
+  color: var(--ink-2);
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 46ch;
 }
 
-/* ====================== typography ====================== */
+/* The mono eyebrow with its little rule — Revvive's signature label. */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.eyebrow::before {
+  content: "";
+  width: 20px;
+  height: 1px;
+  background: currentColor;
+  display: inline-block;
+}
 
 .hub-link {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-height: 40px;
-  padding: 0 12px 0 4px;
-  margin-bottom: 2px;
-  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
   text-decoration: none;
-  font-size: .85rem;
-  font-weight: 600;
-  border-radius: var(--r-pill);
-  transition: color .2s, transform .2s var(--spring);
+  transition: color .2s ease;
 }
-.hub-link:hover { color: var(--text); }
-.hub-link:active { transform: translateX(-3px); }
+.hub-link:hover { color: var(--ink); }
 
-.title { text-align: center; margin: 6px 0 22px; }
-
-.title h1 {
-  font-size: clamp(2rem, 9vw, 2.7rem);
-  font-weight: 800;
-  letter-spacing: -.035em;
-  line-height: 1.05;
-  background: linear-gradient(100deg, var(--text) 8%, var(--p1) 45%, var(--a1) 92%);
-  background-size: 220% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: sheen 9s linear infinite;
-}
-@keyframes sheen {
-  to { background-position: 220% 0; }
-}
-
-.title p {
-  color: var(--text-dim);
-  margin-top: 8px;
-  font-size: .95rem;
-  line-height: 1.5;
-}
-
-/* ====================== glass cards ====================== */
+/* ====================== cards ====================== */
 
 .card {
   position: relative;
-  background:
-    linear-gradient(180deg, var(--glass-2), var(--glass)) padding-box,
-    linear-gradient(180deg, var(--stroke-hi), rgba(255, 255, 255, .04) 40%) border-box;
-  border: 1px solid transparent;
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
   border-radius: var(--r-lg);
-  padding: 20px;
-  margin-top: 14px;
+  padding: 26px;
+  margin-top: 16px;
   box-shadow: var(--shadow);
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
-  overflow: hidden;
 }
 
-/* The light that rakes across the top edge of every panel. */
-.card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--stroke-hi) 25%, rgba(255, 255, 255, .5) 50%, var(--stroke-hi) 75%, transparent);
-  opacity: .7;
-}
-
-/* Cards on the active screen rise in, one after another. */
-.screen.active > .card,
-.screen.active > * > .card {
-  animation: rise .5s var(--ease) both;
-}
-.screen.active > .card:nth-of-type(1) { animation-delay: .04s; }
-.screen.active > .card:nth-of-type(2) { animation-delay: .10s; }
-.screen.active > .card:nth-of-type(3) { animation-delay: .16s; }
-.screen.active > .card:nth-of-type(4) { animation-delay: .22s; }
+.screen.active > .card { animation: rise .5s var(--ease) both; }
+.screen.active > .card:nth-of-type(2) { animation-delay: .06s; }
+.screen.active > .card:nth-of-type(3) { animation-delay: .12s; }
+.screen.active > .card:nth-of-type(4) { animation-delay: .18s; }
 
 @keyframes rise {
-  from { opacity: 0; transform: translateY(22px) scale(.97); }
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
 }
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fade-soft { from { opacity: 0; } to { opacity: 1; } }
 
 /* ====================== buttons ====================== */
 
 button {
   position: relative;
   overflow: hidden;
-  font: inherit;
-  font-weight: 600;
-  color: var(--text);
-  background: var(--glass-2);
-  border: 1px solid var(--stroke);
-  border-radius: var(--r-sm);
-  padding: 12px 18px;
-  min-height: 44px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-pill);
+  padding: 11px 20px;
+  min-height: var(--tap);
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  isolation: isolate;
-  transition: background .2s, border-color .2s, color .2s,
-              transform .16s var(--spring), box-shadow .25s;
+  transition: background .2s ease, color .2s ease, border-color .2s ease,
+              box-shadow .2s ease, transform .15s ease;
 }
-button:hover { background: var(--stroke); border-color: var(--stroke-hi); }
-button:active { transform: scale(.955); }
-button:focus-visible {
-  outline: 2px solid var(--p1);
-  outline-offset: 2px;
-}
+button:hover { border-color: #14111038; box-shadow: var(--shadow); }
+button:active { transform: translateY(1px); }
+button:focus-visible { outline: 2px solid var(--p1); outline-offset: 2px; }
 button:disabled { cursor: default; }
 
-/* Primary — a gradient that glows and slowly drifts, so the one thing you're
-   meant to press is never ambiguous on a bright pavement screen. */
+/* The one solid black thing on the page is the thing to press. */
 button.primary {
-  background: linear-gradient(115deg, var(--p1), var(--p2) 55%, var(--p1));
-  background-size: 220% 100%;
-  border-color: transparent;
-  color: var(--ink);
-  font-weight: 800;
-  letter-spacing: .01em;
-  box-shadow:
-    0 10px 28px -10px color-mix(in oklab, var(--p1) 80%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, .35);
-  animation: drift-bg 7s linear infinite;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+  font-weight: 500;
+  box-shadow: var(--shadow);
 }
-@keyframes drift-bg { to { background-position: 220% 0; } }
-
-button.primary:hover {
-  filter: brightness(1.1);
-  box-shadow:
-    0 14px 34px -10px color-mix(in oklab, var(--p1) 95%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, .45);
-}
-button.primary:active { transform: scale(.96); }
-button.primary:disabled {
-  opacity: .4;
-  box-shadow: none;
-  animation: none;
-  filter: none;
-}
+button.primary:hover { background: #000; box-shadow: var(--shadow-lift); }
+button.primary:disabled { opacity: .35; box-shadow: var(--shadow); }
 
 button.big {
   width: 100%;
-  min-height: 56px;
-  padding: 16px 22px;
-  font-size: 1.08rem;
-  border-radius: var(--r-md);
-  margin-top: 18px;
+  padding: 16px 28px;
+  font-size: 15px;
+  margin-top: 24px;
 }
 
 button.ghost {
   background: transparent;
-  border-color: var(--stroke);
-  color: var(--text-dim);
+  border-color: var(--rule);
+  color: var(--ink-2);
   box-shadow: none;
-  animation: none;
 }
-button.ghost:hover { background: var(--glass); color: var(--text); }
+button.ghost:hover { background: var(--paper-2); color: var(--ink); }
 
-/* The ripple lib/juice.js drops at the touch point. */
+/* A wash rather than a splash — the ripple is nearly subliminal on paper. */
 .ripple {
   position: absolute;
   border-radius: 50%;
   transform: translate(-50%, -50%) scale(0);
-  background: radial-gradient(circle, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 70%);
+  background: radial-gradient(circle, #14111018, transparent 70%);
   pointer-events: none;
   z-index: 2;
-  animation: ripple .55s var(--ease) forwards;
+  animation: ripple .5s var(--ease) forwards;
 }
-@keyframes ripple {
-  to { transform: translate(-50%, -50%) scale(1); opacity: 0; }
-}
+@keyframes ripple { to { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
 
 /* ====================== option pills ====================== */
 
-.opt-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
+.opt-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .opt-grid button {
-  flex: 1 1 auto;
-  padding: 11px 16px;
-  font-size: .93rem;
-  border-radius: var(--r-pill);
-  background: var(--glass);
+  flex: 0 1 auto;
+  padding: 10px 16px;
+  font-size: 13.5px;
 }
 .opt-grid button .sub {
   display: block;
-  font-size: .7rem;
-  font-weight: 500;
-  color: var(--text-dim);
-  margin-top: 2px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .04em;
+  color: var(--ink-3);
+  margin-top: 3px;
 }
 
-/* Two names for one state: Mapmaster says .selected, Numbers/Reader say
-   .active. Both land here. */
+/* Mapmaster says .selected, the others say .active. Both land here. */
 .opt-grid button.selected,
 .opt-grid button.active {
-  background: linear-gradient(115deg, var(--p1), var(--p2));
-  border-color: transparent;
-  color: var(--ink);
-  font-weight: 800;
-  box-shadow:
-    0 8px 22px -8px color-mix(in oklab, var(--p1) 85%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, .35);
-  animation: pick .34s var(--spring);
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+  box-shadow: var(--shadow);
 }
 .opt-grid button.selected .sub,
-.opt-grid button.active .sub { color: rgba(0, 0, 0, .55); }
-.opt-grid button:disabled { opacity: .32; }
+.opt-grid button.active .sub { color: #F6EFE2a0; }
+.opt-grid button:disabled { opacity: .3; }
 
-@keyframes pick {
-  0%   { transform: scale(.9); }
-  60%  { transform: scale(1.06); }
-  100% { transform: scale(1); }
-}
+.opt-icon { margin-right: 7px; }
 
-.opt-icon { margin-right: 6px; }
-
+/* Section labels inside a card. */
 .setup-card h2,
 .card h2.section {
-  font-size: .72rem;
-  font-weight: 700;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: .16em;
-  color: var(--text-dim);
-  margin: 22px 0 10px;
+  letter-spacing: .14em;
+  color: var(--ink-3);
+  margin: 28px 0 12px;
 }
 .setup-card h2:first-child { margin-top: 0; }
 
 .setup-hint {
-  margin-top: 14px;
-  color: var(--text-dim);
-  font-size: .87rem;
-  line-height: 1.55;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--rule);
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.6;
   min-height: 1.2em;
 }
 
@@ -413,430 +344,414 @@ button.ghost:hover { background: var(--glass); color: var(--text); }
 .profile-card {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 18px;
   flex-wrap: wrap;
 }
 
 .level-badge {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(135deg, var(--a1), var(--a2));
-  color: #23100a;
-  font-weight: 900;
-  font-size: 1rem;
-  border-radius: var(--r-md);
-  padding: 10px 16px;
+  font-family: var(--serif);
+  font-size: 26px;
+  font-style: italic;
+  letter-spacing: -.01em;
+  color: var(--p1);
   white-space: nowrap;
-  text-align: center;
-  line-height: 1.1;
-  box-shadow: 0 10px 26px -10px color-mix(in oklab, var(--a1) 90%, transparent);
-}
-/* A shine that sweeps the badge every few seconds. */
-.level-badge::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .75) 50%, transparent 65%);
-  transform: translateX(-120%);
-  animation: shine 4.5s ease-in-out infinite;
-}
-@keyframes shine {
-  0%, 62% { transform: translateX(-120%); }
-  85%, 100% { transform: translateX(120%); }
+  line-height: 1;
 }
 .level-badge small {
   display: block;
-  font-size: .58rem;
-  font-weight: 700;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-style: normal;
+  letter-spacing: .12em;
   text-transform: uppercase;
-  letter-spacing: .1em;
-  opacity: .7;
+  color: var(--ink-3);
+  margin-top: 5px;
 }
 
 .xp { flex: 1 1 180px; min-width: 150px; }
 .xp-bar {
-  position: relative;
-  height: 10px;
-  background: var(--sunk);
-  border: 1px solid var(--stroke);
+  height: 3px;
+  background: var(--rule);
   border-radius: var(--r-pill);
   overflow: hidden;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 #xp-fill {
   height: 100%;
   width: 0;
+  background: var(--p1);
   border-radius: var(--r-pill);
-  background:
-    linear-gradient(90deg, var(--a1), var(--a2)),
-    var(--a1);
-  box-shadow: 0 0 14px color-mix(in oklab, var(--a1) 70%, transparent);
   transition: width .9s var(--ease);
-  position: relative;
 }
-/* Moving stripes so a part-full bar still reads as "in progress". */
-#xp-fill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(115deg,
-    rgba(255, 255, 255, .28) 0 8px, transparent 8px 18px);
-  animation: stripes 1.1s linear infinite;
-}
-@keyframes stripes { to { background-position: 26px 0; } }
 
 .xp span, #xp-label {
   display: block;
-  color: var(--text-dim);
-  font-size: .78rem;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  color: var(--ink-3);
 }
 
 .profile-stats {
   display: flex;
-  gap: 16px;
-  color: var(--text-dim);
-  font-size: .86rem;
+  gap: 20px;
   flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 .profile-stats b {
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -.01em;
+  color: var(--ink);
+  text-transform: none;
+  margin-right: 4px;
 }
 
-#stats-btn {
-  padding: 10px 14px;
-  border-radius: var(--r-pill);
-  font-size: .85rem;
-}
+#stats-btn { padding: 9px 16px; font-size: 13px; }
 
 /* ====================== HUD ====================== */
 
 .hud {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 4px 10px;
-  font-size: .92rem;
-  color: var(--text-dim);
+  gap: 14px;
+  padding: 12px 0 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
   position: sticky;
   top: 0;
   z-index: 20;
-  background: linear-gradient(180deg, color-mix(in oklab, var(--bg) 85%, transparent), transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: color-mix(in oklab, var(--paper) 88%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 18px;
 }
 .hud-spacer { flex: 1; }
-.hud-right { margin-left: auto; display: flex; gap: 14px; align-items: baseline; }
+.hud-right { margin-left: auto; display: flex; gap: 16px; align-items: center; }
 
 #quit-btn {
   padding: 0;
-  width: 38px;
-  height: 38px;
-  min-height: 38px;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
   flex: none;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  color: var(--text-dim);
-  font-size: .95rem;
+  border-color: var(--rule);
+  color: var(--ink-3);
+  font-size: 12px;
 }
 #quit-btn:hover { color: var(--bad); border-color: var(--bad); }
 
-#hud-score, #hud-streak {
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-  font-weight: 800;
+#hud-score {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 22px;
+  letter-spacing: -.01em;
+  text-transform: none;
+  color: var(--ink);
+  line-height: 1;
 }
-#hud-score { font-size: 1.15rem; }
 #hud-streak {
   display: inline-block;
-  color: var(--a1);
-  transition: color .2s;
+  color: var(--a2);
+  font-weight: 500;
+  transition: color .2s ease;
 }
 /* .flare is also used by the hub's day-streak chip, which isn't a HUD. */
-#hud-streak.flare, .flare { animation: flare .5s var(--spring) both; }
+#hud-streak.flare, .flare { animation: flare .45s var(--ease) both; }
 @keyframes flare {
-  0%   { transform: scale(1); filter: brightness(1); }
-  40%  { transform: scale(1.35) rotate(-4deg); filter: brightness(1.6) drop-shadow(0 0 12px var(--a1)); }
-  100% { transform: scale(1); filter: brightness(1); }
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.14); }
+  100% { transform: scale(1); }
 }
 
-#hud-timer, #hud-clock { font-variant-numeric: tabular-nums; font-weight: 700; }
-#hud-timer { color: var(--a1); }
+#hud-timer, #hud-clock { font-variant-numeric: tabular-nums; }
 #hud-timer.urgent { color: var(--bad); animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: .4; } }
 
 /* ====================== progress rails ====================== */
 
 .timer-track, .progress-track {
-  height: 6px;
-  background: var(--sunk);
+  height: 3px;
+  background: var(--rule);
   border-radius: var(--r-pill);
   overflow: hidden;
 }
 #timer-fill, #progress-fill, #scroll-fill {
   height: 100%;
   width: 100%;
+  background: var(--p1);
   border-radius: var(--r-pill);
-  background: linear-gradient(90deg, var(--p1), var(--p2));
-  box-shadow: 0 0 12px color-mix(in oklab, var(--p1) 65%, transparent);
-  transition: width .12s linear, background .3s;
+  transition: width .12s linear, background .3s ease;
 }
 #progress-fill { width: 0; }
-#timer-fill.low, #scroll-fill.low {
-  background: linear-gradient(90deg, var(--bad), #ff8a5b);
-  box-shadow: 0 0 16px color-mix(in oklab, var(--bad) 75%, transparent);
-  animation: pulse-rail .7s ease-in-out infinite;
-}
-@keyframes pulse-rail { 50% { opacity: .55; } }
+#timer-fill.low, #scroll-fill.low { background: var(--bad); }
 
 /* ====================== answers ====================== */
 
 #choices button.correct {
-  background: linear-gradient(120deg, var(--good), #7bf7c4);
-  border-color: transparent;
-  color: var(--good-ink);
-  font-weight: 800;
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--good) 35%, transparent),
-              0 12px 30px -10px var(--good);
-  animation: correct-pop .45s var(--spring) both;
+  background: var(--good);
+  border-color: var(--good);
+  color: #fff;
 }
 #choices button.wrong {
-  background: linear-gradient(120deg, var(--bad), #ff8fa3);
-  border-color: transparent;
+  background: var(--bad);
+  border-color: var(--bad);
   color: #fff;
-  font-weight: 800;
-  animation: wrong-shake .42s ease both;
 }
-@keyframes correct-pop {
-  0%   { transform: scale(1); }
-  45%  { transform: scale(1.07); }
-  100% { transform: scale(1); }
-}
-@keyframes wrong-shake {
-  0%, 100% { transform: translateX(0); }
-  18% { transform: translateX(-8px); }
-  38% { transform: translateX(7px); }
-  58% { transform: translateX(-4px); }
-  78% { transform: translateX(2px); }
-}
+/* No bounce, no shake — the colour change is the whole message. */
 
 #choices button .key {
   position: absolute;
-  left: 10px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: .68rem;
-  font-weight: 700;
-  color: var(--text-dim);
-  border: 1px solid var(--stroke);
-  border-radius: 6px;
-  padding: 1px 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 2px 6px;
 }
 
 #feedback {
-  margin-top: 16px;
+  margin-top: 20px;
   min-height: 1.6em;
-  font-size: .96rem;
-  line-height: 1.55;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
 }
-#feedback.good { color: var(--good); animation: fade-up .3s var(--ease) both; }
-#feedback.bad  { color: var(--bad);  animation: fade-up .3s var(--ease) both; }
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: none; }
-}
+#feedback.good, #feedback.bad { animation: fade-up .3s var(--ease) both; }
+#feedback.good { color: var(--good); }
+#feedback.bad  { color: var(--bad); }
+#feedback b { color: var(--ink); font-weight: 500; }
 
 /* Inputs */
 input[type="text"], input[type="password"], input:not([type]), textarea {
-  font: inherit;
-  color: var(--text);
-  background: var(--sunk);
-  border: 1px solid var(--stroke);
-  border-radius: var(--r-sm);
-  padding: 13px 16px;
-  min-height: 48px;
-  transition: border-color .2s, box-shadow .2s;
+  font-family: var(--sans);
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  min-height: var(--tap);
+  transition: border-color .2s ease, box-shadow .2s ease;
 }
 input:focus, textarea:focus {
   outline: none;
   border-color: var(--p1);
-  box-shadow: 0 0 0 4px color-mix(in oklab, var(--p1) 22%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--p1) 14%, transparent);
 }
-::placeholder { color: color-mix(in oklab, var(--text-dim) 75%, transparent); }
+::placeholder { color: var(--ink-3); }
 
 /* ====================== results ====================== */
 
 .results-card {
   text-align: center;
   max-width: 560px;
-  margin: 24px auto 0;
+  margin: 30px auto 0;
+  padding: 36px 28px;
 }
-.results-card h2 { font-size: 1.45rem; line-height: 1.3; }
+.results-card h2 {
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1.12;
+  letter-spacing: -.02em;
+}
 
+/* The score is set in the serif, italic, huge — the Revvive stat treatment. */
 #results-score {
-  font-size: clamp(3rem, 15vw, 4rem);
-  font-weight: 900;
-  letter-spacing: -.04em;
-  margin: 8px 0 4px;
-  font-variant-numeric: tabular-nums;
-  background: linear-gradient(120deg, var(--p1), var(--a1) 55%, var(--a2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 6px 26px color-mix(in oklab, var(--p1) 45%, transparent));
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(64px, 20vw, 92px);
+  line-height: .92;
+  letter-spacing: -.03em;
+  color: var(--p1);
+  margin: 18px 0 6px;
 }
 #results-score small,
 #results-score span {
   display: block;
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--text-dim);
-  -webkit-text-fill-color: var(--text-dim);
-  filter: none;
-  letter-spacing: 0;
+  font-family: var(--mono);
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-top: 12px;
 }
 #results-score em {
   display: block;
-  font-size: .9rem;
+  font-family: var(--mono);
   font-style: normal;
-  color: var(--a1);
-  -webkit-text-fill-color: var(--a1);
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--a2);
+  margin-top: 8px;
 }
-#results-score.pop { animation: score-pop .55s var(--spring) both; }
-@keyframes score-pop {
-  0%   { transform: scale(.5) rotate(-6deg); opacity: 0; }
-  60%  { transform: scale(1.12) rotate(2deg); opacity: 1; }
-  100% { transform: scale(1); }
-}
+#results-score.pop { animation: fade-up .5s var(--ease) both; }
 
 .results-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
-  gap: 10px;
-  margin: 20px 0;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 0;
+  margin: 28px 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
 }
 .results-stats .stat, .stat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  background: var(--sunk);
-  border: 1px solid var(--stroke);
-  border-radius: var(--r-sm);
-  padding: 12px 8px;
-  animation: rise .45s var(--ease) both;
+  gap: 5px;
+  padding: 18px 8px;
+  border-right: 1px solid var(--rule);
 }
-.results-stats .stat:nth-child(2) { animation-delay: .06s; }
-.results-stats .stat:nth-child(3) { animation-delay: .12s; }
-.results-stats .stat:nth-child(4) { animation-delay: .18s; }
-.stat b { font-size: 1.3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.results-stats .stat:last-child, .stat:last-child { border-right: 0; }
+.stat b {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: -.01em;
+}
 .stat span {
-  font-size: .68rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
+  font-family: var(--mono);
+  font-size: 9.5px;
   letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 
 #results-best, #results-levelup {
   display: inline-block;
-  font-weight: 800;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
   border-radius: var(--r-pill);
-  padding: 9px 18px;
-  margin: 8px 4px;
-  background: linear-gradient(120deg, var(--a1), var(--a2));
-  color: #24100a;
-  box-shadow: 0 12px 30px -10px color-mix(in oklab, var(--a1) 90%, transparent);
-  animation: badge-in .6s var(--spring) both;
-}
-@keyframes badge-in {
-  0%   { transform: scale(.3) rotate(-12deg); opacity: 0; }
-  55%  { transform: scale(1.15) rotate(4deg); opacity: 1; }
-  100% { transform: scale(1) rotate(0); }
+  padding: 7px 16px;
+  margin: 6px 4px;
+  background: #E8A82C1f;
+  border: 1px solid #E8A82C55;
+  color: var(--a2);
+  animation: fade-up .5s var(--ease) both;
 }
 
 .results-xp, .results-note {
-  color: var(--a1);
-  font-size: .92rem;
-  line-height: 1.5;
-  margin-bottom: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: var(--ink-3);
+  line-height: 1.7;
+  margin-bottom: 10px;
 }
+.results-xp b, .results-note b { color: var(--a2); font-weight: 400; }
 
-.results-actions { margin-top: 20px; display: grid; gap: 10px; }
+.results-actions { margin-top: 26px; display: grid; gap: 10px; }
 .results-actions button { width: 100%; margin-top: 0; }
 
 /* ====================== chips, bars, lists ====================== */
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .chip {
-  background: color-mix(in oklab, var(--bad) 16%, transparent);
-  border: 1px solid color-mix(in oklab, var(--bad) 40%, transparent);
-  color: #ffc2cc;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .04em;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
   border-radius: var(--r-pill);
-  padding: 6px 14px;
-  font-size: .83rem;
-  animation: rise .4s var(--ease) both;
+  padding: 5px 13px;
 }
 
 #results-missed h3, #stats-weakest h3,
-#results-review h3, #stats-history h3, #stats-levels h3 {
-  font-size: .72rem;
+#results-review h3, #stats-history h3, #stats-levels h3,
+#stats-eras h3 {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
   text-transform: uppercase;
   letter-spacing: .14em;
-  color: var(--text-dim);
-  margin: 22px 0 12px;
+  color: var(--ink-3);
+  margin: 28px 0 14px;
 }
 
 .missed-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   text-align: left;
-  background: var(--sunk);
-  border: 1px solid var(--stroke);
-  border-radius: var(--r-sm);
-  padding: 12px 14px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
   margin-bottom: 8px;
 }
-.missed-row code { font-size: .93rem; font-family: inherit; line-height: 1.4; }
-.missed-row span { font-size: .82rem; color: var(--text-dim); }
-.clean-sweep { color: var(--text-dim); font-size: .9rem; margin-top: 12px; }
+.missed-row code {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.missed-row span { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+.clean-sweep { color: var(--ink-3); font-size: 14px; margin-top: 12px; }
 
-.topic-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.topic-name { flex: 0 0 40%; font-size: .88rem; }
-.topic-name b { color: var(--text-dim); margin-right: 6px; }
+.topic-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.topic-name { flex: 0 0 40%; font-size: 14px; }
+.topic-name b { font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-right: 6px; font-weight: 400; }
 .bar {
   flex: 1;
-  height: 8px;
-  background: var(--sunk);
+  height: 3px;
+  background: var(--rule);
   border-radius: var(--r-pill);
   overflow: hidden;
 }
 .bar i {
   display: block;
   height: 100%;
+  background: var(--p1);
   border-radius: var(--r-pill);
-  background: linear-gradient(90deg, var(--p1), var(--p2));
-  box-shadow: 0 0 10px color-mix(in oklab, var(--p1) 60%, transparent);
-  animation: grow-bar .8s var(--ease) both;
   transform-origin: left;
+  animation: grow-bar .8s var(--ease) both;
 }
 @keyframes grow-bar { from { transform: scaleX(0); } }
 .topic-num {
-  flex: 0 0 78px;
+  flex: 0 0 76px;
   text-align: right;
-  font-size: .76rem;
-  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
 
-.stats-card { max-width: 600px; margin: 20px auto 0; }
-.stats-card h2 { font-size: 1.4rem; margin-bottom: 16px; }
-#stats-back { width: 100%; margin-top: 22px; }
+.stats-card { max-width: 600px; margin: 24px auto 0; }
+.stats-card h2 {
+  font-family: var(--serif);
+  font-size: 28px;
+  letter-spacing: -.02em;
+  margin-bottom: 22px;
+}
+#stats-back { width: 100%; margin-top: 28px; }
 
-/* ====================== juice layers ====================== */
+/* ====================== feedback layer ====================== */
 
-/* Confetti / particle canvas, injected by lib/juice.js. */
+/* Confetti canvas, injected by lib/juice.js. Used sparingly — milestones only. */
 #fx-canvas {
   position: fixed;
   inset: 0;
@@ -844,109 +759,92 @@ input:focus, textarea:focus {
   pointer-events: none;
 }
 
-/* Full-screen colour wash on a correct or wrong answer. */
-#fx-flash {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  pointer-events: none;
-  opacity: 0;
-}
-#fx-flash.on { animation: flash .5s var(--ease); }
-@keyframes flash {
-  0%   { opacity: 0; }
-  18%  { opacity: .5; }
-  100% { opacity: 0; }
-}
+/* The old full-screen colour flash is gone: on paper it read as a fault. */
+#fx-flash { display: none; }
 
-/* Rising "+120" / "🔥 5 streak" text. */
+/* A quiet "+120" in mono that lifts and fades. */
 .float-points {
   position: fixed;
   transform: translate(-50%, 0);
   pointer-events: none;
   z-index: 95;
-  font-weight: 900;
-  font-size: 1.4rem;
-  letter-spacing: -.02em;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .06em;
   color: var(--good);
-  text-shadow: 0 2px 20px currentColor, 0 2px 4px rgba(0, 0, 0, .6);
-  animation: drift-up 1s var(--ease) both;
   white-space: nowrap;
+  animation: drift-up .9s var(--ease) both;
 }
 .float-points.bad { color: var(--bad); }
-.float-points.accent { color: var(--a1); }
+.float-points.accent { color: var(--a2); }
 @keyframes drift-up {
-  0%   { opacity: 0; transform: translate(-50%, 6px) scale(.6); }
-  22%  { opacity: 1; transform: translate(-50%, -18px) scale(1.15); }
-  45%  { transform: translate(-50%, -30px) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -78px) scale(.95); }
+  0%   { opacity: 0; transform: translate(-50%, 4px); }
+  25%  { opacity: 1; transform: translate(-50%, -14px); }
+  100% { opacity: 0; transform: translate(-50%, -52px); }
 }
 
-/* A toast for milestones — level ups, new bests. */
+/* Milestone toast — a paper card, not a banner. */
 #fx-toast {
   position: fixed;
   left: 50%;
-  top: calc(14px + env(safe-area-inset-top));
+  top: calc(18px + env(safe-area-inset-top));
   transform: translateX(-50%);
   z-index: 96;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 20px;
+  padding: 12px 22px;
   border-radius: var(--r-pill);
-  background: linear-gradient(120deg, var(--a1), var(--a2));
-  color: #24100a;
-  font-weight: 800;
-  font-size: .95rem;
-  box-shadow: 0 18px 44px -14px rgba(0, 0, 0, .8);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-lift);
   animation: toast-in 2.6s var(--ease) both;
   pointer-events: none;
-  max-width: calc(100vw - 32px);
+  max-width: calc(100vw - 36px);
 }
 @keyframes toast-in {
-  0%   { opacity: 0; transform: translate(-50%, -30px) scale(.85); }
-  10%  { opacity: 1; transform: translate(-50%, 0) scale(1.04); }
-  16%  { transform: translate(-50%, 0) scale(1); }
-  88%  { opacity: 1; transform: translate(-50%, 0) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -24px) scale(.95); }
+  0%   { opacity: 0; transform: translate(-50%, -14px); }
+  10%, 88% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
 }
 
-/* Sound toggle — a small floating control every game shares. */
+/* Sound toggle — a mono label, not a button that shouts. */
 .fx-sound {
   position: fixed;
-  right: calc(12px + env(safe-area-inset-right));
-  bottom: calc(12px + env(safe-area-inset-bottom));
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom));
   z-index: 60;
-  width: 44px;
-  height: 44px;
-  min-height: 44px;
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
   padding: 0;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  font-size: 1.05rem;
-  background: var(--glass-2);
-  border: 1px solid var(--stroke);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  font-size: 13px;
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
   box-shadow: var(--shadow);
-  opacity: .55;
-  transition: opacity .2s, transform .2s var(--spring);
+  opacity: .5;
+  transition: opacity .2s ease, box-shadow .2s ease;
 }
-.fx-sound:hover { opacity: 1; }
-.fx-sound:active { transform: scale(.9); }
+.fx-sound:hover { opacity: 1; box-shadow: var(--shadow-lift); }
 
 /* ====================== small screens ====================== */
 
 @media (max-width: 560px) {
-  .card { padding: 16px; border-radius: 22px; }
-  .title { margin: 4px 0 16px; }
-  .profile-stats { gap: 12px; font-size: .8rem; }
-  .opt-grid { gap: 7px; }
-  .opt-grid button { padding: 10px 13px; font-size: .87rem; min-height: 44px; }
-  .hud { gap: 9px; }
-  #hud-score { font-size: 1.05rem; }
+  .card { padding: 20px; }
+  .title { margin: 20px 0 26px; }
+  .results-card { padding: 28px 20px; }
   .results-stats { grid-template-columns: 1fr 1fr; }
+  .results-stats .stat:nth-child(2n) { border-right: 0; }
+  .results-stats .stat:nth-child(-n+2) { border-bottom: 1px solid var(--rule); }
+  .opt-grid button { padding: 10px 14px; font-size: 13px; }
 }
 
 /* Number-key hints mean nothing without a keyboard. */
@@ -954,9 +852,7 @@ input:focus, textarea:focus {
   #choices button .key { display: none; }
 }
 
-/* ====================== motion opt-out ======================
-   The games must stay fully playable, so this strips decoration, not
-   function: rails and fills keep moving, everything else stops. */
+/* ====================== motion opt-out ====================== */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -965,7 +861,6 @@ input:focus, textarea:focus {
     transition-duration: .01ms !important;
     scroll-behavior: auto !important;
   }
-  body::before, body::after { animation: none; }
   #timer-fill, #progress-fill, #scroll-fill { transition: width .1s linear !important; }
   #xp-fill { transition: width .3s !important; }
 }

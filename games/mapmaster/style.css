@@ -1,49 +1,34 @@
 /* Mapmaster — skin over lib/theme.css.
  *
- * The shared theme owns every shape the three games have in common (cards,
- * buttons, HUD, results, motion). This file sets Mapmaster's two gradient
- * stops and styles the one thing only it has: the map. */
+ * Navy on paper, like a printed atlas: cream sea, warm tinted land, a hairline
+ * coastline. The shared theme owns every shape the games have in common; this
+ * file sets the accent and styles the one thing only Mapmaster has. */
 
 :root {
-  --p1: #38bdf8;          /* sky */
-  --p2: #4f7dff;          /* deep ocean blue */
-  --a1: #ffc53d;
-  --a2: #ff8a3d;
+  --p1: #233142;          /* navy */
+  --p2: #6B8CAF;          /* its light companion */
 
-  /* Map-specific palette. The land sits a step brighter than the panels so the
-     coastline reads at a glance on a phone held at arm's length. */
-  --ocean: #06101f;
-  --land: #2e4472;
-  --land-edge: #08101f;
-  --land-hover: #4a68ac;
+  /* Atlas palette. Land sits warmer and darker than the sea so the coastline
+     reads at a glance on a phone in daylight. */
+  --sea: #FDF9F0;
+  --land: #DCCEB2;
+  --land-edge: #14111033;
+  --land-hover: #C9B893;
 }
 
-#app { max-width: 1100px; }
+#app { max-width: 940px; }
 
 /* ------------------------------- map ------------------------------- */
 
 .map-wrap {
   position: relative;
-  margin-top: 12px;
+  margin-top: 4px;
+  border: 1px solid var(--rule);
   border-radius: var(--r-lg);
   overflow: hidden;
-  background:
-    radial-gradient(120% 90% at 50% 0%, #0d1c33, var(--ocean) 70%) padding-box,
-    linear-gradient(160deg, var(--stroke-hi), rgba(255, 255, 255, .04)) border-box;
-  border: 1px solid transparent;
-  box-shadow: var(--shadow), inset 0 0 90px rgba(0, 0, 0, .55);
-  animation: rise .5s var(--ease) both .05s;
-}
-
-/* A faint horizon glow at the top of the ocean, so the panel has depth
-   instead of reading as a flat navy rectangle. */
-.map-wrap::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 45%;
-  pointer-events: none;
-  background: radial-gradient(80% 100% at 50% 0%, color-mix(in oklab, var(--p1) 22%, transparent), transparent 70%);
+  background: var(--sea);
+  box-shadow: var(--shadow);
+  animation: rise .5s var(--ease) both;
 }
 
 #map {
@@ -59,8 +44,8 @@
 #map .country {
   fill: var(--land);
   stroke: var(--land-edge);
-  stroke-width: .6;
-  transition: fill .2s, filter .2s;
+  stroke-width: .5;
+  transition: fill .2s ease;
 }
 
 /* In clickable modes the map owns touch gestures (pan/pinch) entirely */
@@ -68,43 +53,33 @@
 #map.clickable .country { cursor: pointer; }
 #map.clickable .country:hover { fill: var(--land-hover); }
 
-#map .country.dim { fill: #1b2740; }
+#map .country.dim { fill: #E7DCC4; }
 
 #map .country.target {
   fill: var(--a1);
-  stroke: #fff6;
-  stroke-width: 1;
-  filter: drop-shadow(0 0 6px var(--a1));
-  animation: target-pulse 1.5s ease-in-out infinite;
+  stroke: #14111055;
+  stroke-width: .8;
+  animation: target-fade 1.8s ease-in-out infinite;
 }
-@keyframes target-pulse {
-  0%, 100% { fill: var(--a1); filter: drop-shadow(0 0 4px var(--a1)); }
-  50%      { fill: #fff0c2;   filter: drop-shadow(0 0 16px var(--a1)); }
+@keyframes target-fade {
+  0%, 100% { fill: var(--a1); }
+  50%      { fill: #F2C766; }
 }
 
-#map .country.correct {
-  fill: var(--good);
-  animation: land-hit .5s var(--spring) both;
-  filter: drop-shadow(0 0 10px var(--good));
-}
-#map .country.wrong {
-  fill: var(--bad);
-  filter: drop-shadow(0 0 10px var(--bad));
-}
-@keyframes land-hit {
-  0%   { filter: drop-shadow(0 0 0 var(--good)) brightness(2.4); }
-  100% { filter: drop-shadow(0 0 10px var(--good)) brightness(1); }
-}
+#map .country.correct { fill: var(--good); }
+#map .country.wrong { fill: var(--bad); }
 
 #zoom-toggle {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 8px 14px;
-  min-height: 40px;
-  font-size: .82rem;
-  border-radius: var(--r-pill);
-  background: rgba(6, 16, 31, .72);
+  top: 12px;
+  right: 12px;
+  padding: 8px 15px;
+  min-height: 36px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  background: color-mix(in oklab, var(--paper) 88%, transparent);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -112,166 +87,176 @@
 #map-tip {
   position: absolute;
   pointer-events: none;
-  background: rgba(6, 16, 31, .94);
-  border: 1px solid var(--stroke-hi);
-  color: var(--text);
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
   padding: 6px 12px;
-  border-radius: var(--r-sm);
-  font-size: .85rem;
-  font-weight: 600;
-  transform: translate(-50%, -130%);
+  border-radius: var(--r-pill);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  transform: translate(-50%, -140%);
   white-space: nowrap;
   z-index: 5;
-  box-shadow: 0 10px 26px -10px #000;
-  animation: fade-up .18s var(--ease) both;
+  box-shadow: var(--shadow);
 }
 
 /* ------------------------------ panel ------------------------------ */
 
-.panel { margin-top: 16px; text-align: center; }
+.panel { margin-top: 24px; text-align: center; }
 
 #prompt {
-  font-size: 1.3rem;
-  font-weight: 700;
+  font-family: var(--serif);
+  font-size: clamp(26px, 6.5vw, 34px);
+  line-height: 1.15;
   letter-spacing: -.02em;
-  margin-bottom: 14px;
-  min-height: 1.4em;
+  margin-bottom: 22px;
+  min-height: 1.2em;
   animation: fade-up .35s var(--ease) both;
 }
-#prompt b {
-  background: linear-gradient(120deg, var(--a1), var(--a2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+#prompt b { font-weight: 400; font-style: italic; color: var(--p1); }
+#prompt .attempts {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-top: 10px;
 }
-#prompt .attempts { color: var(--text-dim); font-size: .9rem; margin-left: 8px; font-weight: 500; }
 
 #choices {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
-  max-width: 760px;
+  gap: 8px;
+  max-width: 700px;
   margin: 0 auto;
 }
 #choices button {
-  padding: 15px 14px;
+  padding: 15px 16px;
   min-height: 54px;
-  font-size: 1rem;
+  font-size: 15px;
   border-radius: var(--r-md);
   animation: rise .35s var(--ease) both;
 }
-#choices button:nth-child(2) { animation-delay: .05s; }
-#choices button:nth-child(3) { animation-delay: .10s; }
-#choices button:nth-child(4) { animation-delay: .15s; }
+#choices button:nth-child(2) { animation-delay: .04s; }
+#choices button:nth-child(3) { animation-delay: .08s; }
+#choices button:nth-child(4) { animation-delay: .12s; }
 
-#type-form { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-#type-input { width: min(360px, 70vw); text-align: center; }
+#type-form { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+#type-input { width: min(340px, 70vw); text-align: center; }
 
-#next-btn, #explore-done {
-  margin-top: 16px;
-  padding: 14px 36px;
-  border-radius: var(--r-md);
-  animation: rise .3s var(--ease) both;
-}
+#next-btn, #explore-done { margin-top: 22px; padding: 14px 34px; }
 
 #explore-info {
-  margin: 12px auto 0;
-  max-width: 480px;
-  background: var(--glass-2);
-  border: 1px solid var(--stroke);
-  border-radius: var(--r-md);
-  padding: 16px 20px;
+  margin: 16px auto 0;
+  max-width: 460px;
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  padding: 22px;
+  text-align: left;
+  box-shadow: var(--shadow);
   animation: rise .35s var(--ease) both;
 }
-#explore-info h3 { font-size: 1.2rem; margin-bottom: 6px; }
-#explore-info p { color: var(--text-dim); font-size: .9rem; line-height: 1.5; }
+#explore-info h3 {
+  font-family: var(--serif);
+  font-size: 26px;
+  letter-spacing: -.02em;
+  margin-bottom: 8px;
+}
+#explore-info p { color: var(--ink-2); font-size: 14px; line-height: 1.6; }
 
-/* Flags are images, not emoji — Windows has no flag-emoji font. The inset
-   border keeps white flags (Japan, Switzerland's white cross) from bleeding
-   into the dark background. */
+/* Flags are images, not emoji — Windows has no flag-emoji font. The hairline
+   keeps white flags (Japan, Switzerland's cross) off the cream ground. */
 .flag-big,
 .flag-mid,
 .flag-inline {
-  border-radius: 4px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px var(--rule);
   object-fit: cover;
   user-select: none;
 }
 .flag-big {
   display: block;
-  width: 176px;
-  height: 117px;
-  border-radius: 10px;
-  margin: 0 auto 12px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2), 0 16px 34px -14px #000;
-  animation: flag-in .45s var(--spring) both;
+  width: 170px;
+  height: 113px;
+  border-radius: 6px;
+  margin: 0 auto 16px;
+  box-shadow: 0 0 0 1px var(--rule), var(--shadow);
+  animation: fade-up .4s var(--ease) both;
 }
-@keyframes flag-in {
-  from { opacity: 0; transform: perspective(600px) rotateX(22deg) translateY(-10px); }
-  to   { opacity: 1; transform: none; }
-}
-.flag-mid { width: 44px; height: 29px; vertical-align: -8px; border-radius: 5px; }
-.flag-inline { width: 22px; height: 15px; vertical-align: -2px; }
+.flag-mid { width: 42px; height: 28px; vertical-align: -8px; border-radius: 4px; }
+.flag-inline { width: 21px; height: 14px; vertical-align: -2px; }
 
 /* ------------------------------ stats ------------------------------ */
 
 .continent-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--stroke);
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
   animation: rise .4s var(--ease) both;
 }
 .continent-row:last-child { border-bottom: none; }
-.continent-row:nth-child(2) { animation-delay: .05s; }
-.continent-row:nth-child(3) { animation-delay: .10s; }
-.continent-row:nth-child(4) { animation-delay: .15s; }
-.continent-row:nth-child(5) { animation-delay: .20s; }
-.continent-row:nth-child(6) { animation-delay: .25s; }
+.continent-row:nth-child(2) { animation-delay: .04s; }
+.continent-row:nth-child(3) { animation-delay: .08s; }
+.continent-row:nth-child(4) { animation-delay: .12s; }
+.continent-row:nth-child(5) { animation-delay: .16s; }
+.continent-row:nth-child(6) { animation-delay: .20s; }
 
+/* The completion ring, drawn in navy on paper rather than as a glowing dial. */
 .ring {
   --p: 0;
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
   flex: none;
   border-radius: 50%;
-  background: conic-gradient(from -90deg, var(--a1) calc(var(--p) * 1%), rgba(0, 0, 0, .35) 0);
+  background: conic-gradient(from -90deg, var(--p1) calc(var(--p) * 1%), var(--rule) 0);
   display: grid;
   place-items: center;
-  box-shadow: 0 0 18px -6px color-mix(in oklab, var(--a1) 70%, transparent);
 }
 .ring span {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: #10182c;
+  background: var(--card-bg);
   display: grid;
   place-items: center;
-  font-size: .74rem;
-  font-weight: 800;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .02em;
   font-variant-numeric: tabular-nums;
 }
 
-.continent-info { display: flex; flex-direction: column; gap: 2px; }
-.continent-info b { font-size: 1.02rem; }
-.continent-info span { color: var(--text-dim); font-size: .8rem; }
+.continent-info { display: flex; flex-direction: column; gap: 3px; }
+.continent-info b {
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -.01em;
+}
+.continent-info span {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
 
-#stats-weakest { margin-top: 22px; }
+#stats-weakest { margin-top: 8px; }
 #stats-weakest .chips { justify-content: flex-start; }
+#stats-weakest .chip { border-color: #C76A5E4d; color: var(--bad); }
 
 /* --------------------------- small screens --------------------------- */
 
 @media (max-width: 640px) {
-  #app { padding-left: 12px; padding-right: 12px; }
-  .title h1 { font-size: 1.9rem; }
-  #prompt { font-size: 1.1rem; }
-  #choices { grid-template-columns: 1fr 1fr; gap: 8px; }
-  #choices button { padding: 14px 8px; font-size: .93rem; min-height: 56px; }
+  #choices { grid-template-columns: 1fr 1fr; gap: 7px; }
+  #choices button { padding: 14px 8px; font-size: 13.5px; min-height: 56px; }
   #type-input { width: 100%; }
-  #type-form { gap: 8px; }
   #type-form button { flex: 1; }
-  .flag-big { width: 148px; height: 99px; }
+  .flag-big { width: 144px; height: 96px; }
 }
 
 /* Cloud sync card styles live in lib/sync.css, shared across games. */

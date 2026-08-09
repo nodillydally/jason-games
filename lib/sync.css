@@ -1,63 +1,66 @@
 /* lib/sync.css — styles for the shared Cloud sync card.
  *
- * Deliberately palette-agnostic: it consumes the custom properties lib/theme.css
- * defines (--glass, --stroke, --text-dim, --p1, --good, --bad, --a1), so it
- * picks up whatever gradient the game is wearing without knowing which one.
+ * Deliberately palette-agnostic: it consumes the tokens lib/theme.css defines
+ * (--rule, --ink-3, --mono, --good, --bad, --a2), so it picks up whatever
+ * accent the game is wearing without knowing which one.
  */
 
-.sync-card { margin-top: 14px; }
+.sync-card { margin-top: 14px; padding: 20px 26px; }
 
 .sync-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
 }
 
 .sync-status {
-  color: var(--text-dim);
-  font-size: .86rem;
-  font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 9px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 .sync-status.ok { color: var(--good); }
 .sync-status.bad { color: var(--bad); }
-.sync-status.busy { color: var(--a1); }
+.sync-status.busy { color: var(--a2); }
 
 /* A pulsing dot while a sync is in flight — the only moving thing on a card
    that is otherwise pure plumbing. */
 .sync-status.busy::before {
   content: "";
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 10px currentColor;
-  animation: sync-pulse .9s ease-in-out infinite;
+  animation: sync-pulse 1.4s ease-in-out infinite;
 }
-@keyframes sync-pulse { 50% { opacity: .25; transform: scale(.7); } }
+@keyframes sync-pulse { 50% { opacity: .3; } }
 
 .sync-btn {
-  padding: 8px 16px;
-  min-height: 40px;
-  font-size: .82rem;
-  border-radius: var(--r-pill);
   flex: none;
+  padding: 8px 16px;
+  min-height: 38px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
 }
 
 .sync-panel {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--stroke);
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--rule);
   animation: fade-up .3s var(--ease) both;
 }
 .sync-panel p {
-  color: var(--text-dim);
-  font-size: .84rem;
-  line-height: 1.6;
-  margin-bottom: 12px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.65;
+  margin-bottom: 14px;
 }
 
 .sync-form { display: flex; gap: 8px; flex-wrap: wrap; }

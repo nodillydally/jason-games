@@ -1,33 +1,28 @@
 /* Reader — skin over lib/theme.css.
  *
- * Warm amber: the reading game should feel like paper under a lamp, not a
- * screen. Everything shared lives in the theme; this file owns the RSVP stage,
- * the book library, and the scroll reader. */
+ * Terracotta on paper. The reading game had the easiest job in this palette:
+ * cream stock and ink is what a page is. The shared theme owns everything
+ * common; this file owns the RSVP stage, the book library and the scroll read. */
 
 :root {
-  --p1: #fb923c;          /* amber */
-  --p2: #f43f5e;          /* rose */
-  --a1: #ffd166;
-  --a2: #ff8fab;
-
-  --bg: #0d0b12;          /* warmer near-black than the other two */
-  --bg-2: #191320;
+  --p1: #C76A5E;          /* terracotta */
+  --p2: #D99A7E;
 }
 
-#app { max-width: 720px; }
+#app { max-width: 680px; }
 
 /* --------------------------- book library --------------------------- */
 
-.book-list { display: flex; flex-direction: column; gap: 8px; }
-.book-note { color: var(--text-dim); font-size: .85rem; line-height: 1.55; }
+.book-list { display: flex; flex-direction: column; }
+.book-note { color: var(--ink-2); font-size: 13.5px; line-height: 1.6; }
 
 .book-group {
-  font-size: .66rem;
-  font-weight: 700;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
   text-transform: uppercase;
-  letter-spacing: .16em;
-  color: var(--text-dim);
-  margin: 14px 0 4px;
+  color: var(--ink-3);
+  margin: 20px 0 8px;
 }
 .book-group:first-child { margin-top: 0; }
 
@@ -35,198 +30,184 @@
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-areas: "title pct" "meta pct" "bar bar";
-  gap: 2px 12px;
+  gap: 3px 14px;
   text-align: left;
-  padding: 13px 16px;
-  border-radius: var(--r-md);
+  padding: 15px 4px;
   min-height: 60px;
-  animation: rise .4s var(--ease) both;
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  transition: background .2s ease, padding-left .2s ease;
 }
+.book-item:hover { background: var(--paper-2); box-shadow: none; padding-left: 10px; }
 .book-item.active {
-  border-color: transparent;
-  background:
-    linear-gradient(150deg, color-mix(in oklab, var(--p1) 24%, transparent), var(--glass)) padding-box,
-    linear-gradient(150deg, var(--p1), var(--p2)) border-box;
-  box-shadow: 0 12px 30px -14px color-mix(in oklab, var(--p1) 90%, transparent);
+  background: transparent;
+  box-shadow: inset 2px 0 0 var(--p1);
+  padding-left: 12px;
 }
-.book-title { grid-area: title; font-weight: 700; }
-.book-meta { grid-area: meta; color: var(--text-dim); font-size: .77rem; }
+.book-title { grid-area: title; font-size: 15px; font-weight: 500; }
+.book-meta {
+  grid-area: meta;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .06em;
+  color: var(--ink-3);
+}
 .book-pct {
   grid-area: pct;
   align-self: center;
-  color: var(--text-dim);
-  font-size: .8rem;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink-3);
 }
-.book-item.active .book-pct { color: var(--a1); font-weight: 700; }
+.book-item.active .book-pct { color: var(--p1); }
 .book-progress {
   grid-area: bar;
-  height: 5px;
-  background: var(--sunk);
+  height: 2px;
+  background: var(--rule);
   border-radius: var(--r-pill);
   overflow: hidden;
-  margin-top: 8px;
+  margin-top: 9px;
 }
-.book-progress i {
-  display: block;
-  height: 100%;
-  border-radius: var(--r-pill);
-  background: linear-gradient(90deg, var(--p1), var(--a1));
-  box-shadow: 0 0 10px color-mix(in oklab, var(--p1) 70%, transparent);
-}
+.book-progress i { display: block; height: 100%; background: var(--p1); }
 
 /* ------------------------------ speed ------------------------------ */
 
-.wpm-row { display: flex; align-items: center; gap: 14px; }
+.wpm-row { display: flex; align-items: center; gap: 18px; }
 .wpm-row input[type=range] {
   flex: 1;
-  height: 34px;
+  height: 30px;
   appearance: none;
   -webkit-appearance: none;
   background: transparent;
 }
 .wpm-row input[type=range]::-webkit-slider-runnable-track {
-  height: 8px;
+  height: 3px;
   border-radius: var(--r-pill);
-  background: linear-gradient(90deg, var(--p1), var(--p2));
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .5);
+  background: var(--rule);
 }
 .wpm-row input[type=range]::-moz-range-track {
-  height: 8px;
+  height: 3px;
   border-radius: var(--r-pill);
-  background: linear-gradient(90deg, var(--p1), var(--p2));
+  background: var(--rule);
 }
-/* A thumb big enough to grab with a thumb. */
+/* A thumb big enough to grab with a thumb, quiet enough for paper. */
 .wpm-row input[type=range]::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
-  width: 26px;
-  height: 26px;
-  margin-top: -9px;
+  width: 22px;
+  height: 22px;
+  margin-top: -10px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff, var(--a1));
-  border: none;
-  box-shadow: 0 0 0 4px color-mix(in oklab, var(--p1) 30%, transparent),
-              0 6px 16px -4px #000;
+  background: var(--p1);
+  border: 2px solid var(--paper);
+  box-shadow: var(--shadow);
   cursor: grab;
 }
 .wpm-row input[type=range]::-moz-range-thumb {
-  width: 26px;
-  height: 26px;
-  border: none;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--paper);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff, var(--a1));
-  box-shadow: 0 0 0 4px color-mix(in oklab, var(--p1) 30%, transparent);
+  background: var(--p1);
+  box-shadow: var(--shadow);
 }
 .wpm-row output {
   min-width: 96px;
   text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  font-size: 1rem;
-  color: var(--a1);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 22px;
+  letter-spacing: -.01em;
+  color: var(--p1);
 }
 
-#paste-input { width: 100%; font-size: .93rem; line-height: 1.6; resize: vertical; min-height: 120px; }
+#paste-input { width: 100%; font-size: 14.5px; line-height: 1.7; resize: vertical; min-height: 130px; }
 
 .projection {
-  color: var(--text-dim);
-  font-size: .88rem;
-  line-height: 1.65;
-  margin-top: 16px;
-  background: var(--sunk);
-  border: 1px solid var(--stroke);
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.75;
+  margin-top: 18px;
+  padding: 18px 20px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: var(--r-md);
-  padding: 14px 16px;
 }
-.projection b { color: var(--a1); }
+.projection b {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 19px;
+  color: var(--p1);
+}
 
 /* ---------------------------- RSVP stage ----------------------------
-   While words are flashing, the room goes dark: the aurora drops to almost
-   nothing so the only bright thing on the phone is the fixation point. */
+   While words are flashing, everything that isn't the word gets out of the
+   way — including the sound toggle in the corner. */
 
-body:has(#screen-read.active)::before,
-body:has(#screen-scroll.active)::before { opacity: .10; }
-body:has(#screen-read.active)::after,
-body:has(#screen-scroll.active)::after { opacity: .06; }
-body:has(#screen-read.active) .fx-sound { opacity: .12; }
-
+body:has(#screen-read.active) .fx-sound { opacity: .1; }
 
 .reader-stage {
-  margin: 13vh 0 0;
+  margin: 15vh 0 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 12px;
-  position: relative;
+  gap: 14px;
 }
 
-/* A soft pool of light behind the word — the lamp on the page. */
-.reader-stage::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: min(560px, 90vw);
-  height: 200px;
-  transform: translate(-50%, -50%);
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(ellipse, color-mix(in oklab, var(--p1) 20%, transparent), transparent 70%);
-  filter: blur(24px);
-}
-
-/* Vertical ticks marking the fixation point — the eye parks here and the words
+/* Hairline ticks marking the fixation point — the eye parks here and the words
    move around it, which is what makes the technique work. */
-.focus-line { height: 16px; position: relative; }
+.focus-line { height: 14px; position: relative; }
 .focus-line::after {
   content: "";
   position: absolute;
   left: 50%;
   top: 0;
   bottom: 0;
-  width: 2px;
-  border-radius: 2px;
-  background: linear-gradient(180deg, transparent, var(--p1));
-  opacity: .55;
+  width: 1px;
+  background: var(--p1);
+  opacity: .5;
 }
-.focus-line:last-child::after { background: linear-gradient(180deg, var(--p1), transparent); }
 
 .rsvp-word {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: baseline;
-  font-family: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
-  font-size: clamp(1.9rem, 7vw, 3.3rem);
-  font-weight: 600;
-  letter-spacing: -.015em;
+  font-family: var(--mono);
+  font-size: clamp(1.8rem, 6.5vw, 3rem);
+  font-weight: 400;
+  letter-spacing: -.02em;
   white-space: pre;
 }
 .rsvp-word .pre { text-align: right; }
 .rsvp-word .post { text-align: left; }
-.rsvp-word .orp {
-  color: var(--p1);
-  text-shadow: 0 0 26px color-mix(in oklab, var(--p1) 80%, transparent);
-}
-.rsvp-word.count-in { opacity: .5; }
-.rsvp-word.count-in .orp { color: var(--text-dim); text-shadow: none; }
+.rsvp-word .orp { color: var(--p1); }
+.rsvp-word.count-in { opacity: .4; }
+.rsvp-word.count-in .orp { color: var(--ink-3); }
 
 .read-hint {
   text-align: center;
-  margin-top: 12vh;
-  color: var(--text-dim);
-  font-size: .78rem;
-  letter-spacing: .04em;
+  margin-top: 13vh;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 .paused-note {
   text-align: center;
-  margin-top: 12px;
-  color: var(--a1);
-  font-size: .92rem;
-  font-weight: 700;
-  animation: pulse-soft 1.6s ease-in-out infinite;
+  margin-top: 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--p1);
+  animation: pulse-soft 1.8s ease-in-out infinite;
 }
-@keyframes pulse-soft { 50% { opacity: .45; } }
+@keyframes pulse-soft { 50% { opacity: .4; } }
 
 /* --------------------------- scroll reader --------------------------- */
 
@@ -234,64 +215,71 @@ body:has(#screen-read.active) .fx-sound { opacity: .12; }
   max-height: 62vh;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: linear-gradient(180deg, var(--glass-2), var(--glass));
-  border: 1px solid var(--stroke);
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
   border-radius: var(--r-lg);
-  padding: 24px;
-  margin-top: 14px;
-  font-size: 1.06rem;
+  padding: 30px 28px;
+  margin-top: 18px;
+  font-size: 17px;
   line-height: 1.8;
+  color: var(--ink);
   box-shadow: var(--shadow);
   animation: rise .45s var(--ease) both;
 }
-.scroll-text p { margin-bottom: 1em; }
+.scroll-text p { margin-bottom: 1.1em; }
 .scroll-text p:last-child { margin-bottom: 0; }
+/* The opening line of a passage, set like a chapter head. */
+.scroll-text p:first-child::first-line { font-variant: small-caps; letter-spacing: .02em; }
 
-#scroll-clock { font-variant-numeric: tabular-nums; font-weight: 700; }
-#scroll-done { margin-top: 16px; }
+#scroll-clock { font-variant-numeric: tabular-nums; }
+#scroll-done { margin-top: 20px; }
 
 /* ------------------------------- quiz ------------------------------- */
 
-.quiz-card { margin-top: 26px; }
+.quiz-card { margin-top: 20px; padding: 30px 26px; }
 
 .topic-tag {
   display: inline-block;
-  font-size: .66rem;
-  font-weight: 700;
-  text-transform: uppercase;
+  font-family: var(--mono);
+  font-size: 10px;
   letter-spacing: .16em;
-  color: var(--text-dim);
-  background: var(--sunk);
-  border: 1px solid var(--stroke);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border: 1px solid var(--rule);
   border-radius: var(--r-pill);
-  padding: 6px 14px;
-  margin-bottom: 16px;
+  padding: 5px 13px;
+  margin-bottom: 20px;
 }
 
-#quiz-question { font-size: 1.28rem; line-height: 1.4; margin-bottom: 20px; letter-spacing: -.02em; }
-#quiz-options { display: flex; flex-direction: column; gap: 10px; }
+#quiz-question {
+  font-family: var(--serif);
+  font-size: clamp(24px, 6vw, 30px);
+  line-height: 1.2;
+  letter-spacing: -.02em;
+  margin-bottom: 24px;
+}
+#quiz-options { display: flex; flex-direction: column; gap: 8px; }
 #quiz-options button {
   text-align: left;
   line-height: 1.5;
-  padding: 15px 18px;
+  padding: 15px 20px;
   min-height: 56px;
   border-radius: var(--r-md);
-  animation: rise .38s var(--ease) both;
+  font-size: 14.5px;
+  animation: rise .34s var(--ease) both;
 }
-#quiz-options button:nth-child(2) { animation-delay: .06s; }
-#quiz-options button:nth-child(3) { animation-delay: .12s; }
-#quiz-options button:nth-child(4) { animation-delay: .18s; }
+#quiz-options button:nth-child(2) { animation-delay: .05s; }
+#quiz-options button:nth-child(3) { animation-delay: .10s; }
+#quiz-options button:nth-child(4) { animation-delay: .15s; }
 #quiz-options button.correct {
-  background: linear-gradient(120deg, var(--good), #7bf7c4);
-  border-color: transparent;
-  color: var(--good-ink);
-  font-weight: 800;
+  background: var(--good);
+  border-color: var(--good);
+  color: #fff;
 }
 #quiz-options button.wrong {
-  background: linear-gradient(120deg, var(--bad), #ff8fa3);
-  border-color: transparent;
+  background: var(--bad);
+  border-color: var(--bad);
   color: #fff;
-  font-weight: 800;
 }
 
 .missed-row span { color: var(--good); }
@@ -302,18 +290,17 @@ body:has(#screen-read.active) .fx-sound { opacity: .12; }
   display: flex;
   align-items: flex-end;
   gap: 3px;
-  height: 96px;
-  background: var(--sunk);
-  border: 1px solid var(--stroke);
+  height: 92px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: var(--r-md);
-  padding: 10px;
+  padding: 12px;
 }
 .spark i {
   flex: 1;
   min-width: 3px;
-  border-radius: 3px 3px 0 0;
-  background: linear-gradient(180deg, var(--a1), var(--p1));
-  box-shadow: 0 0 10px -2px color-mix(in oklab, var(--p1) 80%, transparent);
+  border-radius: 1px;
+  background: var(--p1);
   transform-origin: bottom;
   animation: grow-y .6s var(--ease) both;
 }
@@ -326,9 +313,9 @@ body:has(#screen-read.active) .fx-sound { opacity: .12; }
 /* --------------------------- small screens --------------------------- */
 
 @media (max-width: 560px) {
-  .reader-stage { margin-top: 11vh; }
-  .read-hint { margin-top: 10vh; }
-  #quiz-question { font-size: 1.12rem; }
-  .scroll-text { padding: 18px; font-size: 1rem; max-height: 58vh; }
-  .wpm-row output { min-width: 82px; font-size: .92rem; }
+  .reader-stage { margin-top: 12vh; }
+  .read-hint { margin-top: 11vh; }
+  .scroll-text { padding: 22px 20px; font-size: 16px; max-height: 58vh; }
+  .quiz-card { padding: 24px 20px; }
+  .wpm-row output { min-width: 84px; font-size: 19px; }
 }

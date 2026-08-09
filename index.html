@@ -3,409 +3,411 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#070a14">
+<meta name="theme-color" content="#F6EFE2">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Jason's Learning Games</title>
 <link rel="stylesheet" href="lib/theme.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
 <style>
   /* Hub-only styles. Everything structural comes from lib/theme.css. */
 
-  :root { --p1: #5b8cff; --p2: #a855f7; --a1: #ffc53d; --a2: #ff6b9d; }
-
-  main.wrap { padding-top: calc(26px + env(safe-area-inset-top)); }
+  main.wrap { max-width: 760px; }
 
   /* ------------------------------ header ------------------------------ */
 
-  .hub-head {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    margin-bottom: 4px;
-  }
-  .hub-head .title { text-align: left; margin: 0; flex: 1; }
-  .hub-head .title h1 { font-size: clamp(1.9rem, 8.5vw, 2.6rem); }
+  .hub-head { padding-top: 12px; }
+  .hub-head .title { margin: 18px 0 0; }
+  .hub-head .title h1 { font-size: clamp(2.8rem, 13vw, 4.2rem); }
 
-  /* Day streak — the one number on this page that only goes up if he shows up. */
-  .streak-chip {
+  /* Day streak — the one number here that only moves if he shows up. */
+  .streak-line {
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 10px;
+    margin-top: 22px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .streak-line .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 99px;
+    background: var(--a1);
     flex: none;
-    padding: 9px 15px;
-    border-radius: var(--r-pill);
-    background: linear-gradient(120deg, var(--a1), var(--a2));
-    color: #24100a;
-    font-weight: 900;
-    font-size: .95rem;
-    white-space: nowrap;
-    box-shadow: 0 10px 28px -12px color-mix(in oklab, var(--a1) 90%, transparent);
-    animation: badge-in .6s var(--spring) both;
   }
-  .streak-chip.cold {
-    background: var(--glass-2);
-    border: 1px solid var(--stroke);
-    color: var(--text-dim);
-    box-shadow: none;
-  }
-  .streak-chip .flame { animation: flicker 2.2s ease-in-out infinite; display: inline-block; }
-  @keyframes flicker {
-    0%, 100% { transform: scale(1) rotate(0); }
-    30% { transform: scale(1.16) rotate(-6deg); }
-    65% { transform: scale(.94) rotate(5deg); }
+  .streak-line.cold .dot { background: var(--rule); box-shadow: none; }
+  .streak-line b {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 19px;
+    letter-spacing: -.01em;
+    color: var(--ink);
+    text-transform: none;
   }
 
-  /* --------------------------- total progress --------------------------- */
+  /* ---------------------------- section heads ---------------------------- */
 
-  .rank-card { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-  .rank-title { font-weight: 800; font-size: 1.02rem; }
-  .rank-sub { color: var(--text-dim); font-size: .8rem; margin-top: 2px; }
+  .sec-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 46px 0 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .sec-head::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
 
   /* ---------------------------- today's card ---------------------------- */
 
   .today {
-    position: relative;
-    padding: 22px;
+    background: var(--card-bg);
+    border: 1px solid var(--rule);
     border-radius: var(--r-lg);
-    background:
-      linear-gradient(160deg,
-        color-mix(in oklab, var(--p1) 26%, transparent),
-        color-mix(in oklab, var(--p2) 18%, transparent) 55%,
-        var(--glass)) padding-box,
-      linear-gradient(150deg, var(--p1), var(--a2) 60%, var(--a1)) border-box;
-    border: 1.5px solid transparent;
-    box-shadow: 0 26px 60px -24px color-mix(in oklab, var(--p2) 85%, transparent), var(--shadow);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    overflow: hidden;
-    margin-top: 16px;
-    animation: rise .55s var(--ease) both .06s;
+    padding: 26px;
+    box-shadow: var(--shadow);
+    animation: rise .5s var(--ease) both .05s;
   }
   .today:empty { display: none; }
 
-  /* A slow light sweep so the hero panel never sits completely still. */
-  .today::after {
-    content: "";
-    position: absolute;
-    inset: -40% -10%;
-    background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, .13) 50%, transparent 58%);
-    animation: sweep 6.5s ease-in-out infinite;
-    pointer-events: none;
-  }
-  @keyframes sweep {
-    0%, 55% { transform: translateX(-70%); }
-    95%, 100% { transform: translateX(70%); }
-  }
-
   .today-label {
-    font-size: .68rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .16em;
     text-transform: uppercase;
-    letter-spacing: .18em;
-    color: var(--a1);
-    font-weight: 800;
-    margin-bottom: 14px;
+    color: var(--ink-3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .today-label::before {
+    content: "";
+    width: 20px;
+    height: 1px;
+    background: currentColor;
   }
 
-  .today-row { display: flex; align-items: center; gap: 15px; }
+  .today-row { display: flex; align-items: flex-start; gap: 16px; }
 
   .today-icon {
     flex: none;
-    width: 62px;
-    height: 62px;
+    width: 46px;
+    height: 46px;
     display: grid;
     place-items: center;
-    font-size: 2rem;
-    border-radius: 20px;
-    background: linear-gradient(150deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .05));
-    border: 1px solid var(--stroke-hi);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 12px 28px -12px #000;
-    animation: bob 3.6s ease-in-out infinite;
-  }
-  @keyframes bob {
-    0%, 100% { transform: translateY(0) rotate(-2deg); }
-    50% { transform: translateY(-7px) rotate(2deg); }
+    font-size: 1.25rem;
+    border-radius: var(--r-md);
+    background: var(--paper);
+    border: 1px solid var(--rule);
   }
 
   .today-body { flex: 1; min-width: 0; }
-  .today-pick { font-weight: 800; font-size: 1.22rem; letter-spacing: -.02em; }
+  .today-pick {
+    font-family: var(--serif);
+    font-size: 30px;
+    line-height: 1.08;
+    letter-spacing: -.02em;
+  }
   .today-why {
-    color: color-mix(in oklab, var(--text) 76%, transparent);
-    font-size: .89rem;
-    line-height: 1.5;
-    margin-top: 5px;
+    color: var(--ink-2);
+    font-size: 14.5px;
+    line-height: 1.6;
+    margin-top: 8px;
+    max-width: 44ch;
   }
 
   .today-play {
-    display: block;
-    text-align: center;
-    margin-top: 18px;
-    padding: 16px 24px;
-    border-radius: var(--r-md);
-    background: linear-gradient(115deg, #fff, #e8ecff);
-    color: #0a0f22;
-    font-weight: 900;
-    font-size: 1.05rem;
-    letter-spacing: .01em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 24px;
+    padding: 16px 28px;
+    border-radius: var(--r-pill);
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 15px;
+    font-weight: 500;
     text-decoration: none;
-    box-shadow: 0 14px 34px -12px rgba(255, 255, 255, .55);
-    transition: transform .18s var(--spring), box-shadow .25s;
-    animation: breathe 2.8s ease-in-out infinite;
+    box-shadow: var(--shadow);
+    transition: background .2s ease, box-shadow .2s ease, transform .15s ease;
   }
-  .today-play:active { transform: scale(.97); }
-  @keyframes breathe {
-    0%, 100% { box-shadow: 0 14px 34px -12px rgba(255, 255, 255, .45); }
-    50% { box-shadow: 0 18px 46px -12px rgba(255, 255, 255, .8); }
-  }
+  .today-play:hover { background: #000; box-shadow: var(--shadow-lift); }
+  .today-play:active { transform: translateY(1px); }
 
+  /* The week as seven hairline cells — the rotation at a glance. */
   .week-strip {
     display: flex;
-    gap: 6px;
-    margin-top: 16px;
+    margin-top: 24px;
+    border: 1px solid var(--rule);
+    border-radius: var(--r-md);
+    overflow: hidden;
   }
   .week-strip .day {
     flex: 1;
     text-align: center;
-    font-size: .68rem;
-    font-weight: 700;
-    color: var(--text-dim);
-    background: rgba(0, 0, 0, .28);
-    border: 1px solid var(--stroke);
-    border-radius: 12px;
-    padding: 7px 2px 6px;
-    line-height: 1.3;
-  }
-  .week-strip .day em { display: block; font-style: normal; font-size: .95rem; margin-top: 2px; }
-  .week-strip .day.now {
-    color: #24100a;
-    background: linear-gradient(150deg, var(--a1), var(--a2));
-    border-color: transparent;
-    box-shadow: 0 8px 20px -8px color-mix(in oklab, var(--a1) 90%, transparent);
-    transform: translateY(-2px);
-  }
-
-  /* ------------------------------ game grid ------------------------------ */
-
-  .grid-label {
-    font-size: .68rem;
+    padding: 10px 2px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: .08em;
     text-transform: uppercase;
-    letter-spacing: .18em;
-    color: var(--text-dim);
-    font-weight: 800;
-    margin: 30px 0 12px;
+    color: var(--ink-3);
+    border-right: 1px solid var(--rule);
+    line-height: 1.4;
   }
+  .week-strip .day:last-child { border-right: 0; }
+  .week-strip .day em { display: block; font-style: normal; font-size: 13px; margin-top: 3px; }
+  .week-strip .day.now { background: var(--ink); color: var(--paper); }
+
+  /* --------------------------- combined rank --------------------------- */
+
+  .rank-card {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding: 22px 26px;
+  }
+  .rank-card .level-badge { font-size: 34px; }
+
+  /* ------------------------------ game list ------------------------------ */
+  /* A ruled list, not a deck of cards: on a phone it scans in one pass. */
 
   .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 12px;
+    border-top: 1px solid var(--rule);
   }
 
   .game {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 16px;
-    border-radius: var(--r-md);
+    gap: 16px;
+    padding: 20px 4px;
+    border-bottom: 1px solid var(--rule);
     text-decoration: none;
     color: inherit;
     overflow: hidden;
-    isolation: isolate;
-    background:
-      linear-gradient(150deg, color-mix(in oklab, var(--c1) 20%, transparent), var(--glass) 65%) padding-box,
-      linear-gradient(150deg, color-mix(in oklab, var(--c1) 55%, transparent), var(--stroke) 70%) border-box;
-    border: 1px solid transparent;
-    backdrop-filter: blur(16px) saturate(150%);
-    -webkit-backdrop-filter: blur(16px) saturate(150%);
-    box-shadow: var(--shadow);
-    transition: transform .22s var(--spring), box-shadow .25s;
+    transition: background .25s ease, padding-left .25s ease;
     animation: rise .5s var(--ease) both;
   }
-  .game:nth-of-type(1) { animation-delay: .10s; }
-  .game:nth-of-type(2) { animation-delay: .16s; }
-  .game:nth-of-type(3) { animation-delay: .22s; }
-  .game:nth-of-type(4) { animation-delay: .28s; }
-  .game:nth-of-type(5) { animation-delay: .34s; }
-  .game:nth-of-type(6) { animation-delay: .40s; }
+  .game:nth-of-type(2) { animation-delay: .05s; }
+  .game:nth-of-type(3) { animation-delay: .10s; }
+  .game:nth-of-type(4) { animation-delay: .15s; }
+  .game:nth-of-type(5) { animation-delay: .20s; }
+  .game:nth-of-type(6) { animation-delay: .25s; }
+  .game:nth-of-type(7) { animation-delay: .30s; }
 
-  /* A colour wash that blooms from the icon on hover/press. */
+  .game:hover { background: var(--paper-2); padding-left: 12px; }
+
+  /* The only colour each row gets: a hairline in the game's own ink. */
   .game::before {
     content: "";
     position: absolute;
-    inset: 0;
-    z-index: -1;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 2px;
+    background: var(--c1, var(--p1));
+    border-radius: 2px;
     opacity: 0;
-    background: radial-gradient(80% 120% at 14% 50%, color-mix(in oklab, var(--c1) 60%, transparent), transparent 70%);
-    transition: opacity .3s;
+    transition: opacity .25s ease;
   }
   .game:hover::before { opacity: 1; }
-  .game:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 26px 54px -20px color-mix(in oklab, var(--c1) 85%, transparent);
-  }
-  .game:active { transform: scale(.975); }
 
   .game .icon {
     flex: none;
-    width: 54px;
-    height: 54px;
+    width: 42px;
+    height: 42px;
     display: grid;
     place-items: center;
-    font-size: 1.7rem;
-    border-radius: 17px;
-    background: linear-gradient(150deg, color-mix(in oklab, var(--c1) 70%, transparent), color-mix(in oklab, var(--c2) 60%, transparent));
-    border: 1px solid var(--stroke-hi);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 10px 24px -12px #000;
-    transition: transform .3s var(--spring);
+    font-size: 1.05rem;
+    border-radius: var(--r-md);
+    background: var(--card-bg);
+    border: 1px solid var(--rule);
   }
-  .game:hover .icon { transform: rotate(-8deg) scale(1.08); }
 
   .game .body { flex: 1; min-width: 0; }
-  .game h2 { font-size: 1.05rem; font-weight: 800; letter-spacing: -.02em; }
+  .game h2 {
+    font-family: var(--serif);
+    font-size: 24px;
+    line-height: 1.1;
+    letter-spacing: -.015em;
+  }
   .game p {
-    color: var(--text-dim);
-    font-size: .82rem;
-    margin-top: 4px;
-    line-height: 1.45;
+    color: var(--ink-2);
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-top: 5px;
+    max-width: 46ch;
   }
 
   /* Per-game level, read straight out of the game's own localStorage. */
   .game .lv {
     display: inline-block;
-    margin-left: 8px;
-    padding: 2px 9px;
-    border-radius: var(--r-pill);
-    font-size: .64rem;
-    font-weight: 800;
-    letter-spacing: .06em;
+    margin-left: 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .1em;
     text-transform: uppercase;
-    color: var(--ink);
-    background: linear-gradient(120deg, var(--c1), var(--c2));
+    color: var(--c1, var(--p1));
     vertical-align: middle;
   }
 
-  .game.soon {
-    opacity: .42;
-    pointer-events: none;
-    filter: saturate(.4);
+  .game .go {
+    flex: none;
+    font-family: var(--serif);
+    font-size: 20px;
+    color: var(--ink-3);
+    transition: transform .25s ease, color .25s ease;
   }
+  .game:hover .go { transform: translateX(4px); color: var(--ink); }
+
+  .game.soon { pointer-events: none; }
+  .game.soon .icon, .game.soon h2, .game.soon p { opacity: .45; }
+  .game.soon .go { display: none; }
   .game.soon h2::after {
-    content: "🔒 soon";
-    font-size: .6rem;
+    content: "soon";
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: .12em;
     text-transform: uppercase;
-    letter-spacing: .1em;
-    color: var(--text-dim);
-    border: 1px solid var(--stroke);
+    color: var(--ink-3);
+    border: 1px solid var(--rule);
     border-radius: var(--r-pill);
-    padding: 2px 8px;
-    margin-left: 8px;
+    padding: 3px 9px;
+    margin-left: 10px;
     vertical-align: middle;
-    font-weight: 700;
+    opacity: 1;
   }
 
   footer {
-    margin-top: 36px;
-    text-align: center;
-    color: var(--text-dim);
-    font-size: .8rem;
-    line-height: 1.7;
+    margin-top: 44px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    line-height: 1.9;
   }
-  footer a { color: var(--p1); text-decoration: none; font-weight: 600; }
-  footer a:hover { text-decoration: underline; }
+  footer a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--rule); }
+  footer a:hover { color: var(--ink); border-color: var(--ink); }
 
-  @media (max-width: 480px) {
-    .hub-head { flex-direction: column; gap: 10px; }
-    .streak-chip { align-self: flex-start; }
-    .today { padding: 18px; }
-    .today-icon { width: 54px; height: 54px; font-size: 1.7rem; }
-    .grid { grid-template-columns: 1fr; }
+  @media (max-width: 560px) {
+    .today { padding: 22px 20px; }
+    .today-pick { font-size: 26px; }
+    .game { padding: 18px 2px; gap: 14px; }
+    .game h2 { font-size: 21px; }
+    .rank-card { gap: 18px; padding: 20px; }
   }
 </style>
 </head>
 <body>
 <main class="wrap">
 
-  <div class="hub-head">
+  <header class="hub-head">
+    <span class="eyebrow">Deliberate practice</span>
     <div class="title">
-      <h1>Learning Games</h1>
-      <p>Deliberate practice, one session a day. The rotation covers every domain if you keep showing up.</p>
+      <h1>Learning<br><em>Games</em></h1>
+      <p>One session a day. The rotation covers every domain — if you keep showing up.</p>
     </div>
-    <div id="streak" class="streak-chip cold"><span class="flame">🔥</span> <span id="streak-n">0</span></div>
-  </div>
+    <div id="streak" class="streak-line cold">
+      <span class="dot"></span> <b id="streak-n">0</b> day streak
+    </div>
+  </header>
+
+  <div class="sec-head">Today</div>
 
   <section id="today" class="today"></section>
 
   <div class="card rank-card" id="rank-card">
-    <div class="level-badge">Lv&nbsp;<span id="rank-level">1</span><small>overall</small></div>
+    <div class="level-badge"><span id="rank-level">1</span><small>Overall level</small></div>
     <div class="xp">
       <div class="xp-bar"><div id="xp-fill"></div></div>
       <span id="rank-label">0 XP</span>
     </div>
   </div>
 
-  <div class="grid-label">All games</div>
+  <div class="sec-head">The games</div>
 
   <div class="grid" id="grid">
-    <a class="game" href="games/mapmaster/" data-game="mapmaster" style="--c1:#38bdf8; --c2:#3b82f6;">
-      <div class="icon">🌍</div>
-      <div class="body">
+    <a class="game" href="games/mapmaster/" data-game="mapmaster" style="--c1:#233142;">
+      <span class="icon">🌍</span>
+      <span class="body">
         <h2>Mapmaster</h2>
         <p>Name the country, find it on the map, drill the ones you keep missing.</p>
-      </div>
+      </span>
+      <span class="go">→</span>
     </a>
 
-    <a class="game" href="games/numbers/" data-game="numbers" style="--c1:#a855f7; --c2:#6366f1;">
-      <div class="icon">🔢</div>
-      <div class="body">
+    <a class="game" href="games/numbers/" data-game="numbers" style="--c1:#3E5E3A;">
+      <span class="icon">🔢</span>
+      <span class="body">
         <h2>Numbers</h2>
         <p>Mental math under time pressure — and the shortcuts behind it.</p>
-      </div>
+      </span>
+      <span class="go">→</span>
     </a>
 
-    <a class="game" href="games/reader/" data-game="reader" style="--c1:#fb923c; --c2:#f43f5e;">
-      <div class="icon">📖</div>
-      <div class="body">
+    <a class="game" href="games/reader/" data-game="reader" style="--c1:#C76A5E;">
+      <span class="icon">📖</span>
+      <span class="body">
         <h2>Reader</h2>
         <p>Speed reading with a comprehension check — raw wpm means nothing alone.</p>
-      </div>
+      </span>
+      <span class="go">→</span>
     </a>
 
-    <a class="game" href="games/chronicle/" data-game="chronicle" style="--c1:#2dd4a7; --c2:#0e9488;">
-      <div class="icon">🏛️</div>
-      <div class="body">
+    <a class="game" href="games/chronicle/" data-game="chronicle" style="--c1:#8A6A3B;">
+      <span class="icon">🏛️</span>
+      <span class="body">
         <h2>Chronicle</h2>
         <p>The timeline of history — what happened when, which came first, and why it mattered.</p>
-      </div>
+      </span>
+      <span class="go">→</span>
     </a>
 
-    <a class="game soon" href="#" style="--c1:#34d399; --c2:#14b8a6;">
-      <div class="icon">🗣️</div>
-      <div class="body">
+    <a class="game soon" href="#" style="--c1:#6B8CAF;">
+      <span class="icon">🗣️</span>
+      <span class="body">
         <h2>Lexicon</h2>
         <p>Vocabulary and language drills.</p>
-      </div>
+      </span>
     </a>
 
-    <a class="game soon" href="#" style="--c1:#f472b6; --c2:#e879f9;">
-      <div class="icon">📚</div>
-      <div class="body">
+    <a class="game soon" href="#" style="--c1:#6B8CAF;">
+      <span class="icon">📚</span>
+      <span class="body">
         <h2>Bookshelf</h2>
         <p>Facts and ideas from what you've been reading.</p>
-      </div>
+      </span>
     </a>
 
-    <a class="game soon" href="#" style="--c1:#94a3b8; --c2:#64748b;">
-      <div class="icon">♟️</div>
-      <div class="body">
+    <a class="game soon" href="#" style="--c1:#6B8CAF;">
+      <span class="icon">♟️</span>
+      <span class="body">
         <h2>Chess</h2>
         <p>Tactics puzzles and pattern recognition.</p>
-      </div>
+      </span>
     </a>
   </div>
 
   <footer>
-    Built for one player. Source on <a href="https://github.com/nodillydally/jason-games">GitHub</a>.
+    Built for one player.<br>
+    Source on <a href="https://github.com/nodillydally/jason-games">GitHub</a>.
   </footer>
 </main>
 

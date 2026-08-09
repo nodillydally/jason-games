@@ -121,7 +121,7 @@
     }).join('');
 
     host.innerHTML = `
-      <div class="today-label">Today's session</div>
+      <div class="today-label">${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][dayIdx]}</div>
       <div class="today-row">
         <div class="today-icon">${pick.game.icon}</div>
         <div class="today-body">

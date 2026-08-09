@@ -1,206 +1,179 @@
 /* Chronicle — skin over lib/theme.css.
  *
- * Verdigris and aged gold: bronze statues and marble, not neon. Everything
- * shared lives in the theme; this file owns the question stage, the sequence
- * builder, and the era bars. */
+ * Bronze on paper: an archive page, not a neon timeline. The shared theme owns
+ * everything common; this file owns the question stage, the sequence builder,
+ * and the era bars. */
 
 :root {
-  --p1: #2dd4a7;          /* verdigris */
-  --p2: #0e9488;          /* deep patina */
-  --a1: #e8c46b;          /* aged gold */
-  --a2: #ff9a5a;
-
-  --bg: #08120f;          /* a green-black, its own place */
-  --bg-2: #0e1f1a;
+  --p1: #8A6A3B;          /* bronze */
+  --p2: #C79A4F;          /* aged gold */
 }
 
-#app { max-width: 720px; }
+#app { max-width: 680px; }
 
 /* --------------------------- question stage --------------------------- */
 
 .question-card {
   text-align: center;
-  padding: 30px 20px 26px;
-  margin-top: 14px;
-}
-
-.question-card::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 34%;
-  width: 320px;
-  height: 300px;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: -1;
-  background: radial-gradient(circle, color-mix(in oklab, var(--p1) 26%, transparent), transparent 68%);
-  filter: blur(22px);
+  padding: 38px 24px 30px;
+  margin-top: 6px;
 }
 
 .topic-tag {
   display: inline-block;
-  font-size: .66rem;
-  font-weight: 700;
-  text-transform: uppercase;
+  font-family: var(--mono);
+  font-size: 10px;
   letter-spacing: .16em;
-  color: var(--text-dim);
-  background: var(--sunk);
-  border: 1px solid var(--stroke);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border: 1px solid var(--rule);
   border-radius: var(--r-pill);
-  padding: 6px 14px;
-  margin-bottom: 18px;
+  padding: 5px 13px;
+  margin-bottom: 22px;
 }
 
-#question { margin-bottom: 24px; }
+#question { margin-bottom: 30px; }
 .q-lead {
   display: block;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--text-dim);
-  letter-spacing: -.01em;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
+/* The event itself, set like a headline in an old paper. */
 .q-event {
   display: block;
-  margin-top: 8px;
-  font-size: clamp(1.25rem, 5.4vw, 1.7rem);
-  font-weight: 800;
+  margin-top: 14px;
+  font-family: var(--serif);
+  font-size: clamp(28px, 8vw, 40px);
+  line-height: 1.1;
   letter-spacing: -.025em;
-  line-height: 1.3;
   text-wrap: balance;
-  text-shadow: 0 6px 34px color-mix(in oklab, var(--p1) 45%, transparent);
 }
 
-#choices { display: grid; grid-template-columns: 1fr; gap: 10px; }
+#choices { display: grid; grid-template-columns: 1fr; gap: 8px; }
 #choices button {
-  padding: 14px 16px 14px 44px;
+  padding: 15px 18px 15px 46px;
   min-height: 56px;
-  font-size: .98rem;
-  font-weight: 600;
+  font-size: 14.5px;
   text-align: left;
-  line-height: 1.35;
+  line-height: 1.4;
   border-radius: var(--r-md);
   position: relative;
 }
-#choices button .key {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: .7rem;
-  color: var(--text-dim);
-  border: 1px solid var(--stroke);
-  border-radius: 6px;
-  padding: 2px 7px;
-}
-#choices button.enter { animation: rise .34s var(--ease) both; }
+#choices button.enter { animation: rise .32s var(--ease) both; }
+#choices button.enter:nth-child(2) { animation-delay: .04s; }
+#choices button.enter:nth-child(3) { animation-delay: .08s; }
+#choices button.enter:nth-child(4) { animation-delay: .12s; }
 #choices button:disabled { opacity: 1; }
-#choices button:disabled:not(.correct):not(.wrong) { opacity: .35; }
+#choices button:disabled:not(.correct):not(.wrong) { opacity: .32; }
 
-#next-btn { margin-top: 16px; padding: 14px 36px; border-radius: var(--r-md); }
+#next-btn { margin-top: 22px; padding: 14px 36px; }
 
 /* --------------------------- sequence builder --------------------------- */
 
 .seq-slots {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 18px;
+  margin-bottom: 22px;
+  border-top: 1px solid var(--rule);
 }
 .seq-chip,
 .seq-empty {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 52px;
-  padding: 10px 14px;
-  border-radius: var(--r-md);
+  gap: 14px;
+  min-height: 54px;
+  padding: 12px 14px;
   text-align: left;
-  font-size: .93rem;
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: 14px;
+  line-height: 1.35;
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
 }
-.seq-chip {
-  background: linear-gradient(150deg, color-mix(in oklab, var(--p1) 22%, transparent), var(--glass));
-  border: 1px solid color-mix(in oklab, var(--p1) 55%, transparent);
-  animation: rise .25s var(--ease) both;
-}
+.seq-chip { animation: fade-up .25s var(--ease) both; }
+.seq-chip:hover { background: var(--paper-2); box-shadow: none; }
+/* The ordinal is the point of this drill, so it gets the serif. */
 .seq-chip b {
   flex: none;
-  min-width: 30px;
-  font-size: .78rem;
-  color: var(--a1);
-  font-variant-numeric: tabular-nums;
+  min-width: 26px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 20px;
+  color: var(--p1);
 }
-.seq-chip.reveal.right { border-color: var(--good); box-shadow: 0 0 18px -6px var(--good); }
-.seq-chip.reveal.wrong { border-color: var(--bad); }
+.seq-chip.reveal.right { box-shadow: inset 2px 0 0 var(--good); }
+.seq-chip.reveal.wrong { box-shadow: inset 2px 0 0 var(--bad); }
 
 .seq-empty {
   justify-content: center;
-  color: var(--text-dim);
-  font-size: .8rem;
-  border: 1px dashed var(--stroke);
-  background: var(--sunk);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-bottom: 1px dashed var(--rule);
 }
 
 .seq-pool {
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 .seq-pool button {
   min-height: 52px;
-  padding: 12px 14px;
-  font-size: .93rem;
-  font-weight: 600;
+  padding: 13px 16px;
+  font-size: 14px;
   text-align: left;
-  line-height: 1.3;
+  line-height: 1.35;
   border-radius: var(--r-md);
 }
 
-#seq-check { width: 100%; padding: 14px; border-radius: var(--r-md); }
+#seq-check { width: 100%; padding: 15px; }
 
 /* ------------------------------- stats ------------------------------- */
 
 .era-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
   animation: rise .4s var(--ease) both;
 }
-.era-name { flex: 0 0 46%; display: flex; flex-direction: column; }
-.era-name b { font-size: .9rem; }
-.era-name small { color: var(--text-dim); font-size: .72rem; margin-top: 1px; }
+.era-name { flex: 0 0 44%; display: flex; flex-direction: column; gap: 2px; }
+.era-name b { font-size: 14px; font-weight: 500; }
+.era-name small {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
 .era-num {
   flex: 0 0 44px;
   text-align: right;
-  font-size: .8rem;
-  font-weight: 700;
-  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
-}
-
-#stats-eras h3, #stats-weakest h3 {
-  font-size: .72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .14em;
-  color: var(--text-dim);
-  margin: 20px 0 12px;
 }
 
 /* --------------------------- small screens --------------------------- */
 
 @media (max-width: 560px) {
-  .question-card { padding: 24px 14px 20px; }
-  .era-name { flex: 0 0 44%; }
-  .seq-chip, .seq-pool button { font-size: .87rem; }
+  .question-card { padding: 28px 16px 24px; }
+  .era-name { flex: 0 0 42%; }
+  .seq-chip, .seq-pool button { font-size: 13px; }
 }
 
 /* Touch devices: number-key hints are meaningless without a keyboard */
 @media (hover: none) {
   #choices button .key { display: none; }
-  #choices button { padding-left: 16px; }
+  #choices button { padding-left: 18px; }
 }
