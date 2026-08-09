@@ -20,22 +20,27 @@
     mapmaster: { name: 'Mapmaster', href: 'games/mapmaster/', icon: '🌍', store: 'mapmaster-v1' },
     numbers: { name: 'Numbers', href: 'games/numbers/', icon: '🔢', store: 'numbers.profile.v1' },
     reader: { name: 'Reader', href: 'games/reader/', icon: '📖', store: 'reader.profile.v1' },
-    // chronicle: { name: 'Chronicle', href: 'games/chronicle/', icon: '🏛️' },  // history — next build
+    chronicle: { name: 'Chronicle', href: 'games/chronicle/', icon: '🏛️', store: 'chronicle.profile.v1' },
     // elements:  { name: 'Elements',  href: 'games/elements/',  icon: '🧪' },  // science
     // briefing:  { name: 'Briefing',  href: 'games/briefing/',  icon: '📰' },  // news + expression
   };
 
-  // Mon..Sun. Each slot: candidate games in priority order + a mode hint.
-  // Priorities point at unbuilt games on purpose — the day a game ships and
-  // is uncommented in GAMES, the rotation adopts it.
+  // Mon..Sun. Each slot lists candidates in priority order, each carrying its
+  // own mode — the first candidate whose game exists in GAMES wins. Slots
+  // point at unbuilt games on purpose: the day one ships and is uncommented,
+  // it takes its slots without this table needing a redesign.
   const ROTATION = [
-    { games: ['numbers'], mode: 'Ladder', why: 'Start the week where the ceiling is — climb until it breaks.' },
-    { games: ['chronicle', 'reader'], mode: 'Flash read', why: 'Speed with comprehension held — train just above baseline.' },
-    { games: ['mapmaster'], mode: 'Review', why: 'Spaced repetition day — clear the trouble spots.' },
-    { games: ['elements', 'numbers'], mode: 'Blitz', why: 'Volume day — as many as the clock allows.' },
-    { games: ['reader'], mode: 'Book passages', why: 'Friday is books — one signature passage, kept for good.' },
-    { games: ['chronicle', 'mapmaster'], mode: 'Find it', why: 'The reverse drill — recall is stronger than recognition.' },
-    { games: ['briefing', 'reader'], mode: 'Timed read', why: 'Whole-page reading under a clock — closest to real reading.' },
+    [{ g: 'numbers', mode: 'Ladder', why: 'Start the week where the ceiling is — climb until it breaks.' }],
+    [{ g: 'chronicle', mode: 'Classic', why: 'History day — place the eras, learn the whys.' },
+     { g: 'reader', mode: 'Flash read', why: 'Speed with comprehension held — train just above baseline.' }],
+    [{ g: 'mapmaster', mode: 'Review', why: 'Spaced repetition day — clear the trouble spots.' }],
+    [{ g: 'elements', mode: 'Decks', why: 'Science day — spaced repetition on the fundamentals.' },
+     { g: 'numbers', mode: 'Blitz', why: 'Volume day — as many as the clock allows.' }],
+    [{ g: 'reader', mode: 'Book passages', why: 'Friday is books — one signature passage, kept for good.' }],
+    [{ g: 'chronicle', mode: 'Sequence', why: 'Order four events — the drill that builds the actual timeline.' },
+     { g: 'mapmaster', mode: 'Find it', why: 'The reverse drill — recall is stronger than recognition.' }],
+    [{ g: 'briefing', mode: 'Recall', why: 'What happened this week — and why it mattered.' },
+     { g: 'reader', mode: 'Timed read', why: 'Whole-page reading under a clock — closest to real reading.' }],
   ];
 
   const STREAK_KEY = 'games.streak.v1';
@@ -79,9 +84,9 @@
       return { game: GAMES.reader, mode: 'Baseline', why: 'First Sunday — monthly re-baseline. The trend over months is the real score.' };
     }
 
-    const slot = ROTATION[dayIdx];
-    const gameKey = slot.games.find((g) => GAMES[g]) || 'reader';
-    const pick = { game: GAMES[gameKey], mode: slot.mode, why: slot.why };
+    const cand = ROTATION[dayIdx].find((c) => GAMES[c.g]) || { g: 'reader', mode: 'Flash read', why: 'Speed with comprehension held.' };
+    const gameKey = cand.g;
+    const pick = { game: GAMES[gameKey], mode: cand.mode, why: cand.why };
 
     // Sharpen with what the games already know about you.
     if (gameKey === 'mapmaster') {
@@ -96,7 +101,7 @@
         if (worst && worst.acc < 0.85) pick.why = 'Spaced repetition day — Review mode drills what you keep missing until it sticks.';
       }
     }
-    if (gameKey === 'reader' && slot.mode === 'Flash read' && reader.baselineWpm) {
+    if (gameKey === 'reader' && cand.mode === 'Flash read' && reader.baselineWpm) {
       pick.why = `Train just above your natural pace — baseline is ${reader.baselineWpm} wpm, so set the slider ~${reader.baselineWpm + 50}.`;
     }
     return pick;
@@ -110,8 +115,9 @@
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     const strip = ROTATION.map((slot, i) => {
-      const g = GAMES[slot.games.find((k) => GAMES[k]) || 'reader'];
-      return `<span class="day${i === dayIdx ? ' now' : ''}" title="${g.name} — ${slot.mode}">${dayNames[i]}<em>${g.icon}</em></span>`;
+      const c = slot.find((x) => GAMES[x.g]) || { g: 'reader', mode: 'Flash read' };
+      const g = GAMES[c.g];
+      return `<span class="day${i === dayIdx ? ' now' : ''}" title="${g.name} — ${c.mode}">${dayNames[i]}<em>${g.icon}</em></span>`;
     }).join('');
 
     host.innerHTML = `
