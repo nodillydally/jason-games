@@ -108,6 +108,32 @@
   letter-spacing: .06em;
 }
 
+.wardrobe-purse {
+  position: relative;
+  padding: 7px 13px;
+  min-height: 32px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
+  color: var(--ink-2);
+}
+/* Lit only when today's three are actually within reach. */
+.wardrobe-purse.affordable {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--a1) 60%, transparent);
+}
+.wardrobe-purse.affordable::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--a1);
+}
+
 .wardrobe-panel {
   flex: 1 0 100%;
   margin-top: 4px;
