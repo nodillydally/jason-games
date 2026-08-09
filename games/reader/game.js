@@ -612,6 +612,30 @@ function beginRecall() {
   $('recall-text').focus();
 }
 
+// Dozing off happens. The honest exit is a re-read: the same passage again,
+// comprehension still graded, but the SPEED measurement is voided — a dozed
+// first pass wasn't reading, and a second pass isn't a clean timing. Nothing
+// this round touches the baseline, the training pace, or the wpm history.
+function rereadPassage() {
+  if (!g) return;
+  g.reread = true;
+  // finishReading already banked this passage's words; the second pass will
+  // bank them again, so take the first count back.
+  g.wordsRead = Math.max(0, g.wordsRead - g.words.length);
+  g.index = 0;
+  g.paused = false;
+  g.readStartedAt = null;
+
+  if (SCROLL_MODES.has(g.mode)) return beginScrollRead();
+
+  $('read-title').textContent = g.passage.title;
+  $('read-wpm').textContent = `${g.wpm} wpm`;
+  $('progress-fill').style.width = '0%';
+  $('paused-note').classList.add('hidden');
+  showScreen('read');
+  countIn(3);
+}
+
 function submitRecall() {
   const text = $('recall-text').value.trim();
   if (text.split(/\s+/).filter(Boolean).length < RECALL_MIN_WORDS) {
@@ -656,6 +680,7 @@ function scoreRecallRound(grade, text) {
     effective,
     ai: grade,
     recallText: text,
+    reread: Boolean(g.reread),
   });
 
   g.log.push({
@@ -671,14 +696,14 @@ function scoreRecallRound(grade, text) {
   lvl.correct += grade.score;
   lvl.total += 100;
 
-  if (g.mode === 'baseline' && comprehension >= BASELINE_MIN_COMP) {
+  if (!g.reread && g.mode === 'baseline' && comprehension >= BASELINE_MIN_COMP) {
     // The number every other mode trains against — but only if the recall
     // proves the reading actually happened. A fresh baseline reseeds the
     // adaptive training pace too.
     store.baselineWpm = actualWpm;
     store.trainWpm = 0;
   }
-  if (g.adaptivePace) adaptWpm(comprehension);
+  if (g.adaptivePace && !g.reread) adaptWpm(comprehension);
 
   endGame();
 }
@@ -892,9 +917,12 @@ function endGame(aborted = false) {
   const levelAfter = levelForXp(store.xp);
 
   const last = g.rounds[g.rounds.length - 1];
-  const best = g.rounds.reduce((m, r) => Math.max(m, r.effective), 0);
+  // Re-read rounds are comprehension practice, not measurements — they never
+  // enter the wpm history or the personal best.
+  const measured = g.rounds.filter((r) => !r.reread);
+  const best = measured.reduce((m, r) => Math.max(m, r.effective), 0);
   if (best > store.bestEffective) store.bestEffective = best;
-  g.rounds.forEach((r) => {
+  measured.forEach((r) => {
     store.history.push({ t: Date.now(), wpm: r.wpm, comp: r.comprehension, ewpm: r.effective });
   });
   store.history = store.history.slice(-60);
@@ -965,6 +993,13 @@ function endGame(aborted = false) {
         comp >= 85 ? 'Comprehension is holding. Push the speed up 50 and see if it still does.'
           : comp >= 60 ? 'You are near the edge — this is roughly your working ceiling right now.'
           : 'Too fast. At this speed you are recognising words rather than reading sentences.';
+    }
+
+    if (last.reread) {
+      if (g.mode === 'baseline') $('results-title').textContent = '⏱ Re-read round';
+      $('results-note').textContent =
+        'Re-read round — the recall was graded, but no speed was recorded. ' +
+        'Dozing happens; the measurements stay clean.';
     }
 
     if (last.ai) {
@@ -1061,6 +1096,7 @@ $('quit-btn').addEventListener('click', () => endGame(true));
 $('scroll-quit').addEventListener('click', () => endGame(true));
 $('scroll-done').addEventListener('click', () => finishScrollRead(false));
 $('recall-quit').addEventListener('click', () => endGame(true));
+$('recall-reread').addEventListener('click', rereadPassage);
 $('recall-submit').addEventListener('click', submitRecall);
 $('again-btn').addEventListener('click', startGame);
 $('menu-btn').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
