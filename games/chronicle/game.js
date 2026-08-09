@@ -865,7 +865,11 @@ function renderStudyList() {
     // remaining tells you the length of the reading, not the state of the work.
     const pool = syl.era ? EVENTS.filter((e) => e.era === syl.id) : [];
     const placed = pool.filter((e) => isPinned(e.id)).length;
-    const mark = done
+    const saved = loadStudySave();
+    const inProgress = saved && saved.syl === id && saved.si > 0 && saved.si < syl.sections.length;
+    const mark = inProgress
+      ? `▶ part ${saved.si + 1} of ${syl.sections.length}`
+      : done
       ? agoLabel(store.studiedAt && store.studiedAt[id])
       : `${syl.sections.length} parts`;
     b.innerHTML =
@@ -883,6 +887,36 @@ function renderStudyList() {
   });
 }
 
+// A study course is long by design — progress survives leaving. The
+// checkpoint is the section: each part entered is saved, so coming back
+// resumes at the part you were on with your counters intact.
+const STUDY_SAVE_KEY = 'chronicle.study.v1';
+
+function loadStudySave() {
+  try { return JSON.parse(localStorage.getItem(STUDY_SAVE_KEY)); } catch { return null; }
+}
+
+function saveStudy() {
+  if (!st) return;
+  try {
+    localStorage.setItem(STUDY_SAVE_KEY, JSON.stringify({
+      syl: st.syl.id,
+      si: st.si,
+      correct: st.correct,
+      answered: st.answered,
+      predictScore: st.predictScore,
+      predictOf: st.predictOf,
+      placeScore: st.placeScore,
+      placeOf: st.placeOf,
+      log: st.log,
+      id: st.id,
+      startedAt: st.startedAt,
+    }));
+  } catch { /* private mode — resume just won't survive */ }
+}
+
+const clearStudySave = () => localStorage.removeItem(STUDY_SAVE_KEY);
+
 function startStudy(id) {
   const syl = syllabusFor(id);
   if (!syl) return;
@@ -897,8 +931,27 @@ function startStudy(id) {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     startedAt: Date.now(),
   };
+
+  // Pick up where this course was left. Counters carry over; the part being
+  // read when you left restarts from its top (a checkpoint, not a bookmark).
+  const saved = loadStudySave();
+  let from = 0;
+  if (saved && saved.syl === id && saved.si > 0 && saved.si < syl.sections.length) {
+    st.correct = saved.correct || 0;
+    st.answered = saved.answered || 0;
+    st.predictScore = saved.predictScore || 0;
+    st.predictOf = saved.predictOf || 0;
+    st.placeScore = saved.placeScore || 0;
+    st.placeOf = saved.placeOf || 0;
+    st.log = saved.log || [];
+    st.id = saved.id || st.id;
+    st.startedAt = saved.startedAt || st.startedAt;
+    from = saved.si;
+    if (window.Juice) Juice.toast(`▶ Resuming — part ${from + 1} of ${syl.sections.length}`);
+  }
+
   showScreen('study');
-  enterSection(0);
+  enterSection(from);
 }
 
 const totalSections = () => st.syl.sections.length;
@@ -906,6 +959,7 @@ const curSection = () => st.syl.sections[st.si];
 
 function enterSection(i) {
   st.si = i;
+  saveStudy();
   const sec = curSection();
   st.events = sectionEvents(sec);
   st.rungs = buildRungs(sec);
@@ -1348,6 +1402,7 @@ function syncStudy(aborted) {
 }
 
 function finishStudy() {
+  clearStudySave();
   const xpGain = studyXp();
   const levelBefore = levelForXp(store.xp);
   store.xp += xpGain;
