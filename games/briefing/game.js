@@ -160,10 +160,9 @@ function renderMenu() {
   const done = store.doneDates[latest.date];
   $('start-btn').disabled = false;
   $('setup-hint').textContent =
-    `Latest brief: ${weekday(latest.date)}, ${latest.topic} — ${latest.items.length} stories` +
-    `${briefs[1] ? ', plus cold recall of ' + weekday(briefs[1].date) + "'s" : ''}, plus the market pulse. ` +
-    `Everything you write is graded (A–F and /100) against the actual material.` +
-    (done ? ' You\'ve already kept this brief — replaying won\'t re-count the streak.' : '');
+    `${weekday(latest.date)} · ${latest.topic} · ${latest.items.length} stories + markets` +
+    (briefs[1] ? ` + recall of ${weekday(briefs[1].date)}` : '') +
+    (done ? ' · already kept' : '');
 }
 
 function showScreen(name) {
@@ -239,14 +238,19 @@ function saveDraft() {
 
 // ---- panel renderers ------------------------------------------------------
 
-function promptBlock(prompts, state, cta) {
+function promptBlock(prompts, state, cta, extra = '') {
   return `
-    <div class="take-label">Your turn</div>
     <p class="take-prompts">${prompts.map((p) => `<span>${esc(p)}</span>`).join('')}</p>
-    <textarea id="take-input" rows="5" placeholder="Dump it all in one go — typed fast is fine; spelling doesn't count.">${esc(state.text)}</textarea>
+    ${extra}
+    <textarea id="take-input" rows="5" placeholder="">${esc(state.text)}</textarea>
     <button id="grade-btn" class="primary big" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Grading…' : cta}</button>
     <div id="grade-error" class="grade-error"></div>`;
 }
+
+// Bold the load-bearing specifics — figures, magnitudes, acronyms — which are
+// also exactly what the grader checks for. Escape first, then mark.
+const KEY_RX = /(\$\d[\d,]*(?:\.\d+)?(?:\s?(?:trillion|billion|million|bn|mn|k))?|\d[\d,]*(?:\.\d+)?(?:%|(?:\s?(?:trillion|billion|million|percent|points?|bps)))?|\b[A-Z][A-Z0-9]{1,5}\b)/g;
+const emphasize = (s) => esc(s).replace(KEY_RX, '<b>$1</b>');
 
 function gradeCard(grade, revealHtml = '') {
   return `
@@ -269,14 +273,16 @@ function renderPanel() {
 
   if (key === 'recall') {
     const y = briefs[1];
+    const hintHtml = state.hinted
+      ? `<div class="hint-reveal"><b>Headlines (cued recall — caps the grade)</b><ul>${y.items.map((it) => `<li>${esc(it.headline || it.what)}</li>`).join('')}</ul></div>`
+      : `<button id="hint-btn" class="ghost">Show headlines (caps the grade at 85)</button>`;
     panel.innerHTML = `
       <div class="card story-card">
         <div class="story-meta">Cold recall · ${weekday(y.date)} ${shortDate(y.date)} · ${esc(y.topic)}</div>
         <h2 class="panel-title">What do you remember from ${weekday(y.date)}'s brief?</h2>
-        <p class="panel-sub">No peeking, no cues — every story you can pull back, with as much of the what and the why as survives. This is the rep that makes the news yours.</p>
         ${state.grade
           ? gradeCard(state.grade, `<div class="reveal-block"><b>${weekday(y.date)}'s stories were</b><ul>${y.items.map((it) => `<li>${esc(it.headline || it.what)}</li>`).join('')}</ul></div>`)
-          : promptBlock([`${y.items.length} stories ran that day`, 'What happened?', 'Why did it matter?'], state, 'Grade my recall')}
+          : promptBlock([`${y.items.length} stories`, 'What happened?', 'Why did it matter?'], state, 'Grade my recall', hintHtml)}
       </div>`;
   } else if (key === 'markets') {
     renderMarketsPanel(panel, state);
@@ -287,8 +293,8 @@ function renderPanel() {
       <div class="card story-card">
         <div class="story-meta">${weekday(g.brief.date)} · story ${i + 1} of ${g.brief.items.length}</div>
         <h2 class="panel-title">${esc(it.headline || it.what)}</h2>
-        ${it.headline ? `<p class="story-what">${esc(it.what)}</p>` : ''}
-        <ul class="story-details">${it.details.map((d) => `<li>${esc(d)}</li>`).join('')}</ul>
+        ${it.headline ? `<p class="story-what">${emphasize(it.what)}</p>` : ''}
+        <ul class="story-details">${it.details.map((d) => `<li>${emphasize(d)}</li>`).join('')}</ul>
         ${it.sources.length ? `<div class="sources">${it.sources.map((s) => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)} ↗</a>`).join('')}</div>` : ''}
         ${state.grade
           ? gradeCard(state.grade, `<div class="reveal-block"><b>The brief's take</b><p>${esc(it.why)}</p></div>`)
@@ -338,6 +344,12 @@ function wirePanel() {
   if (ta) ta.addEventListener('input', () => { g.tabs[g.active].text = ta.value; });
   const btn = $('grade-btn');
   if (btn) btn.addEventListener('click', gradeActive);
+  const hint = $('hint-btn');
+  if (hint) hint.addEventListener('click', () => {
+    saveDraft();
+    g.tabs.recall.hinted = true;
+    renderPanel();
+  });
 }
 
 // ---- grading --------------------------------------------------------------
@@ -357,7 +369,7 @@ async function gradeActive() {
   renderPanel();
 
   const payload = key === 'recall'
-    ? { kind: 'recall', date: briefs[1].date, user_text: text }
+    ? { kind: 'recall', date: briefs[1].date, user_text: text, hinted: Boolean(state.hinted) }
     : key === 'markets'
     ? { kind: 'markets', user_text: text }
     : { kind: 'story', date: g.brief.date, idx: Number(key.slice(1)), user_text: text };
@@ -459,8 +471,8 @@ function endGame(aborted = false) {
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`
     : `+${xpGain} XP`;
   $('results-note').textContent = storiesAllGraded()
-    ? 'Tomorrow opens with cold recall of what you just read. That second pass is where it becomes yours.'
-    : 'Some stories are still ungraded — the streak counts full briefs. Come back to them today if you can.';
+    ? 'Tomorrow opens with cold recall of today.'
+    : 'Streak counts full briefs — some stories are still ungraded.';
 
   showScreen('results');
   if (window.Juice) {
