@@ -186,6 +186,18 @@
   }
   .week-strip .day:last-child { border-right: 0; }
   .week-strip .day em { display: block; font-style: normal; font-size: 13px; margin-top: 3px; }
+
+  /* A finished day trades its game icon for a flame, so the strip reads as the
+     week's record rather than as a fixed timetable. */
+  .week-strip .day.done { color: var(--a2); }
+  .week-strip .day.done:not(.now) { background: color-mix(in oklab, var(--a1) 12%, transparent); }
+  .week-strip .day.now.done { color: var(--paper); }
+  .week-strip .day.now.done em { animation: flicker 2.6s ease-in-out infinite; }
+  @keyframes flicker {
+    0%, 100% { transform: scale(1) rotate(0); }
+    35% { transform: scale(1.13) rotate(-5deg); }
+    70% { transform: scale(.97) rotate(4deg); }
+  }
   .week-strip .day.now { background: var(--ink); color: var(--paper); }
 
   /* The two daily duties: the Brief, and the rotation's game. */

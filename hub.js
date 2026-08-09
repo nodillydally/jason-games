@@ -121,6 +121,33 @@
     return Boolean(b && b.doneDates && b.doneDates[new Date().toISOString().slice(0, 10)]);
   }
 
+  // Mon..Sun of the current week as ISO dates, so the strip can look each day
+  // up in the playlog. UTC to match what sync.js writes.
+  function weekDates() {
+    const now = new Date();
+    const dayIdx = (now.getDay() + 6) % 7; // Monday = 0
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now);
+      d.setDate(now.getDate() - dayIdx + i);
+      return d.toISOString().slice(0, 10);
+    });
+  }
+
+  // A day is complete on the same terms the duty list uses: the Brief kept and
+  // the rotation's game played. Anything less is a day in progress.
+  // The playlog only keeps 14 days, so older weeks quietly stop showing fire.
+  function completedDays() {
+    const log = read(PLAYLOG_KEY) || {};
+    const brief = read('briefing.profile.v1');
+    const kept = (brief && brief.doneDates) || {};
+    const done = new Set();
+    for (const iso of weekDates()) {
+      const played = log[iso] || [];
+      if (kept[iso] && played.some((k) => k !== 'briefing')) done.add(iso);
+    }
+    return done;
+  }
+
   function renderToday() {
     const host = document.getElementById('today');
     if (!host) return;
@@ -128,10 +155,17 @@
     const dayIdx = (new Date().getDay() + 6) % 7;
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+    // A finished day trades its game icon for a flame — the row then reads as
+    // the week's actual record rather than as a fixed timetable.
+    const dates = weekDates();
+    const done = completedDays();
     const strip = ROTATION.map((slot, i) => {
       const c = slot.find((x) => GAMES[x.g]) || { g: 'reader', mode: 'Flash read' };
       const g = GAMES[c.g];
-      return `<span class="day${i === dayIdx ? ' now' : ''}" title="${g.name} — ${c.mode}">${dayNames[i]}<em>${g.icon}</em></span>`;
+      const lit = done.has(dates[i]);
+      const cls = `day${i === dayIdx ? ' now' : ''}${lit ? ' done' : ''}`;
+      const title = lit ? `${dayNames[i]} — day complete` : `${g.name} — ${c.mode}`;
+      return `<span class="${cls}" title="${title}">${dayNames[i]}<em>${lit ? '🔥' : g.icon}</em></span>`;
     }).join('');
 
     // Two things, every day: the Brief, and the rotation's game.
