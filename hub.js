@@ -321,7 +321,24 @@
           : `<div class="elo-row unrated"><span class="er-label">${d.icon} ${d.label}</span><b>—</b><small>not yet rated</small></div>`).join('')}
       </div>`;
   }
+  // Each game card wears its domain rating next to the level: the level is
+  // the loot economy, the rating is the truth.
+  function stampCardRatings() {
+    if (!window.EloBoard) return;
+    EloBoard.board().domains.forEach((d) => {
+      if (d.rating === null) return;
+      const h2 = document.querySelector(`.game[data-game="${d.key}"] h2`);
+      if (!h2 || h2.querySelector('.elo-badge')) return;
+      const el = document.createElement('span');
+      el.className = 'elo-badge';
+      el.title = `${d.label} rating${d.detail ? ` · ${d.detail}` : ''}`;
+      el.textContent = Math.round(d.rating);
+      h2.appendChild(el);
+    });
+  }
+
   renderEloBoard();
+  stampCardRatings();
   window.addEventListener('pageshow', (e) => { if (e.persisted) renderEloBoard(); });
 
   // The locker: the shared character stands in the hub like a lobby, with the
