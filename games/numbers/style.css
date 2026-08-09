@@ -57,6 +57,27 @@
   font-variant-numeric: tabular-nums;
   margin-bottom: 34px;
 }
+/* A stacked fraction: numerator over a rule over denominator. Built from
+   markup rather than font features, so it renders the same everywhere. All
+   dimensions are in em so it scales with the clamped question size. */
+.frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  vertical-align: -.34em;
+  margin: 0 .08em;
+  line-height: 1;
+}
+.frac b, .frac i {
+  font-weight: inherit;
+  font-style: normal;
+  font-size: .52em;
+  padding: 0 .2em;
+}
+.frac b { border-bottom: .05em solid currentColor; padding-bottom: .08em; }
+.frac i { padding-top: .1em; }
+
 #question.enter { animation: fade-up .32s var(--ease) both; }
 #question.pop   { animation: q-pop .4s var(--ease) both; }
 #question.shake { animation: q-dip .4s var(--ease) both; }

@@ -115,7 +115,7 @@ const GENERATORS = {
     const base = d * rnd(2, 20);
     const unit = base / d;
     return {
-      text: `${n}⁄${d} of ${base}`,
+      text: `${n}/${d} of ${base}`,
       answer: n * unit,
       why: `${base} ÷ ${d} = ${unit}, then × ${n}.`,
       // Stopping at the unit fraction — forgetting to multiply by the numerator.

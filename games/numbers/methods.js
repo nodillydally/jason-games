@@ -118,7 +118,7 @@ const METHODS = {
       'The common mistake is stopping after step one.',
     ],
     example: {
-      problem: '3⁄8 of 96',
+      problem: '3/8 of 96',
       lines: [
         '96 ÷ 8 = 12 (one eighth)',
         '12 × 3 = 36',
