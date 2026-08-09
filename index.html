@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Jason's Learning Games</title>
 <link rel="stylesheet" href="lib/theme.css">
+<link rel="stylesheet" href="lib/wardrobe.css">
 <script src="lib/theme.js"></script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
 <style>
@@ -56,6 +57,41 @@
     flex: none;
   }
   .streak-line.cold .dot { background: var(--rule); box-shadow: none; }
+  /* The locker — the lobby. The figure stands big on a stage; the wardrobe
+     bay's own buttons and inline panel (Worn / Shop) do the rest. */
+  .lobby-card { padding: 26px 28px; }
+  .lobby-card .wardrobe-bay {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 22px;
+    margin: 0;
+  }
+  .lobby-card .wardrobe-figure {
+    width: 96px;                 /* ~3.4x the in-game bay figure */
+    height: 144px;
+    position: relative;
+    margin: 6px 18px 14px 10px;
+  }
+  .lobby-card .wardrobe-figure::after {
+    /* the stage — a soft floor ellipse under the figure */
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -12px;
+    width: 120%;
+    height: 16px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,.18), transparent 70%);
+  }
+  .lobby-card .wardrobe-btn,
+  .lobby-card .wardrobe-purse {
+    padding: 12px 20px;
+    min-height: 44px;
+    font-size: 12.5px;
+  }
+
   /* Quick play — THE button: one tap, straight into a running session of
      whichever game is furthest behind. */
   .quick-cta[hidden] { display: none; }
@@ -477,6 +513,9 @@
     </div>
   </div>
 
+  <div class="sec-head">The locker</div>
+  <section class="card lobby-card profile-card" id="lobby"></section>
+
   <div class="card rank-card" id="rank-card">
     <div class="level-badge"><span id="rank-level">1</span><small>Overall level</small></div>
     <div class="xp">
@@ -569,6 +608,10 @@
 <script src="lib/sync.js"></script>
 <script src="lib/juice.js"></script>
 <script src="lib/next.js"></script>
+<script src="lib/pixel.js"></script>
+<script src="lib/gear.js"></script>
+<script src="lib/avatar.js"></script>
+<script src="lib/wardrobe.js"></script>
 <script src="hub.js"></script>
 </body>
 </html>

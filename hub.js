@@ -304,6 +304,15 @@
   renderRank();
   renderStreak();
 
+  // The locker: the shared character stands in the hub like a lobby, with the
+  // wardrobe (inventory) and shop attached. Chests earned in any game and not
+  // yet opened greet you here — the lobby is where loot gets opened.
+  if (window.Wardrobe && window.Avatar) {
+    Wardrobe.attach('hub');
+    const openAll = () => { if (Wardrobe.pending()) Wardrobe.openChestUI(openAll); };
+    openAll();
+  }
+
   // Back-navigating from a game often restores the hub from the bfcache, so
   // re-read the duties — a session logged in the game must show immediately.
   window.addEventListener('pageshow', (e) => { if (e.persisted) renderToday(); });
