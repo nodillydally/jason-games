@@ -39,7 +39,7 @@
     [{ g: 'reader', mode: 'Book passages', why: 'Friday is books — one signature passage, kept for good.' }],
     [{ g: 'chronicle', mode: 'Sequence', why: 'Order four events — the drill that builds the actual timeline.' },
      { g: 'mapmaster', mode: 'Find it', why: 'The reverse drill — recall is stronger than recognition.' }],
-    [{ g: 'briefing', mode: 'Recall', why: 'What happened this week — and why it mattered.' },
+    [{ g: 'briefing', mode: 'Daily', why: 'Recall yesterday cold, keep today in writing — graded.' },
      { g: 'reader', mode: 'Timed read', why: 'Whole-page reading under a clock — closest to real reading.' }],
   ];
 
