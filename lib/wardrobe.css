@@ -35,13 +35,12 @@
 }
 .avatar .av-f.on { opacity: 1; }
 
-/* Gear rides above the sprite, positioned per frame from JS. */
-.av-gearlayer {
-  position: absolute;
-  overflow: visible;
-  pointer-events: none;
-}
-.av-gearlayer .av-under { opacity: .95; }
+/* Gear rides above the sprite. Each slot is its own <svg>, positioned per
+   frame from JS in sprite units. */
+.av-gearlayer { position: absolute; inset: 0; pointer-events: none; }
+.av-gear { position: absolute; overflow: visible; }
+/* Capes and auras belong behind the body, not on top of it. */
+.av-gear-back, .av-gear-aura { z-index: -1; }
 
 /* Front-facing sprites can't turn their heads, so being chased reads as a lean
    away from whatever is gaining on you. */
