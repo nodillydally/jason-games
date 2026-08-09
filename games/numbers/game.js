@@ -121,7 +121,7 @@ function mountAvatars() {
   $('companion').classList.toggle('hidden', isRace);
   const host = isRace ? $('racer-you') : $('companion-avatar');
   // Both hosts are lanes the runner travels along, so it runs in profile.
-  avatars.push(Avatar.create(host, { ink: Wardrobe.ink(), gear: Wardrobe.gear(), facing: 'e' }));
+  avatars.push(Avatar.create(host, { ink: Wardrobe.ink(), gear: Wardrobe.gear(), facing: 'e', sprite: Wardrobe.character() }));
   poseAll('idle');
 }
 
@@ -317,6 +317,7 @@ function startGame() {
       difficultySeconds: difficulty.seconds,
       drawTopic,
       playerGear: Wardrobe.gear(),
+      playerSprite: Wardrobe.character(),
       playerInk: Wardrobe.ink(),
       baseMsFor: avgMsOf,
       missRateFor: (id) => {

@@ -309,7 +309,7 @@ window.Rival = (function () {
       pal: def.pal,
       tint: def.sprite ? '' : (def.ghost ? '' : def.id),
       facing: def.facing || 'e',
-      sprite: def.sprite || 'runner',
+      sprite: def.sprite || (def.ghost ? opts.playerSprite : 'runner'),
       ghost: !!def.ghost,
     });
     s.avatar.pose('run');
