@@ -25,6 +25,21 @@
  *    something you weren't just shown.
  */
 
+/* What each course looks like on the picker: a mark you can spot at a glance
+ * and one line answering “what even is this age?” — because “Age of Discovery”
+ * on its own tells you nothing, which was the whole complaint. */
+const ERA_CARDS = {
+  ages:        { icon: '🗺️', what: 'The whole span in one sitting — what each age is, and why it starts and stops where it does.' },
+  ancient:     { icon: '🏺', what: 'Cities, writing, law and coins: the state invented from scratch, with nothing to copy.' },
+  classical:   { icon: '🏛️', what: 'Greece invents the argument, Rome administers a continent, Han China matches them.' },
+  medieval:    { icon: '🏰', what: 'Rome’s world splits three ways and power drops to whoever holds the nearest castle.' },
+  discovery:   { icon: '⛵', what: 'Ships close the map: the continents meet, and truth starts answering to evidence.' },
+  revolution:  { icon: '⚙️', what: 'Steam breaks the limit on work; America, France and Haiti break the limit on kings.' },
+  industrial:  { icon: '🚂', what: 'Every machine arrives inside one lifetime, and Europe divides the rest of the planet.' },
+  worldwars:   { icon: '☢️', what: 'Two industrial wars, a weapon that ends them, and a standoff that stops quietly.' },
+  information: { icon: '🌐', what: 'Copying information becomes free — and everything since runs on top of that fact.' },
+};
+
 const AGES = {
   id: 'ages',
   name: 'The shape of history',

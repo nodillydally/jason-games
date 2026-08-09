@@ -18,39 +18,62 @@
 
 /* --------------------------- book library --------------------------- */
 
-.book-list { display: flex; flex-direction: column; }
+.book-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 10px;
+}
 .book-note { color: var(--ink-2); font-size: 13.5px; line-height: 1.6; }
 
+/* Group headings span the whole grid so the books below them stay in rows. */
 .book-group {
+  grid-column: 1 / -1;
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--ink-3);
-  margin: 20px 0 8px;
+  margin: 14px 0 2px;
 }
 .book-group:first-child { margin-top: 0; }
+.book-note { grid-column: 1 / -1; }
 
+/* Cards, matching the hub and Chronicle's study picker. */
 .book-item {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-areas: "title pct" "meta pct" "bar bar";
-  gap: 3px 14px;
+  gap: 3px 12px;
+  align-content: start;
   text-align: left;
-  padding: 15px 4px;
-  min-height: 60px;
-  border: none;
-  border-bottom: 1px solid var(--rule);
-  border-radius: 0;
-  background: transparent;
-  transition: background .2s ease, padding-left .2s ease;
+  padding: 18px 16px 16px;
+  min-height: 104px;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
 }
-.book-item:hover { background: var(--paper-2); box-shadow: none; padding-left: 10px; }
+.book-item::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--p1);
+  opacity: .35;
+}
+.book-item:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
+  border-color: var(--stroke-hi);
+}
+.book-item:active { transform: translateY(0); }
 .book-item.active {
-  background: transparent;
-  box-shadow: inset 2px 0 0 var(--p1);
-  padding-left: 12px;
+  border-color: color-mix(in oklab, var(--p1) 45%, transparent);
 }
+.book-item.active::before { opacity: 1; }
 .book-title { grid-area: title; font-size: 15px; font-weight: 500; }
 .book-meta {
   grid-area: meta;
@@ -70,7 +93,7 @@
 .book-item.active .book-pct { color: var(--p1); }
 .book-progress {
   grid-area: bar;
-  height: 2px;
+  height: 3px;
   background: var(--rule);
   border-radius: var(--r-pill);
   overflow: hidden;

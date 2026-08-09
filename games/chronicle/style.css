@@ -213,7 +213,30 @@
 }
 .study-row:active { transform: translateY(0); }
 
-.study-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+/* The mark sits in a bordered tile like the hub's game cards, so the picker
+   scans as a set of objects rather than as text. */
+.syl-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  font-size: 1.05rem;
+  border-radius: var(--r-md);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+}
+
+.study-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+
+/* The line that answers "what even is this age?" */
+.study-row-body i {
+  font-style: normal;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  margin-top: 4px;
+}
 .study-row-body b {
   font-family: var(--serif);
   font-size: 21px;
@@ -244,6 +267,10 @@
 /* The overview is the recommended entry point: it takes the full width and
    the only saturated band on the screen. */
 .study-row.primer { grid-column: 1 / -1; min-height: 0; }
+.study-row.primer .syl-icon {
+  background: color-mix(in oklab, var(--p1) 16%, var(--paper));
+  border-color: color-mix(in oklab, var(--p1) 40%, transparent);
+}
 .study-row.primer::before { opacity: 1; height: 4px; }
 .study-row.primer .study-row-body b { color: var(--p1); }
 .study-row.primer .study-row-body em {
@@ -267,8 +294,78 @@
   transition: width .45s var(--ease);
 }
 
-/* The passage is set as a page, not as UI text: this is the part that has to
-   be pleasant to actually read on a phone. */
+/* The passage reads like a brief: headline, one-line lead, then bullets.
+   Two bullet shapes, because they carry different things — a dated event is a
+   year plus a fact, a concept is a labelled point. */
+.study-passage .panel-title {
+  font-family: var(--serif);
+  font-size: clamp(26px, 7vw, 33px);
+  line-height: 1.12;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+  margin-bottom: 10px;
+}
+.study-passage .story-what {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  margin-bottom: 20px;
+  max-width: 54ch;
+}
+
+.study-passage .story-details { list-style: none; margin: 0; padding: 0; }
+.study-passage .story-details li {
+  padding: 14px 0;
+  border-top: 1px solid var(--rule-2);
+}
+.study-passage .story-details li:last-child { padding-bottom: 0; }
+
+/* A dated event: year in the margin, fact beside it, why underneath. */
+.study-passage .story-details li.ev { display: flex; gap: 14px; }
+.study-passage .story-details li.ev > b {
+  flex: 0 0 72px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .04em;
+  color: var(--p1);
+  padding-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.study-passage .story-details li.ev > span {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 15.5px;
+  line-height: 1.45;
+}
+.study-passage .story-details li.ev em {
+  font-style: normal;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* A concept: the label sits above its sentence, never jammed against it. */
+.study-passage .story-details li.pt > b {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--p1);
+  margin-bottom: 6px;
+}
+.study-passage .story-details li.pt > span {
+  display: block;
+  font-size: 15.5px;
+  line-height: 1.6;
+  max-width: 56ch;
+}
+
 .study-q { margin: 2px 0 22px; }
 
 #study-choices { display: grid; grid-template-columns: 1fr; gap: 8px; }

@@ -678,7 +678,8 @@ function endGame(aborted = false) {
 //           from exactly the events that paragraph named.
 
 function syllabusFor(id) {
-  if (id === AGES.id) return AGES;
+  const card = ERA_CARDS[id] || {};
+  if (id === AGES.id) return { ...AGES, icon: card.icon, what: card.what };
   const era = ERAS.find((e) => e.id === id);
   if (!era) return null;
   const parts = ERA_SECTIONS[era.id] || [];
@@ -686,6 +687,8 @@ function syllabusFor(id) {
     id: era.id,
     name: era.name,
     blurb: fmtEraSpan(era),
+    icon: card.icon,
+    what: card.what,
     era,
     sections: parts.map((p, i) => ({
       title: `${era.name} · part ${i + 1} of ${parts.length}`,
@@ -721,9 +724,11 @@ function renderStudyList() {
     const b = document.createElement('button');
     b.className = `study-row${id === AGES.id ? ' primer' : ''}${done ? ' done' : ''}`;
     b.innerHTML =
-      '<span class="study-row-body">'
+      `<span class="syl-icon">${syl.icon || ''}</span>`
+      + '<span class="study-row-body">'
         + `<b>${esc(syl.name)}</b>`
-        + `<em>${esc(syl.blurb || '')}</em>`
+        + `<em>${esc(id === AGES.id ? 'Start here' : syl.blurb || '')}</em>`
+        + `<i>${esc(syl.what || '')}</i>`
       + '</span>'
       + `<span class="study-row-mark">${done ? '✓ studied' : `${syl.sections.length} parts`}</span>`;
     b.addEventListener('click', () => startStudy(id));
@@ -764,8 +769,9 @@ function renderPassage() {
     `<h2 class="panel-title">${esc(sec.headline)}</h2>`
     + `<p class="story-what">${esc(sec.lead)}</p>`
     + '<ul class="story-details">'
-    + bulletsFor(sec).map((b) =>
-      `<li><b>${esc(b.k)}</b><span>${esc(b.v)}${b.w ? `<em>${esc(b.w)}</em>` : ''}</span></li>`).join('')
+    + bulletsFor(sec).map((b) => (b.w
+      ? `<li class="ev"><b>${esc(b.k)}</b><span>${esc(b.v)}<em>${esc(b.w)}</em></span></li>`
+      : `<li class="pt"><b>${esc(b.k)}</b><span>${esc(b.v)}</span></li>`)).join('')
     + '</ul>';
   $('study-passage').classList.remove('hidden');
   $('study-quiz').classList.add('hidden');
