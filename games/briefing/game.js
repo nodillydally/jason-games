@@ -158,6 +158,7 @@ const shortDate = (date) => new Date(`${date}T12:00:00`).toLocaleDateString('en-
 
 function renderMenu() {
   const level = levelForXp(store.xp);
+  Wardrobe.check('briefing', level);
   $('menu-level').textContent = level;
   const cur = store.xp - xpAtLevel(level);
   const need = xpAtLevel(level + 1) - xpAtLevel(level);
@@ -619,6 +620,7 @@ function endGame(aborted = false) {
   const levelBefore = levelForXp(store.xp);
   const xpGain = Math.round(g.score / 10);
   store.xp += xpGain;
+  Wardrobe.earn(xpGain / 2);
   store.sessions += 1;
 
   // The streak is for keeping the whole brief — every story graded. Recall
@@ -729,6 +731,7 @@ $('stats-back').addEventListener('click', () => { showScreen('menu'); renderMenu
 // Boot
 // ---------------------------------------------------------------------------
 
+Wardrobe.attach('briefing');
 renderMenu();
 Sync.mountUI();
 if (Sync.isEnabled()) loadBriefs();

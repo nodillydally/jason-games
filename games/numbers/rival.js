@@ -56,7 +56,7 @@ window.Rival = (function () {
     {
       id: 'metronome',
       color: 'var(--rival-metronome)',
-      head: 'tick',
+      gear: { head: { svg: '<path d="M20 3.2V1.4"/><circle class="av-fill" cx="20" cy=".9" r="1.2"/>' } },
       name: 'The Metronome',
       icon: '⏱',
       blurb: 'Seven and a half seconds a question, forever, and never wrong. The only rival that ignores your history — a fixed bar, so on Hard it is genuinely brutal.',
@@ -67,7 +67,7 @@ window.Rival = (function () {
     {
       id: 'kid',
       color: 'var(--rival-kid)',
-      head: 'bolt',
+      gear: { head: { svg: '<path class="av-fill" d="M25.8.6l-4.6 5.4h3l-2.3 4.4 5.2-5.8h-3.1z"/>' } },
       name: 'Kid Lightning',
       icon: '⚡',
       blurb: 'Faster than you and knows it — but rushes one in four and then loses more time sulking than it ever gained. Wild swings, big comebacks.',
@@ -79,7 +79,7 @@ window.Rival = (function () {
     {
       id: 'professor',
       color: 'var(--rival-professor)',
-      head: 'mortar',
+      gear: { head: { svg: '<path class="av-fill" d="M9.6 4.2h20.8L20 8z"/><path d="M27.4 5.2v5"/>' } },
       name: 'The Professor',
       icon: '🎓',
       blurb: 'Laborious at plain arithmetic, near-instant at anything with structure. Take your lead on × and ÷ before it takes it all back on √ and ( ).',
@@ -264,8 +264,9 @@ window.Rival = (function () {
     // Both lanes are drawn figures, so a race reads as two runners rather than
     // a runner and a dot. Your Ghost borrows your own cosmetic — it is you.
     s.avatar = Avatar.create(els.rival, {
-      color: def.color,
-      head: def.ghost ? opts.playerHead : def.head,
+      // Your Ghost wears your clothes and your ink, because it is you.
+      ink: def.ghost ? opts.playerInk : def.color,
+      gear: def.ghost ? opts.playerGear : def.gear,
       ghost: !!def.ghost,
     });
     s.avatar.pose('run');

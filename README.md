@@ -29,6 +29,43 @@ argument against it is offline capability and simplicity — not money.
 - Each game keeps its own `style.css` and palette. Games are meant to look like siblings, not clones, and shared styling would couple them for no real gain. The exception is `lib/sync.css`, which styles the one piece of UI they genuinely share and reads its colours from whatever custom properties the game defines.
 - Game data files (country lists, vocab decks, fact banks) live in the game's own `data/` folder.
 
+## The runner and the wardrobe
+
+Every game shows the same character — a line-art figure in `lib/avatar.js`,
+drawn as inline SVG so it takes each game's own accent colour and ships no
+assets. It has five poses and six equipment slots.
+
+Levels stay **per game**: each keeps its own XP on the same curve, so being
+level 12 at Numbers and level 2 at Chronicle is honest rather than averaged
+into a meaningless number. What's shared is the character. One figure, one
+wardrobe (`lib/wardrobe.js`, one `localStorage` key across all games), worn
+everywhere.
+
+Gear comes from two places that never overlap:
+
+- **Drops** are earned. Each is dropped by exactly one game and gated on that
+  game's level, so the compass only ever comes out of Mapmaster and the
+  hourglass only ever out of Chronicle. Nothing locked is ever listed — you get
+  a count of what's still out there and nothing else, because the reveal is the
+  payoff and spoiling the catalogue spends it early. A few are gated on doing
+  something rather than reaching a level (beating Your Ghost, taking The
+  Metronome on Hard).
+- **Shop** items are bought with coins, which ride on XP so there's no second
+  scoring system. This half is deliberately the opposite: browsable rather than
+  hidden, because you need something to save toward, and pure expression rather
+  than status. Stock is three items rotating daily.
+
+Nothing in the first group can ever be bought. Collapse the two and the drops
+stop being proof of anything.
+
+Wiring a game in is two calls:
+
+```js
+Wardrobe.attach('mapmaster');                      // once, at boot
+Wardrobe.check('mapmaster', levelForXp(store.xp));  // wherever the level is known
+Wardrobe.earn(xpGain / 2);                          // when a round ends
+```
+
 ## Cloud sync
 
 Every game works standalone with progress in `localStorage`. Optionally, finished

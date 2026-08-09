@@ -243,6 +243,7 @@ function optionButton(label, active, onPick) {
 
 function renderMenu() {
   const level = levelForXp(store.xp);
+  Wardrobe.check('chronicle', level);
   $('menu-level').textContent = level;
   const cur = store.xp - xpAtLevel(level);
   const need = xpAtLevel(level + 1) - xpAtLevel(level);
@@ -647,6 +648,7 @@ function endGame(aborted = false) {
   const levelBefore = levelForXp(store.xp);
   const xpGain = Math.round(g.score / 10);
   store.xp += xpGain;
+  Wardrobe.earn(xpGain / 2);
   store.games += 1;
 
   const bestKey = `${g.mode}|${g.era}`;
@@ -1115,6 +1117,7 @@ document.addEventListener('keydown', (e) => {
 // Boot
 // ---------------------------------------------------------------------------
 
+Wardrobe.attach('chronicle');
 renderMenu();
 renderStudyList();
 Sync.mountUI();

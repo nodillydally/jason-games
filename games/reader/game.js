@@ -236,6 +236,7 @@ function optionButton(item, group, active) {
 
 function renderMenu() {
   const level = levelForXp(store.xp);
+  Wardrobe.check('reader', level);
   $('menu-level').textContent = level;
   const cur = store.xp - xpAtLevel(level);
   const need = xpAtLevel(level + 1) - xpAtLevel(level);
@@ -830,6 +831,7 @@ function endGame(aborted = false) {
     : Math.round((g.wordsRead / 10) * compFactor);
   const levelBefore = levelForXp(store.xp);
   store.xp += g.xpGain;
+  Wardrobe.earn(g.xpGain / 2);
   const levelAfter = levelForXp(store.xp);
 
   const last = g.rounds[g.rounds.length - 1];
@@ -1045,5 +1047,6 @@ document.addEventListener('keydown', (e) => {
 // Boot
 // ---------------------------------------------------------------------------
 
+Wardrobe.attach('reader');
 renderMenu();
 Sync.mountUI();

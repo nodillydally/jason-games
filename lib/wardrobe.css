@@ -1,0 +1,296 @@
+/* lib/wardrobe.css — the figure, the wardrobe panel, the shop, the reveal.
+ *
+ * Reads its colours from whatever custom properties the host game defines, the
+ * same contract lib/sync.css uses, so the character sits in Numbers' moss and
+ * Mapmaster's blue without either game knowing about this file. */
+
+/* ------------------------------- figure -------------------------------- */
+
+.avatar { display: inline-block; line-height: 0; }
+.av-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.av-svg path, .av-svg circle, .av-svg ellipse {
+  fill: none;
+  stroke: var(--av-ink, var(--p1));
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Variable weight is most of what separates a drawn figure from a default
+   stick one: a heavy trunk, lighter limbs, a fine outline on the head. */
+.av-svg .av-torso { stroke-width: 4.2; }
+.av-svg .av-leg { stroke-width: 2.9; }
+.av-svg .av-arm, .av-svg .av-limb { stroke-width: 2.5; }
+.av-svg .av-head { fill: var(--card-bg, #fff); stroke-width: 2.3; }
+.av-svg .av-eye { fill: var(--av-ink, var(--p1)); stroke: none; }
+.av-svg .av-fill { fill: var(--av-ink, var(--p1)); }
+.av-svg .av-thick { stroke-width: 3.6; }
+.av-svg .av-cape {
+  fill: color-mix(in srgb, var(--av-ink, var(--p1)) 20%, transparent);
+  stroke-width: 1.6;
+}
+/* Held things are small — full limb weight turns them into blobs. */
+.av-svg .av-slot-hand path,
+.av-svg .av-slot-hand circle,
+.av-svg .av-slot-hand ellipse { stroke-width: 1.9; }
+
+/* Your Ghost: your own figure, dashed and faded. */
+.av-ghost { opacity: .52; }
+.av-ghost .av-svg path, .av-ghost .av-svg circle { stroke-dasharray: 3.4 2.6; }
+
+.av-lean, .av-body, .av-head-group, .av-arm, .av-leg, .av-orbit { transform-box: view-box; }
+.av-lean, .av-body { transform-origin: 20px 45.5px; } /* the feet */
+.av-head-group { transform-origin: 20px 16px; }       /* the neck */
+.av-arm { transform-origin: 20px 20px; }              /* the shoulder */
+.av-leg { transform-origin: 20px 33px; }              /* the hip */
+.av-orbit { transform-origin: 20px 22px; animation: av-spin 9s linear infinite; }
+
+.av-lean, .av-head-group, .av-arm, .av-leg { transition: transform .22s var(--ease, ease); }
+
+.pose-idle .av-body { animation: av-breathe 3.2s ease-in-out infinite; }
+.pose-idle .av-arm-l { transform: rotate(-6deg); }
+.pose-idle .av-arm-r { transform: rotate(6deg); }
+
+.pose-run .av-leg-l { animation: av-swing-a .46s linear infinite; }
+.pose-run .av-leg-r { animation: av-swing-b .46s linear infinite; }
+.pose-run .av-arm-l { animation: av-pump-b .46s linear infinite; }
+.pose-run .av-arm-r { animation: av-pump-a .46s linear infinite; }
+.pose-run .av-body  { animation: av-bob .23s linear infinite; }
+
+/* Anticipation: the lean happens before the clock runs out, not after. */
+.pose-strain .av-lean { transform: rotate(13deg); }
+.pose-strain .av-leg-l { animation: av-swing-a .28s linear infinite; }
+.pose-strain .av-leg-r { animation: av-swing-b .28s linear infinite; }
+.pose-strain .av-arm-l { animation: av-pump-b .28s linear infinite; }
+.pose-strain .av-arm-r { animation: av-pump-a .28s linear infinite; }
+.pose-strain .av-body  { animation: av-bob .14s linear infinite; }
+
+.pose-stumble .av-lean { transform: rotate(26deg); }
+.pose-stumble .av-arm-l { transform: rotate(-78deg); }
+.pose-stumble .av-arm-r { transform: rotate(-24deg); }
+.pose-stumble .av-leg-l { transform: rotate(34deg); }
+.pose-stumble .av-leg-r { transform: rotate(-20deg); }
+
+.pose-cheer .av-arm-l { transform: rotate(74deg); }
+.pose-cheer .av-arm-r { transform: rotate(-74deg); }
+.pose-cheer .av-leg-l { transform: rotate(-12deg); }
+.pose-cheer .av-leg-r { transform: rotate(12deg); }
+.pose-cheer .av-body { animation: av-hop .5s var(--ease, ease) 2; }
+
+.avatar.behind .av-head-group { transform: rotate(-22deg); }
+
+@keyframes av-swing-a { 0%, 100% { transform: rotate(-24deg); } 50% { transform: rotate(22deg); } }
+@keyframes av-swing-b { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-24deg); } }
+@keyframes av-pump-a  { 0%, 100% { transform: rotate(20deg); } 50% { transform: rotate(-22deg); } }
+@keyframes av-pump-b  { 0%, 100% { transform: rotate(-22deg); } 50% { transform: rotate(20deg); } }
+@keyframes av-bob     { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.4px); } }
+@keyframes av-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.7px); } }
+@keyframes av-hop     { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-5px); } }
+@keyframes av-spin    { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+/* -------------------------------- bay ---------------------------------- */
+
+.wardrobe-bay {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.wardrobe-figure { width: 36px; height: 46px; flex: 0 0 auto; }
+
+.wardrobe-btn {
+  padding: 7px 14px;
+  min-height: 32px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .06em;
+}
+
+.wardrobe-panel {
+  flex: 1 0 100%;
+  margin-top: 4px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.wardrobe-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+.wardrobe-tabs { display: flex; gap: 4px; flex: 1; }
+.wardrobe-tab {
+  padding: 5px 12px;
+  min-height: 28px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-color: transparent;
+  background: transparent;
+}
+.wardrobe-tab.active { color: var(--ink); border-color: var(--rule); background: var(--card-bg); }
+
+.wardrobe-coins {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--a2, var(--ink-2));
+}
+.wardrobe-close {
+  width: 26px; height: 26px; min-height: 26px;
+  padding: 0; display: grid; place-items: center;
+  border-radius: 50%; font-size: 10px;
+}
+
+.wardrobe-body { padding: 12px; }
+
+.wardrobe-slot { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+.wardrobe-slot-label {
+  flex: 0 0 42px;
+  padding-top: 7px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.wardrobe-chips { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; }
+.wardrobe-chip {
+  padding: 5px 10px;
+  min-height: 28px;
+  font-size: 11.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.wardrobe-chip .chip-src { font-size: 9px; opacity: .55; }
+.wardrobe-chip.legendary { border-color: color-mix(in srgb, var(--a1) 55%, transparent); }
+
+.wardrobe-empty, .shop-note {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-3);
+  margin-bottom: 12px;
+}
+
+/* What's said about locked gear, and all that's said: how much there is. */
+.wardrobe-remaining {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.wardrobe-tally {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .04em;
+  white-space: pre;
+  margin-left: auto;
+}
+
+/* -------------------------------- shop --------------------------------- */
+
+.shop-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule-2);
+}
+.shop-row:last-of-type { border-bottom: none; }
+.shop-row.broke { opacity: .55; }
+.shop-preview { width: 30px; height: 40px; flex: 0 0 auto; }
+.shop-meta { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.shop-name { font-size: 13.5px; }
+.shop-slot {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.shop-buy {
+  padding: 7px 13px;
+  min-height: 30px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.shop-buy:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ------------------------------- reveal -------------------------------- */
+
+.reveal-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .58);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+  padding: 20px;
+  animation: fade-soft .25s var(--ease, ease) both;
+}
+
+.reveal-card {
+  background: var(--card-bg);
+  border: 1px solid var(--stroke-hi);
+  border-radius: 20px;
+  padding: 26px 28px 22px;
+  text-align: center;
+  max-width: 320px;
+  width: 100%;
+  box-shadow: 0 30px 70px -24px rgba(0, 0, 0, .7);
+  animation: reveal-in .4s var(--ease, ease) both;
+}
+@keyframes reveal-in {
+  from { opacity: 0; transform: translateY(14px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+.reveal-kicker {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--a2);
+  margin-bottom: 14px;
+}
+.reveal-figure { display: block; width: 78px; height: 100px; margin: 0 auto 12px; }
+.reveal-name {
+  font-family: var(--serif);
+  font-size: 25px;
+  letter-spacing: -.02em;
+  margin-bottom: 5px;
+}
+.reveal-src {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.reveal-more { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+.reveal-ok { margin-top: 20px; padding: 12px 30px; width: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .av-body, .av-leg, .av-arm, .av-orbit { animation: none !important; }
+  .av-lean, .av-head-group, .av-arm, .av-leg { transition: none; }
+  .reveal-card { animation: none; }
+}

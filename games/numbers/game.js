@@ -47,7 +47,7 @@ const screens = {
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, head: 'none', ...JSON.parse(raw) };
+    if (raw) return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
   return { xp: 0, games: 0, correct: 0, answered: 0, best: {}, stats: {}, facts: {}, head: 'none' };
 }
@@ -99,7 +99,6 @@ const questionHtml = (text) => esc(text).replace(
 // rather than addressed, so the game loop never has to know which is on screen.
 
 let avatars = [];
-let menuAvatar = null;
 
 const poseAll = (name) => avatars.forEach((a) => a.pose(name));
 const flashAll = (name, ms) => avatars.forEach((a) => a.flash(name, ms));
@@ -109,7 +108,7 @@ function mountAvatars() {
   const isRace = g && g.mode === 'race';
   $('companion').classList.toggle('hidden', isRace);
   const host = isRace ? $('racer-you') : $('companion-avatar');
-  avatars.push(Avatar.create(host, { color: 'var(--p1)', head: store.head }));
+  avatars.push(Avatar.create(host, { ink: Wardrobe.ink(), gear: Wardrobe.gear() }));
   poseAll('idle');
 }
 
@@ -131,30 +130,6 @@ function placeCompanion() {
   const p = companionProgress();
   $('companion-rail').classList.toggle('open', p === null);
   $('companion-avatar').style.left = `${clamp(p === null ? 0 : p, 0, 1) * 100}%`;
-}
-
-function renderCosmetics() {
-  const level = levelForXp(store.xp);
-  const el = $('cosmetic-options');
-  el.innerHTML = '';
-
-  Avatar.cosmetics().forEach((c) => {
-    const locked = c.level > level;
-    const b = document.createElement('button');
-    b.className = store.head === c.id ? 'active' : '';
-    b.disabled = locked;
-    b.innerHTML = locked
-      ? `${c.label}<span class="cosmetic-lock">LV ${c.level}</span>`
-      : c.label;
-    b.title = locked ? `Unlocks at level ${c.level}` : c.label;
-    b.addEventListener('click', () => {
-      store.head = c.id;
-      saveStore();
-      if (menuAvatar) menuAvatar.setHead(c.id);
-      renderCosmetics();
-    });
-    el.appendChild(b);
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -210,11 +185,7 @@ function renderMenu() {
   $('xp-fill').style.width = `${Math.min(100, (cur / need) * 100)}%`;
   $('xp-label').textContent = `${cur} / ${need} XP to level ${level + 1}`;
 
-  if (!menuAvatar) {
-    menuAvatar = Avatar.create($('menu-avatar'), { color: 'var(--p1)', head: store.head });
-    menuAvatar.pose('idle');
-  }
-  renderCosmetics();
+  Wardrobe.check('numbers', level);
 
   const acc = store.answered ? Math.round((store.correct / store.answered) * 100) : 0;
   $('profile-stats').innerHTML =
@@ -313,7 +284,8 @@ function startGame() {
       difficultyId: difficulty.id,
       difficultySeconds: difficulty.seconds,
       drawTopic,
-      playerHead: store.head,
+      playerGear: Wardrobe.gear(),
+      playerInk: Wardrobe.ink(),
       baseMsFor: avgMsOf,
       missRateFor: (id) => {
         const s = statFor(id);
@@ -753,6 +725,17 @@ function endGame(aborted = false) {
   saveStore();
   syncSession(false, xpGain);
 
+  // Coins ride on XP so there's no second scoring system to reason about,
+  // with a small bump for the things that took some doing.
+  Wardrobe.earn(xpGain / 2 + (isBest ? 10 : 0) + (race && race.won ? 10 : 0));
+
+  if (race && race.won) {
+    if (g.rivalId === 'ghost') Wardrobe.grantFlag('numbers:beat-ghost');
+    if (g.rivalId === 'metronome' && g.difficulty.id === 'hard') {
+      Wardrobe.grantFlag('numbers:metronome-hard');
+    }
+  }
+
   const levelAfter = levelForXp(store.xp);
   const acc = g.answered ? Math.round((g.correct / g.answered) * 100) : 0;
   const avgMs = g.log.length ? Math.round(g.log.reduce((sum, a) => sum + a.ms, 0) / g.log.length) : 0;
@@ -891,5 +874,6 @@ document.addEventListener('keydown', (e) => {
 // Boot
 // ---------------------------------------------------------------------------
 
+Wardrobe.attach('numbers');
 renderMenu();
 Sync.mountUI();

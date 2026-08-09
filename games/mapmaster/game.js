@@ -457,6 +457,7 @@ function renderOptionGroup(el, options, selectedId, onPick) {
 
 function renderMenu() {
   const level = levelForXp(store.xp);
+  Wardrobe.check('mapmaster', level);
   $('menu-level').textContent = level;
   const cur = store.xp - xpAtLevel(level);
   const need = xpAtLevel(level + 1) - xpAtLevel(level);
@@ -677,6 +678,7 @@ function endGame(aborted = false) {
   const levelBefore = levelForXp(xpBefore);
   const xpGain = Math.round(g.score / 10);
   store.xp += xpGain;
+  Wardrobe.earn(xpGain / 2);
   store.games += 1;
 
   const bestKey = `${g.mode}|${g.continent}|${g.difficulty.id}|${g.question}`;
@@ -1190,5 +1192,6 @@ document.addEventListener('keydown', (e) => {
 // ---------------------------------------------------------------------------
 
 buildMap();
+Wardrobe.attach('mapmaster');
 renderMenu();
 Sync.mountUI();

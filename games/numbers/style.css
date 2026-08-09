@@ -292,97 +292,6 @@
 .method-extras { margin: 20px 0 0 20px; }
 .method-extras li { font-size: 13.5px; line-height: 1.7; color: var(--ink-2); margin-bottom: 7px; }
 
-/* ------------------------------ avatar ------------------------------- */
-
-/* Line art in the page's own ink, so the runner is the same drawing as the
-   hairline rules around it rather than a cartoon dropped on top. */
-
-.avatar { display: inline-block; line-height: 0; }
-.av-svg { display: block; width: 100%; height: 100%; overflow: visible; }
-
-.av-svg path, .av-svg circle {
-  fill: none;
-  stroke: var(--av-ink, var(--ink));
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-/* Variable weight is what separates a drawn figure from a default stick one:
-   a heavy trunk, lighter limbs, a fine outline on the head. */
-.av-svg .av-torso { stroke-width: 4.2; }
-.av-svg .av-leg { stroke-width: 2.9; }
-.av-svg .av-arm { stroke-width: 2.5; }
-.av-svg .av-head { fill: var(--card-bg); stroke-width: 2.3; }
-.av-svg .av-eye { fill: var(--av-ink, var(--ink)); stroke: none; }
-.av-svg .av-fill { fill: var(--av-ink, var(--ink)); }
-.av-svg .av-thick { stroke-width: 3.6; }
-.av-svg .av-cape {
-  fill: color-mix(in srgb, var(--av-ink, var(--ink)) 20%, transparent);
-  stroke-width: 1.6;
-}
-
-/* Your Ghost is drawn as your own figure, dashed and faded. */
-.av-ghost { opacity: .52; }
-.av-ghost .av-svg path, .av-ghost .av-svg circle { stroke-dasharray: 3.4 2.6; }
-
-.av-lean, .av-body, .av-head-group, .av-arm, .av-leg { transform-box: view-box; }
-.av-lean, .av-body { transform-origin: 20px 45.5px; } /* the feet */
-.av-head-group { transform-origin: 20px 16px; }      /* the neck */
-.av-arm { transform-origin: 20px 20px; }             /* the shoulder */
-.av-leg { transform-origin: 20px 33px; }             /* the hip */
-
-.av-lean, .av-head-group, .av-arm, .av-leg {
-  transition: transform .22s var(--ease);
-}
-
-/* --- idle: standing, breathing --- */
-.pose-idle .av-body { animation: av-breathe 3.2s ease-in-out infinite; }
-.pose-idle .av-arm-l { transform: rotate(-6deg); }
-.pose-idle .av-arm-r { transform: rotate(6deg); }
-
-/* --- run: the default while a question is live --- */
-.pose-run .av-leg-l { animation: av-swing-a .46s linear infinite; }
-.pose-run .av-leg-r { animation: av-swing-b .46s linear infinite; }
-.pose-run .av-arm-l { animation: av-pump-b .46s linear infinite; }
-.pose-run .av-arm-r { animation: av-pump-a .46s linear infinite; }
-.pose-run .av-body  { animation: av-bob .23s linear infinite; }
-
-/* --- strain: the clock is nearly out. Anticipation, not reaction. --- */
-.pose-strain .av-lean { transform: rotate(13deg); }
-.pose-strain .av-leg-l { animation: av-swing-a .28s linear infinite; }
-.pose-strain .av-leg-r { animation: av-swing-b .28s linear infinite; }
-.pose-strain .av-arm-l { animation: av-pump-b .28s linear infinite; }
-.pose-strain .av-arm-r { animation: av-pump-a .28s linear infinite; }
-.pose-strain .av-body  { animation: av-bob .14s linear infinite; }
-
-/* --- stumble --- */
-.pose-stumble .av-lean { transform: rotate(34deg); }
-.pose-stumble .av-arm-l { transform: rotate(-118deg); }
-.pose-stumble .av-arm-r { transform: rotate(-48deg); }
-.pose-stumble .av-leg-l { transform: rotate(26deg); }
-.pose-stumble .av-leg-r { transform: rotate(-14deg); }
-
-/* --- cheer --- */
-.pose-cheer .av-arm-l { transform: rotate(74deg); }
-.pose-cheer .av-arm-r { transform: rotate(-74deg); }
-.pose-cheer .av-leg-l { transform: rotate(-12deg); }
-.pose-cheer .av-leg-r { transform: rotate(12deg); }
-.pose-cheer .av-body { animation: av-hop .5s var(--ease) 2; }
-
-/* Glancing back at whoever is catching you. */
-.avatar.behind .av-head-group { transform: rotate(-22deg); }
-
-@keyframes av-swing-a { 0%, 100% { transform: rotate(-24deg); } 50% { transform: rotate(22deg); } }
-@keyframes av-swing-b { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-24deg); } }
-@keyframes av-pump-a  { 0%, 100% { transform: rotate(20deg); } 50% { transform: rotate(-22deg); } }
-@keyframes av-pump-b  { 0%, 100% { transform: rotate(-22deg); } 50% { transform: rotate(20deg); } }
-@keyframes av-bob     { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.4px); } }
-@keyframes av-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.7px); } }
-@keyframes av-hop     { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-5px); } }
-
-/* The runner stands on the question card in every non-race mode, on the same
-   hairline the race lanes use — so switching into Race reads as the same
-   character moving onto a track. */
 /* The same rail the race uses, minus a rival — so the runner is one character
    who happens to have company in Race, not two different ideas. */
 .companion {
@@ -419,11 +328,6 @@
   letter-spacing: .06em;
   margin-left: 5px;
   color: var(--ink-3);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .av-body, .av-leg, .av-arm { animation: none !important; }
-  .av-lean, .av-head-group, .av-arm, .av-leg { transition: none; }
 }
 
 /* ------------------------------- race -------------------------------- */
