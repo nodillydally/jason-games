@@ -35,6 +35,28 @@
 }
 .avatar .av-f.on { opacity: 1; }
 
+/* Floating extras — halos, motes, wings, pets. Centred on their placement
+   point and sized as a fraction of the sprite, so one drawing fits every
+   character in the roster. */
+.av-extralayer { position: absolute; inset: 0; pointer-events: none; }
+.av-extra {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.av-extra-pet { animation: av-pet-bob 1.1s steps(2) infinite; }
+.av-spin { animation: av-mote 3.4s ease-in-out infinite; }
+
+/* Whole-pixel motion only — fractional drift is what makes pixel art shimmer. */
+@keyframes av-pet-bob { 0%,49% { transform: translate(-50%,-50%); } 50%,100% { transform: translate(-50%,calc(-50% - 2px)); } }
+@keyframes av-mote {
+  0%,100% { transform: translate(-50%,-50%); }
+  25%     { transform: translate(calc(-50% + 10px),calc(-50% - 6px)); }
+  50%     { transform: translate(-50%,calc(-50% - 10px)); }
+  75%     { transform: translate(calc(-50% - 10px),calc(-50% - 6px)); }
+}
+
 /* Gear rides above the sprite. Each slot is its own <svg>, positioned per
    frame from JS in sprite units. */
 .av-gearlayer { position: absolute; inset: 0; pointer-events: none; }
@@ -59,6 +81,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .avatar .av-f { transition: none; }
+  .av-extra-pet, .av-spin { animation: none; }
 }
 
 /* -------------------------------- bay ---------------------------------- */
@@ -245,7 +268,7 @@
 }
 .shop-row:last-of-type { border-bottom: none; }
 .shop-row.broke { opacity: .55; }
-.shop-preview { width: 28px; height: 42px; flex: 0 0 auto; }  /* 1x */
+.shop-preview { width: 28px; height: 42px; flex: 0 0 auto; }
 .shop-meta { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .shop-name { font-size: 13.5px; }
 .shop-slot {
