@@ -763,7 +763,13 @@ function endGame(aborted = false) {
       : g.mode === 'blitz' ? "Time's up!"
       : g.mode === 'marathon' ? `💀 Out of lives — ${g.correct} correct!`
       : 'Round complete!';
-  $('results-score').innerHTML = `${g.score}<small>points · +${xpGain} XP</small>`;
+  // Rating leads; points are a footnote (they only exist to feed the XP and
+  // wardrobe economy).
+  const sessionNet = Object.values(g.eloMoves || {}).reduce((a, b) => a + b, 0);
+  const geoAfter = geoEloAvg();
+  $('results-score').innerHTML = geoAfter !== null
+    ? `${geoAfter}<small>elo · ${sessionNet >= 0 ? '+' : '−'}${Math.abs(Math.round(sessionNet))} this session · ${g.score} pts · +${xpGain} XP</small>`
+    : `${g.score}<small>points · +${xpGain} XP</small>`;
   $('results-best').classList.toggle('hidden', !isBest);
   const lvUp = levelAfter > levelBefore;
   $('results-levelup').classList.toggle('hidden', !lvUp);

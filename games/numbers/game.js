@@ -851,7 +851,15 @@ function endGame(aborted = false) {
       : 'Round complete';
 
   $('results-race').innerHTML = race ? raceVerdictHTML(race, raceBonus) : '';
-  $('results-score').innerHTML = `${g.score.toLocaleString()}<span> pts</span>${isBest ? ' <em>new best!</em>' : ''}`;
+  // The headline is the rating — the number that can go DOWN, which is what
+  // makes it worth reading. Points are demoted to a footnote: they only exist
+  // to feed XP and the wardrobe economy.
+  const sessionNet = Object.values(g.eloMoves || {}).reduce((a, b) => a + b, 0);
+  const rated = Object.values(store.elo).filter((e) => e && e.n > 0).map((e) => e.r);
+  const avgAfter = rated.length ? Math.round(rated.reduce((a, b) => a + b, 0) / rated.length) : null;
+  $('results-score').innerHTML = avgAfter !== null
+    ? `${avgAfter}<span> elo · ${sessionNet >= 0 ? '+' : '−'}${Math.abs(Math.round(sessionNet))} this session</span>`
+    : `${g.score.toLocaleString()}<span> pts</span>`;
   $('results-stats').innerHTML =
     `<div class="stat"><b>${g.correct}/${g.answered}</b><span>correct</span></div>` +
     `<div class="stat"><b>${acc}%</b><span>accuracy</span></div>` +
@@ -859,15 +867,15 @@ function endGame(aborted = false) {
     `<div class="stat"><b>${g.bestStreak}</b><span>best streak</span></div>` +
     (g.newlyLearned ? `<div class="stat"><b>+${g.newlyLearned}</b><span>facts learned 🎉</span></div>` : '') +
     (g.newlyLost ? `<div class="stat"><b>−${g.newlyLost}</b><span>slipped</span></div>` : '') +
-    // The session's biggest rating move — the number that actually measures
-    // whether today made you better.
+    // The session's biggest single-topic move, then the points footnote.
     (() => {
       const moves = Object.entries(g.eloMoves || {}).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
       if (!moves.length || Math.abs(moves[0][1]) < 1) return '';
       const [topicId, d] = moves[0];
       const label = TOPICS.find((t) => t.id === topicId).label;
-      return `<div class="stat"><b>${d > 0 ? '+' : '−'}${Math.abs(Math.round(d))}</b><span>${label} rating → ${Math.round(eloOf(topicId))}</span></div>`;
-    })();
+      return `<div class="stat"><b>${d > 0 ? '+' : '−'}${Math.abs(Math.round(d))}</b><span>${label} → ${Math.round(eloOf(topicId))}</span></div>`;
+    })() +
+    `<div class="stat"><b>${g.score.toLocaleString()}</b><span>pts${isBest ? ' · new best!' : ''}</span></div>`;
 
   $('results-xp').innerHTML = levelAfter > levelBefore
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`

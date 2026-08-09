@@ -519,6 +519,7 @@ function updateElo(qtype, wasCorrect) {
   const before = e.r;
   e.r = Math.round((e.r + K * ((wasCorrect ? 1 : 0) - expected)) * 10) / 10;
   e.n += 1;
+  if (g) g.eloDelta = (g.eloDelta || 0) + (e.r - before);
   if (Math.floor(before / 100) !== Math.floor(e.r / 100) && window.Juice) {
     Juice.toast(`${e.r > before ? '➚' : '➘'} History rating ${Math.round(e.r)}`);
   }
@@ -784,7 +785,11 @@ function endGame(aborted = false) {
       : g.mode === 'review' ? 'Review round done'
       : 'Round complete';
 
-  $('results-score').innerHTML = `${g.score.toLocaleString()}<span> pts</span>${isBest ? ' <em>new best!</em>' : ''}`;
+  // Rating leads; points are the footnote.
+  const netDelta = g.eloDelta || 0;
+  $('results-score').innerHTML = store.elo && store.elo.n
+    ? `${Math.round(store.elo.r)}<span> elo · ${netDelta >= 0 ? '+' : '−'}${Math.abs(Math.round(netDelta))} this session · ${g.score.toLocaleString()} pts${isBest ? ' · new best!' : ''}</span>`
+    : `${g.score.toLocaleString()}<span> pts</span>${isBest ? ' <em>new best!</em>' : ''}`;
   $('results-stats').innerHTML =
     `<div class="stat"><b>${g.correct}/${g.answered}</b><span>correct</span></div>` +
     `<div class="stat"><b>${acc}%</b><span>accuracy</span></div>` +
