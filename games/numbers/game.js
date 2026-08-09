@@ -297,19 +297,8 @@ function animateScore(from, to) {
   requestAnimationFrame(step);
 }
 
-// A "+120" that drifts up from the answer and fades — the clearest possible
-// signal of what the last action was worth.
-function floatPoints(pts, anchor) {
-  const el = document.createElement('div');
-  el.className = 'float-points';
-  el.textContent = `+${pts}`;
-  const host = anchor || $('question');
-  const rect = host.getBoundingClientRect();
-  el.style.left = `${rect.left + rect.width / 2}px`;
-  el.style.top = `${rect.top}px`;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 900);
-}
+// The "+120" that used to drift up from the answer now comes from Juice.good(),
+// which fires the confetti, the haptic and the rising pitch in the same beat.
 
 function replay(el, cls) {
   if (!el) return;
@@ -329,7 +318,10 @@ function updateHud(scoreFrom = null) {
   const streakEl = $('hud-streak');
   const wasStreak = streakEl.textContent;
   streakEl.textContent = g.streak >= 2 ? `🔥 ${g.streak}` : '';
-  if (streakEl.textContent && streakEl.textContent !== wasStreak) replay(streakEl, 'flare');
+  if (streakEl.textContent && streakEl.textContent !== wasStreak) {
+    replay(streakEl, 'flare');
+    Juice.streak(g.streak, streakEl);
+  }
 
   if (g.lives !== null) $('hud-lives').textContent = '❤'.repeat(Math.max(0, g.lives));
 }
@@ -349,7 +341,7 @@ function answer(given, btn) {
   if (right) {
     const pts = awardPoints(elapsed);
     if (btn) btn.classList.add('correct');
-    floatPoints(pts, btn);
+    Juice.good({ points: pts, anchor: btn || $('question'), streak: g.streak });
     replay($('question'), 'pop');
     showFeedback(true, `✓ +${pts} pts${g.hinted ? ' (method used)' : ''}`);
   } else {
@@ -358,6 +350,7 @@ function answer(given, btn) {
     if (btn) btn.classList.add('wrong');
     if (g.lives !== null) g.lives -= 1;
     const lead = given === null ? "⏱ Time's up —" : '✗';
+    Juice.bad();
     replay($('question'), 'shake');
     showFeedback(false, `${lead} ${q.text} = <b>${q.answer.toLocaleString()}</b>. ${esc(q.why)}`);
   }
@@ -588,6 +581,10 @@ function endGame(aborted = false) {
     } else {
       scoreEl.innerHTML = finalHTML;
       replay(scoreEl, 'pop');
+      // The payoff lands on the number, not on the screen change: confetti for
+      // a clean round or a new best, and the level-up takes the whole screen.
+      if (isBest || acc >= 80) Juice.celebrate(scoreEl);
+      if (levelAfter > levelBefore) setTimeout(() => Juice.levelUp(levelAfter), 450);
     }
   };
   requestAnimationFrame(countUp);

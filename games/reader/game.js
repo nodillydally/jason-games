@@ -563,9 +563,21 @@ function answerQuestion(choice) {
     answered_at: new Date().toISOString(),
   });
 
+  // Show the verdict before moving on. The quiz used to advance silently, which
+  // gave back neither the correction nor the hit of getting one right.
+  const opts = [...$('quiz-options').children];
+  opts.forEach((b) => { b.disabled = true; });
+  if (opts[q.answer]) opts[q.answer].classList.add('correct');
+  if (!right && opts[choice]) opts[choice].classList.add('wrong');
+  if (right) Juice.good({ anchor: opts[choice] });
+  else Juice.bad();
+
   g.quizIndex += 1;
-  if (g.quizIndex < qs.length) renderQuestion();
-  else scoreRound();
+  setTimeout(() => {
+    if (!g || !screens.quiz.classList.contains('active')) return;  // quit mid-pause
+    if (g.quizIndex < qs.length) renderQuestion();
+    else scoreRound();
+  }, right ? 650 : 1250);
 }
 
 function scoreRound() {

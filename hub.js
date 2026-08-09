@@ -1,4 +1,4 @@
-/* hub.js — the daily recommender.
+/* hub.js — the daily recommender, plus the progress the hub itself owns.
  *
  * The games only compound if they're played on a schedule that covers every
  * domain, so the hub decides what today's session is instead of leaving it to
@@ -9,15 +9,17 @@
  * it takes its slots without this file needing a redesign.
  *
  * It also reads the games' own localStorage (same origin) to sharpen the
- * recommendation: no reading baseline yet → the audit comes first; a weakest
- * continent in Mapmaster → name it.
+ * recommendation — no reading baseline yet → the audit comes first — and to
+ * surface the two numbers that make opening this page feel like progress: a
+ * combined level across every game, and a day streak that only moves if a
+ * session actually gets started.
  */
 
 (function () {
   const GAMES = {
-    mapmaster: { name: 'Mapmaster', href: 'games/mapmaster/', icon: '🌍' },
-    numbers: { name: 'Numbers', href: 'games/numbers/', icon: '🔢' },
-    reader: { name: 'Reader', href: 'games/reader/', icon: '📖' },
+    mapmaster: { name: 'Mapmaster', href: 'games/mapmaster/', icon: '🌍', store: 'mapmaster-v1' },
+    numbers: { name: 'Numbers', href: 'games/numbers/', icon: '🔢', store: 'numbers.profile.v1' },
+    reader: { name: 'Reader', href: 'games/reader/', icon: '📖', store: 'reader.profile.v1' },
     // chronicle: { name: 'Chronicle', href: 'games/chronicle/', icon: '🏛️' },  // history — next build
     // elements:  { name: 'Elements',  href: 'games/elements/',  icon: '🧪' },  // science
     // briefing:  { name: 'Briefing',  href: 'games/briefing/',  icon: '📰' },  // news + expression
@@ -36,9 +38,30 @@
     { games: ['briefing', 'reader'], mode: 'Timed read', why: 'Whole-page reading under a clock — closest to real reading.' },
   ];
 
+  const STREAK_KEY = 'games.streak.v1';
+
   const read = (key) => {
     try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
   };
+  const write = (key, val) => {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* private mode */ }
+  };
+
+  // Same XP curve the games use, so the combined level means the same thing.
+  const levelForXp = (xp) => 1 + Math.floor(Math.sqrt(xp / 100));
+  const xpAtLevel = (lv) => 100 * (lv - 1) * (lv - 1);
+
+  const todayKey = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  };
+  const dayKeyOffset = (days) => {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  };
+
+  /* --------------------------- today's pick --------------------------- */
 
   function todaysPick() {
     const now = new Date();
@@ -79,7 +102,7 @@
     return pick;
   }
 
-  function render() {
+  function renderToday() {
     const host = document.getElementById('today');
     if (!host) return;
     const pick = todaysPick();
@@ -88,7 +111,7 @@
 
     const strip = ROTATION.map((slot, i) => {
       const g = GAMES[slot.games.find((k) => GAMES[k]) || 'reader'];
-      return `<span class="day${i === dayIdx ? ' now' : ''}" title="${g.name} — ${slot.mode}">${dayNames[i]} ${g.icon}</span>`;
+      return `<span class="day${i === dayIdx ? ' now' : ''}" title="${g.name} — ${slot.mode}">${dayNames[i]}<em>${g.icon}</em></span>`;
     }).join('');
 
     host.innerHTML = `
@@ -99,10 +122,113 @@
           <div class="today-pick">${pick.game.name} · ${pick.mode}</div>
           <div class="today-why">${pick.why}</div>
         </div>
-        <a class="today-play" href="${pick.game.href}">Play</a>
       </div>
+      <a class="today-play" href="${pick.game.href}" data-game="${pick.game.name}">Play ${pick.mode} →</a>
       <div class="week-strip">${strip}</div>`;
   }
 
-  render();
+  /* ------------------------- combined progress ------------------------- */
+
+  function renderRank() {
+    let totalXp = 0;
+    for (const [key, g] of Object.entries(GAMES)) {
+      const s = read(g.store);
+      const xp = s && Number(s.xp) ? Number(s.xp) : 0;
+      totalXp += xp;
+
+      // Stamp each card with the level it's actually at.
+      const card = document.querySelector(`.game[data-game="${key}"] h2`);
+      if (card && xp > 0) {
+        const lv = document.createElement('span');
+        lv.className = 'lv';
+        lv.textContent = `Lv ${levelForXp(xp)}`;
+        card.appendChild(lv);
+      }
+    }
+
+    const level = levelForXp(totalXp);
+    const floor = xpAtLevel(level);
+    const ceil = xpAtLevel(level + 1);
+    const pct = ceil > floor ? Math.round(((totalXp - floor) / (ceil - floor)) * 100) : 0;
+
+    const lvEl = document.getElementById('rank-level');
+    const fill = document.getElementById('xp-fill');
+    const label = document.getElementById('rank-label');
+    if (lvEl) lvEl.textContent = level;
+    if (label) {
+      label.textContent = totalXp
+        ? `${totalXp.toLocaleString()} XP total · ${(ceil - totalXp).toLocaleString()} to level ${level + 1}`
+        : 'No XP yet — play a round and this fills up.';
+    }
+    // Paint on the next frame so the bar visibly grows rather than appearing full.
+    if (fill) requestAnimationFrame(() => { fill.style.width = `${pct}%`; });
+  }
+
+  /* ----------------------------- day streak ----------------------------- */
+  /* Counts days a session was *started* from this hub. Opening the page isn't
+     enough — the click on a game is what moves it, so the number stays honest. */
+
+  function loadStreak() {
+    const s = read(STREAK_KEY);
+    if (!s || !s.last) return { last: null, streak: 0, best: 0 };
+    // A gap of more than one day means the run is over.
+    if (s.last !== todayKey() && s.last !== dayKeyOffset(1)) {
+      return { ...s, streak: 0 };
+    }
+    return s;
+  }
+
+  function renderStreak() {
+    const s = loadStreak();
+    const chip = document.getElementById('streak');
+    const n = document.getElementById('streak-n');
+    if (!chip || !n) return;
+    n.textContent = s.streak;
+    chip.classList.toggle('cold', s.streak < 1);
+    chip.title = s.streak
+      ? `${s.streak}-day streak${s.best ? ` · best ${s.best}` : ''}`
+      : 'Start a session to light this up';
+  }
+
+  function bumpStreak() {
+    const s = loadStreak();
+    if (s.last === todayKey()) return s;          // already counted today
+    const next = {
+      last: todayKey(),
+      streak: s.streak + 1,
+      best: Math.max(s.best || 0, s.streak + 1),
+    };
+    write(STREAK_KEY, next);
+    return next;
+  }
+
+  /* -------------------------------- wire -------------------------------- */
+
+  renderToday();
+  renderRank();
+  renderStreak();
+
+  // Launching a game is the thing that counts. Delay the navigation just long
+  // enough for the streak to light up — the payoff has to be visible.
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a.game:not(.soon), a.today-play');
+    if (!link) return;
+    const before = loadStreak().streak;
+    const after = bumpStreak().streak;
+    if (after === before) return;                 // already played today
+
+    e.preventDefault();
+    renderStreak();
+    if (window.Juice) {
+      const chip = document.getElementById('streak');
+      Juice.streak(after, chip);
+      Juice.spawn(
+        chip.getBoundingClientRect().left + chip.offsetWidth / 2,
+        chip.getBoundingClientRect().top + chip.offsetHeight / 2,
+        36, { spread: Math.PI * 2, speed: 9, colors: ['#ffc53d', '#ff6b9d', '#ffffff'] }
+      );
+      Juice.chord([523, 784, 1046], { dur: .2, type: 'triangle', gain: .05, stagger: .06 });
+    }
+    setTimeout(() => { window.location.href = link.href; }, 480);
+  });
 })();

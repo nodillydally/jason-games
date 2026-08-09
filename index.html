@@ -2,181 +2,409 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070a14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Jason's Learning Games</title>
+<link rel="stylesheet" href="lib/theme.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
 <style>
-  :root {
-    --bg: #0e1726;
-    --bg-soft: #16213a;
-    --card: #1a2742;
-    --card-edge: #2a3b61;
-    --text: #e8eefc;
-    --text-dim: #93a3c4;
-    --accent: #ffb84d;
-    --primary: #4d9fff;
+  /* Hub-only styles. Everything structural comes from lib/theme.css. */
+
+  :root { --p1: #5b8cff; --p2: #a855f7; --a1: #ffc53d; --a2: #ff6b9d; }
+
+  main.wrap { padding-top: calc(26px + env(safe-area-inset-top)); }
+
+  /* ------------------------------ header ------------------------------ */
+
+  .hub-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 4px;
+  }
+  .hub-head .title { text-align: left; margin: 0; flex: 1; }
+  .hub-head .title h1 { font-size: clamp(1.9rem, 8.5vw, 2.6rem); }
+
+  /* Day streak — the one number on this page that only goes up if he shows up. */
+  .streak-chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex: none;
+    padding: 9px 15px;
+    border-radius: var(--r-pill);
+    background: linear-gradient(120deg, var(--a1), var(--a2));
+    color: #24100a;
+    font-weight: 900;
+    font-size: .95rem;
+    white-space: nowrap;
+    box-shadow: 0 10px 28px -12px color-mix(in oklab, var(--a1) 90%, transparent);
+    animation: badge-in .6s var(--spring) both;
+  }
+  .streak-chip.cold {
+    background: var(--glass-2);
+    border: 1px solid var(--stroke);
+    color: var(--text-dim);
+    box-shadow: none;
+  }
+  .streak-chip .flame { animation: flicker 2.2s ease-in-out infinite; display: inline-block; }
+  @keyframes flicker {
+    0%, 100% { transform: scale(1) rotate(0); }
+    30% { transform: scale(1.16) rotate(-6deg); }
+    65% { transform: scale(.94) rotate(5deg); }
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* --------------------------- total progress --------------------------- */
 
-  body {
-    font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
-    background: radial-gradient(120% 100% at 50% 0%, var(--bg-soft) 0%, var(--bg) 60%);
-    color: var(--text);
-    min-height: 100vh;
-  }
+  .rank-card { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .rank-title { font-weight: 800; font-size: 1.02rem; }
+  .rank-sub { color: var(--text-dim); font-size: .8rem; margin-top: 2px; }
 
-  main { max-width: 860px; margin: 0 auto; padding: 56px 20px 64px; }
-
-  h1 { font-size: 2rem; letter-spacing: -.02em; }
-  .tagline { color: var(--text-dim); margin-top: 8px; line-height: 1.5; }
-
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
-    margin-top: 36px;
-  }
-
-  .game {
-    display: block;
-    background: var(--card);
-    border: 1px solid var(--card-edge);
-    border-radius: 14px;
-    padding: 20px;
-    text-decoration: none;
-    color: inherit;
-    transition: background .15s, border-color .15s, transform .06s;
-  }
-  .game:hover { background: #22335a; border-color: var(--primary); }
-  .game:active { transform: scale(.99); }
-
-  .game .icon { font-size: 1.9rem; line-height: 1; }
-  .game h2 { font-size: 1.1rem; margin-top: 12px; }
-  .game p { color: var(--text-dim); font-size: .9rem; margin-top: 6px; line-height: 1.45; }
-
-  .game.soon { opacity: .5; pointer-events: none; }
-  .game.soon h2::after {
-    content: "soon";
-    font-size: .65rem;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 999px;
-    padding: 2px 7px;
-    margin-left: 8px;
-    vertical-align: middle;
-  }
-
-  footer { margin-top: 48px; color: var(--text-dim); font-size: .85rem; }
-  footer a { color: var(--primary); }
-
-  /* ------------------------- Today's session ------------------------- */
+  /* ---------------------------- today's card ---------------------------- */
 
   .today {
-    background: var(--card);
-    border: 1px solid var(--primary);
-    border-radius: 16px;
-    padding: 18px 20px;
-    margin-top: 28px;
+    position: relative;
+    padding: 22px;
+    border-radius: var(--r-lg);
+    background:
+      linear-gradient(160deg,
+        color-mix(in oklab, var(--p1) 26%, transparent),
+        color-mix(in oklab, var(--p2) 18%, transparent) 55%,
+        var(--glass)) padding-box,
+      linear-gradient(150deg, var(--p1), var(--a2) 60%, var(--a1)) border-box;
+    border: 1.5px solid transparent;
+    box-shadow: 0 26px 60px -24px color-mix(in oklab, var(--p2) 85%, transparent), var(--shadow);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    overflow: hidden;
+    margin-top: 16px;
+    animation: rise .55s var(--ease) both .06s;
   }
   .today:empty { display: none; }
+
+  /* A slow light sweep so the hero panel never sits completely still. */
+  .today::after {
+    content: "";
+    position: absolute;
+    inset: -40% -10%;
+    background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, .13) 50%, transparent 58%);
+    animation: sweep 6.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes sweep {
+    0%, 55% { transform: translateX(-70%); }
+    95%, 100% { transform: translateX(70%); }
+  }
+
   .today-label {
-    font-size: .72rem;
+    font-size: .68rem;
     text-transform: uppercase;
-    letter-spacing: .1em;
-    color: var(--accent);
-    font-weight: 600;
-    margin-bottom: 10px;
+    letter-spacing: .18em;
+    color: var(--a1);
+    font-weight: 800;
+    margin-bottom: 14px;
   }
-  .today-row { display: flex; align-items: center; gap: 16px; }
-  .today-icon { font-size: 2.2rem; line-height: 1; }
+
+  .today-row { display: flex; align-items: center; gap: 15px; }
+
+  .today-icon {
+    flex: none;
+    width: 62px;
+    height: 62px;
+    display: grid;
+    place-items: center;
+    font-size: 2rem;
+    border-radius: 20px;
+    background: linear-gradient(150deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .05));
+    border: 1px solid var(--stroke-hi);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 12px 28px -12px #000;
+    animation: bob 3.6s ease-in-out infinite;
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(-7px) rotate(2deg); }
+  }
+
   .today-body { flex: 1; min-width: 0; }
-  .today-pick { font-weight: 700; font-size: 1.15rem; }
-  .today-why { color: var(--text-dim); font-size: .88rem; line-height: 1.45; margin-top: 3px; }
-  .today-play {
-    background: var(--primary);
-    color: #06132b;
-    font-weight: 700;
-    text-decoration: none;
-    border-radius: 10px;
-    padding: 10px 22px;
-    white-space: nowrap;
+  .today-pick { font-weight: 800; font-size: 1.22rem; letter-spacing: -.02em; }
+  .today-why {
+    color: color-mix(in oklab, var(--text) 76%, transparent);
+    font-size: .89rem;
+    line-height: 1.5;
+    margin-top: 5px;
   }
-  .today-play:hover { filter: brightness(1.12); }
+
+  .today-play {
+    display: block;
+    text-align: center;
+    margin-top: 18px;
+    padding: 16px 24px;
+    border-radius: var(--r-md);
+    background: linear-gradient(115deg, #fff, #e8ecff);
+    color: #0a0f22;
+    font-weight: 900;
+    font-size: 1.05rem;
+    letter-spacing: .01em;
+    text-decoration: none;
+    box-shadow: 0 14px 34px -12px rgba(255, 255, 255, .55);
+    transition: transform .18s var(--spring), box-shadow .25s;
+    animation: breathe 2.8s ease-in-out infinite;
+  }
+  .today-play:active { transform: scale(.97); }
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 14px 34px -12px rgba(255, 255, 255, .45); }
+    50% { box-shadow: 0 18px 46px -12px rgba(255, 255, 255, .8); }
+  }
+
   .week-strip {
     display: flex;
     gap: 6px;
-    margin-top: 14px;
-    flex-wrap: wrap;
+    margin-top: 16px;
   }
   .week-strip .day {
-    font-size: .74rem;
+    flex: 1;
+    text-align: center;
+    font-size: .68rem;
+    font-weight: 700;
     color: var(--text-dim);
-    border: 1px solid var(--card-edge);
-    border-radius: 999px;
-    padding: 3px 10px;
-    white-space: nowrap;
+    background: rgba(0, 0, 0, .28);
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+    padding: 7px 2px 6px;
+    line-height: 1.3;
   }
+  .week-strip .day em { display: block; font-style: normal; font-size: .95rem; margin-top: 2px; }
   .week-strip .day.now {
-    border-color: var(--primary);
-    color: var(--text);
-    background: var(--bg);
+    color: #24100a;
+    background: linear-gradient(150deg, var(--a1), var(--a2));
+    border-color: transparent;
+    box-shadow: 0 8px 20px -8px color-mix(in oklab, var(--a1) 90%, transparent);
+    transform: translateY(-2px);
+  }
+
+  /* ------------------------------ game grid ------------------------------ */
+
+  .grid-label {
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    color: var(--text-dim);
+    font-weight: 800;
+    margin: 30px 0 12px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 12px;
+  }
+
+  .game {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    border-radius: var(--r-md);
+    text-decoration: none;
+    color: inherit;
+    overflow: hidden;
+    isolation: isolate;
+    background:
+      linear-gradient(150deg, color-mix(in oklab, var(--c1) 20%, transparent), var(--glass) 65%) padding-box,
+      linear-gradient(150deg, color-mix(in oklab, var(--c1) 55%, transparent), var(--stroke) 70%) border-box;
+    border: 1px solid transparent;
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    box-shadow: var(--shadow);
+    transition: transform .22s var(--spring), box-shadow .25s;
+    animation: rise .5s var(--ease) both;
+  }
+  .game:nth-of-type(1) { animation-delay: .10s; }
+  .game:nth-of-type(2) { animation-delay: .16s; }
+  .game:nth-of-type(3) { animation-delay: .22s; }
+  .game:nth-of-type(4) { animation-delay: .28s; }
+  .game:nth-of-type(5) { animation-delay: .34s; }
+  .game:nth-of-type(6) { animation-delay: .40s; }
+
+  /* A colour wash that blooms from the icon on hover/press. */
+  .game::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0;
+    background: radial-gradient(80% 120% at 14% 50%, color-mix(in oklab, var(--c1) 60%, transparent), transparent 70%);
+    transition: opacity .3s;
+  }
+  .game:hover::before { opacity: 1; }
+  .game:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 26px 54px -20px color-mix(in oklab, var(--c1) 85%, transparent);
+  }
+  .game:active { transform: scale(.975); }
+
+  .game .icon {
+    flex: none;
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    font-size: 1.7rem;
+    border-radius: 17px;
+    background: linear-gradient(150deg, color-mix(in oklab, var(--c1) 70%, transparent), color-mix(in oklab, var(--c2) 60%, transparent));
+    border: 1px solid var(--stroke-hi);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 10px 24px -12px #000;
+    transition: transform .3s var(--spring);
+  }
+  .game:hover .icon { transform: rotate(-8deg) scale(1.08); }
+
+  .game .body { flex: 1; min-width: 0; }
+  .game h2 { font-size: 1.05rem; font-weight: 800; letter-spacing: -.02em; }
+  .game p {
+    color: var(--text-dim);
+    font-size: .82rem;
+    margin-top: 4px;
+    line-height: 1.45;
+  }
+
+  /* Per-game level, read straight out of the game's own localStorage. */
+  .game .lv {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 9px;
+    border-radius: var(--r-pill);
+    font-size: .64rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: linear-gradient(120deg, var(--c1), var(--c2));
+    vertical-align: middle;
+  }
+
+  .game.soon {
+    opacity: .42;
+    pointer-events: none;
+    filter: saturate(.4);
+  }
+  .game.soon h2::after {
+    content: "🔒 soon";
+    font-size: .6rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--text-dim);
+    border: 1px solid var(--stroke);
+    border-radius: var(--r-pill);
+    padding: 2px 8px;
+    margin-left: 8px;
+    vertical-align: middle;
+    font-weight: 700;
+  }
+
+  footer {
+    margin-top: 36px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: .8rem;
+    line-height: 1.7;
+  }
+  footer a { color: var(--p1); text-decoration: none; font-weight: 600; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 480px) {
+    .hub-head { flex-direction: column; gap: 10px; }
+    .streak-chip { align-self: flex-start; }
+    .today { padding: 18px; }
+    .today-icon { width: 54px; height: 54px; font-size: 1.7rem; }
+    .grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
 <body>
-<main>
-  <h1>Jason's Learning Games</h1>
-  <p class="tagline">Custom games for deliberate practice. The rotation below covers every domain if you show up daily.</p>
+<main class="wrap">
+
+  <div class="hub-head">
+    <div class="title">
+      <h1>Learning Games</h1>
+      <p>Deliberate practice, one session a day. The rotation covers every domain if you keep showing up.</p>
+    </div>
+    <div id="streak" class="streak-chip cold"><span class="flame">🔥</span> <span id="streak-n">0</span></div>
+  </div>
 
   <section id="today" class="today"></section>
 
-  <div class="grid">
-    <a class="game" href="games/mapmaster/">
+  <div class="card rank-card" id="rank-card">
+    <div class="level-badge">Lv&nbsp;<span id="rank-level">1</span><small>overall</small></div>
+    <div class="xp">
+      <div class="xp-bar"><div id="xp-fill"></div></div>
+      <span id="rank-label">0 XP</span>
+    </div>
+  </div>
+
+  <div class="grid-label">All games</div>
+
+  <div class="grid" id="grid">
+    <a class="game" href="games/mapmaster/" data-game="mapmaster" style="--c1:#38bdf8; --c2:#3b82f6;">
       <div class="icon">🌍</div>
-      <h2>Mapmaster</h2>
-      <p>World geography — name the country, find it on the map, drill the ones you keep missing.</p>
+      <div class="body">
+        <h2>Mapmaster</h2>
+        <p>Name the country, find it on the map, drill the ones you keep missing.</p>
+      </div>
     </a>
 
-    <a class="game" href="games/numbers/">
+    <a class="game" href="games/numbers/" data-game="numbers" style="--c1:#a855f7; --c2:#6366f1;">
       <div class="icon">🔢</div>
-      <h2>Numbers</h2>
-      <p>Mental math under time pressure — percentages, powers, order of operations, and the shortcuts behind them.</p>
+      <div class="body">
+        <h2>Numbers</h2>
+        <p>Mental math under time pressure — and the shortcuts behind it.</p>
+      </div>
     </a>
 
-    <a class="game" href="games/reader/">
+    <a class="game" href="games/reader/" data-game="reader" style="--c1:#fb923c; --c2:#f43f5e;">
       <div class="icon">📖</div>
-      <h2>Reader</h2>
-      <p>Speed reading with a comprehension check — because raw words-per-minute means nothing on its own.</p>
+      <div class="body">
+        <h2>Reader</h2>
+        <p>Speed reading with a comprehension check — raw wpm means nothing alone.</p>
+      </div>
     </a>
 
-    <a class="game soon" href="#">
+    <a class="game soon" href="#" style="--c1:#34d399; --c2:#14b8a6;">
       <div class="icon">🗣️</div>
-      <h2>Lexicon</h2>
-      <p>Vocabulary and language drills.</p>
+      <div class="body">
+        <h2>Lexicon</h2>
+        <p>Vocabulary and language drills.</p>
+      </div>
     </a>
 
-    <a class="game soon" href="#">
+    <a class="game soon" href="#" style="--c1:#f472b6; --c2:#e879f9;">
       <div class="icon">📚</div>
-      <h2>Bookshelf</h2>
-      <p>Facts and ideas from what you've been reading.</p>
+      <div class="body">
+        <h2>Bookshelf</h2>
+        <p>Facts and ideas from what you've been reading.</p>
+      </div>
     </a>
 
-    <a class="game soon" href="#">
+    <a class="game soon" href="#" style="--c1:#94a3b8; --c2:#64748b;">
       <div class="icon">♟️</div>
-      <h2>Chess</h2>
-      <p>Tactics puzzles and pattern recognition.</p>
+      <div class="body">
+        <h2>Chess</h2>
+        <p>Tactics puzzles and pattern recognition.</p>
+      </div>
     </a>
   </div>
 
   <footer>
-    Source on <a href="https://github.com/nodillydally/jason-games">GitHub</a>.
+    Built for one player. Source on <a href="https://github.com/nodillydally/jason-games">GitHub</a>.
   </footer>
 </main>
+
 <!-- Loaded here so a #sync= provisioning link works on the hub itself —
      localStorage is origin-wide, so arming it once arms every game. -->
 <script src="lib/sync.js"></script>
+<script src="lib/juice.js"></script>
 <script src="hub.js"></script>
 </body>
 </html>

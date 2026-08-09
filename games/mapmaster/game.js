@@ -698,6 +698,14 @@ function endGame(aborted = false) {
   }
 
   showScreen('results');
+
+  // The end-of-round payoff. A level-up outranks everything else on screen, so
+  // it gets its own beat after the confetti.
+  const scoreEl = $('results-score');
+  Juice.replay(scoreEl, 'pop');
+  const clean = g.answered > 0 && !g.missed.length;
+  if (isBest || clean) Juice.celebrate(scoreEl);
+  if (lvUp) setTimeout(() => Juice.levelUp(levelAfter), 500);
 }
 
 function recordAnswer(country, wasCorrect) {
@@ -728,15 +736,24 @@ function recordAnswer(country, wasCorrect) {
   updateHud();
 }
 
-function awardPoints(multiplier = 1) {
+// `anchor` is whatever the player just touched — the confetti and the "+40"
+// come out of it, so the reward is attached to the action that earned it.
+function awardPoints(multiplier = 1, anchor = null) {
   const streakBonus = Math.min(g.streak, 5) * 10;
-  g.score += Math.round(g.difficulty.points * multiplier) + streakBonus;
+  const gained = Math.round(g.difficulty.points * multiplier) + streakBonus;
+  g.score += gained;
   updateHud();
+  Juice.good({ points: gained, anchor: anchor || $('prompt'), streak: g.streak });
 }
 
 function updateHud() {
   $('hud-score').textContent = `${g.score} pts`;
-  $('hud-streak').textContent = g.streak >= 2 ? `🔥 ${g.streak}` : '';
+  const streakEl = $('hud-streak');
+  const wasStreak = streakEl.textContent;
+  streakEl.textContent = g.streak >= 2 ? `🔥 ${g.streak}` : '';
+  if (streakEl.textContent && streakEl.textContent !== wasStreak) {
+    Juice.streak(g.streak, streakEl);
+  }
   if (g.mode === 'blitz') {
     $('hud-progress').textContent = `${g.answered} answered`;
   } else if (g.mode === 'marathon') {
@@ -910,6 +927,9 @@ function showFeedback(good, html) {
   const el = $('feedback');
   el.innerHTML = html;
   el.className = good ? 'good' : 'bad';
+  // Correct answers get their celebration from awardPoints(), which knows what
+  // the answer was worth. A miss has nothing to count, so it lands here.
+  if (!good) Juice.bad();
 }
 
 // --- quiz/blitz answers ----------------------------------------------------
@@ -925,7 +945,7 @@ function submitChoice(country, btn) {
   }
   revealTarget();
   if (right) {
-    awardPoints();
+    awardPoints(1, btn);
     showFeedback(true, `✓ ${answerLabel(g.target)}!`);
     finishRound(900);
   } else {
@@ -983,12 +1003,15 @@ function handleFindClick(clicked) {
     const attemptIndex = g.difficulty.attempts - g.attemptsLeft;
     const multiplier = [1, 0.6, 0.3][attemptIndex] || 0.3;
     recordAnswer(g.target, attemptIndex === 0);
+    const hit = pathEls.get(g.target.id) || $('map');
     if (attemptIndex > 0) {
       // found it, but not first try — no streak, partial points
-      g.score += Math.round(g.difficulty.points * multiplier);
+      const partial = Math.round(g.difficulty.points * multiplier);
+      g.score += partial;
       updateHud();
+      Juice.good({ points: partial, anchor: hit, streak: 0 });
     } else {
-      awardPoints();
+      awardPoints(1, hit);
     }
     markCountry(g.target.id, 'correct');
     animateCamera(countryCamera(g.target));
