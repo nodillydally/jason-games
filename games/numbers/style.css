@@ -71,23 +71,27 @@
 /* A stacked fraction: numerator over a rule over denominator. Built from
    markup rather than font features, so it renders the same everywhere. All
    dimensions are in em so it scales with the clamped question size. */
+/* inline-block + vertical-align:middle, not inline-flex + a nudged baseline.
+   A two-line flex column sat on the baseline hangs its whole height below the
+   line, which dropped the fraction under "of 34" instead of beside it. middle
+   lands the bar near the math axis, which is where a reader expects it. */
 .frac {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  vertical-align: -.34em;
-  margin: 0 .08em;
-  line-height: 1;
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  font-size: .5em;
+  line-height: 1.1;
+  margin: 0 .12em;
+  position: relative;
+  top: -.05em;
 }
 .frac b, .frac i {
+  display: block;
   font-weight: inherit;
   font-style: normal;
-  font-size: .52em;
-  padding: 0 .2em;
+  padding: 0 .18em;
 }
-.frac b { border-bottom: .05em solid currentColor; padding-bottom: .08em; }
-.frac i { padding-top: .1em; }
+.frac b { border-bottom: .07em solid currentColor; }
 
 #question.enter { animation: fade-up .32s var(--ease) both; }
 #question.pop   { animation: q-pop .4s var(--ease) both; }
