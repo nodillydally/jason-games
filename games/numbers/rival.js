@@ -55,6 +55,8 @@ window.Rival = (function () {
   const RIVALS = [
     {
       id: 'metronome',
+      sprite: 'metronome',
+      facing: 's',
       pal: { H: '#5b5b5b', h: '#7a7a7a', S: '#cbb9a6', s: '#a8968a' },
       color: 'var(--rival-metronome)',
       gear: { head: { px: [
@@ -71,6 +73,8 @@ window.Rival = (function () {
     },
     {
       id: 'kid',
+      sprite: 'kid',
+      facing: 's',
       pal: { H: '#b8471a', h: '#d4652c', S: '#e6c2a0', s: '#c39c78' },
       color: 'var(--rival-kid)',
       gear: { head: { px: [
@@ -90,6 +94,8 @@ window.Rival = (function () {
     },
     {
       id: 'professor',
+      sprite: 'professor',
+      facing: 's',
       pal: { H: '#b9b2a6', h: '#d4cec2', S: '#d6b492', s: '#b2906e' },
       color: 'var(--rival-professor)',
       gear: { head: { px: [
@@ -297,10 +303,12 @@ window.Rival = (function () {
     s.avatar = Avatar.create(els.rival, {
       // Your Ghost wears your clothes and your ink, because it is you.
       ink: def.ghost ? opts.playerInk : def.color,
-      gear: def.ghost ? opts.playerGear : def.gear,
+      // A rival with its own sprite is already a character — the stand-in
+      // headgear was only ever there to tell recolours of one figure apart.
+      gear: def.ghost ? opts.playerGear : (def.sprite ? {} : def.gear),
       pal: def.pal,
-      tint: def.ghost ? '' : def.id,
-      facing: 'e',
+      tint: def.sprite ? '' : (def.ghost ? '' : def.id),
+      facing: def.facing || 'e',
       sprite: def.sprite || 'runner',
       ghost: !!def.ghost,
     });
