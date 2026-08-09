@@ -401,3 +401,20 @@ body:has(#screen-read.active) .fx-sound { opacity: .1; }
 .grade-good li { color: var(--ink-soft); }
 .grade-good li::marker { content: '✓ '; color: var(--good); }
 .grade-missed li::marker { color: var(--bad); }
+
+/* adaptive pace toggle */
+.wpm-adaptive {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .05em;
+  padding: 8px 12px;
+  border-radius: 99px;
+  opacity: .65;
+}
+.wpm-adaptive.active {
+  opacity: 1;
+  background: var(--p1);
+  border-color: var(--p1);
+  color: var(--paper);
+}

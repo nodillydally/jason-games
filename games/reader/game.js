@@ -63,9 +63,9 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => (
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { xp: 0, sessions: 0, wordsRead: 0, bestEffective: 0, baselineWpm: 0, history: [], byLevel: {}, passagesDone: {}, ...JSON.parse(raw) };
+    if (raw) return { xp: 0, sessions: 0, wordsRead: 0, bestEffective: 0, baselineWpm: 0, trainWpm: 0, adaptiveWpm: true, history: [], byLevel: {}, passagesDone: {}, ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
-  return { xp: 0, sessions: 0, wordsRead: 0, bestEffective: 0, baselineWpm: 0, history: [], byLevel: {}, passagesDone: {} };
+  return { xp: 0, sessions: 0, wordsRead: 0, bestEffective: 0, baselineWpm: 0, trainWpm: 0, adaptiveWpm: true, history: [], byLevel: {}, passagesDone: {} };
 }
 
 const store = loadStore();
@@ -82,6 +82,31 @@ const xpAtLevel = (lv) => 100 * (lv - 1) * (lv - 1);
 // nonfiction book; 30 min/day is the assumed reading habit.
 const BOOK_WORDS = 90000;
 const DAILY_MINUTES = 30;
+
+// ---------------------------------------------------------------------------
+// Adaptive training pace
+// ---------------------------------------------------------------------------
+
+// The wpm the training modes should run at, adjusted by results instead of by
+// hand: comprehension holding (>= 75%) at this pace nudges it up 25; breaking
+// (< 60%) drops it 25. Between the two is the working edge — it stays. Seeded
+// from the baseline (+50, the train-just-above-natural rule).
+const trainWpm = () =>
+  store.trainWpm
+  || (store.baselineWpm ? Math.min(900, Math.max(150, Math.round((store.baselineWpm + 50) / 25) * 25)) : 300);
+
+function adaptWpm(comprehension) {
+  const cur = trainWpm();
+  const next = comprehension >= 0.75 ? Math.min(900, cur + 25)
+    : comprehension < 0.6 ? Math.max(150, cur - 25)
+    : cur;
+  store.trainWpm = next;
+  if (next !== cur && window.Juice) {
+    Juice.toast(next > cur
+      ? `➚ Training pace → ${next} wpm`
+      : `➘ Training pace → ${next} wpm — hold it here`);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Text handling
@@ -269,8 +294,11 @@ function renderMenu() {
   fill('mode-options', MODES, 'mode');
   fill('chunk-options', CHUNKS, 'chunk');
 
+  // Adaptive pace owns the slider until the slider is touched by hand.
+  if (store.adaptiveWpm) sel.wpm = trainWpm();
   $('wpm-slider').value = sel.wpm;
   $('wpm-value').textContent = `${sel.wpm} wpm`;
+  $('wpm-adaptive').classList.toggle('active', Boolean(store.adaptiveWpm));
 
   $('paste-wrap').classList.toggle('hidden', sel.mode !== 'free');
   $('book-wrap').classList.toggle('hidden', sel.mode !== 'book');
@@ -387,6 +415,9 @@ async function startGame() {
     chunk: sel.chunk,
     wpm: sel.wpm,
     startWpm: sel.wpm,
+    // Only rounds run AT the adaptive pace adjust it — a manual 700-wpm
+    // experiment failing says nothing about the training number.
+    adaptivePace: Boolean(store.adaptiveWpm) && (sel.mode === 'benchmark' || sel.mode === 'timed'),
     rung: 0,
     usedPassages: [],
     wordsRead: 0,
@@ -642,9 +673,12 @@ function scoreRecallRound(grade, text) {
 
   if (g.mode === 'baseline' && comprehension >= BASELINE_MIN_COMP) {
     // The number every other mode trains against — but only if the recall
-    // proves the reading actually happened.
+    // proves the reading actually happened. A fresh baseline reseeds the
+    // adaptive training pace too.
     store.baselineWpm = actualWpm;
+    store.trainWpm = 0;
   }
+  if (g.adaptivePace) adaptWpm(comprehension);
 
   endGame();
 }
@@ -787,9 +821,11 @@ function scoreRound() {
 
   if (g.mode === 'baseline' && comprehension >= BASELINE_MIN_COMP) {
     // The number every other mode trains against — but only when the quiz
-    // shows the reading actually happened.
+    // shows the reading actually happened. Reseeds the training pace.
     store.baselineWpm = actualWpm;
+    store.trainWpm = 0;
   }
+  if (g.adaptivePace && (g.mode === 'benchmark' || g.mode === 'timed')) adaptWpm(comprehension);
 
   if (g.mode === 'ladder' && comprehension >= LADDER_PASS) {
     g.rung += 1;
@@ -1031,7 +1067,19 @@ $('menu-btn').addEventListener('click', () => { showScreen('menu'); renderMenu()
 $('stats-btn').addEventListener('click', () => { renderStats(); showScreen('stats'); });
 $('stats-back').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
 
+$('wpm-adaptive').addEventListener('click', () => {
+  store.adaptiveWpm = !store.adaptiveWpm;
+  saveStore();
+  renderMenu();
+});
+
 $('wpm-slider').addEventListener('input', (e) => {
+  // Touching the slider is an explicit override — adaptive lets go.
+  if (store.adaptiveWpm) {
+    store.adaptiveWpm = false;
+    saveStore();
+    $('wpm-adaptive').classList.remove('active');
+  }
   sel.wpm = Number(e.target.value);
   $('wpm-value').textContent = `${sel.wpm} wpm`;
 });
@@ -1078,7 +1126,7 @@ Sync.mountUI();
 if (new URLSearchParams(location.search).has('play')) {
   if (store.baselineWpm) {
     sel.mode = 'benchmark';
-    sel.wpm = Math.min(900, Math.max(150, Math.round((store.baselineWpm + 50) / 25) * 25));
+    sel.wpm = trainWpm();
   } else {
     sel.mode = 'baseline';
   }
