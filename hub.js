@@ -114,12 +114,14 @@
   const PLAYLOG_KEY = 'games.playlog.v2';
   const playedToday = () => (read(PLAYLOG_KEY) || {})[new Date().toISOString().slice(0, 10)] || [];
 
-  // The Brief's own definition of "kept": every story graded. Read straight
-  // from Briefing's store (it keys days by UTC date, so match that).
-  function briefDoneToday() {
+  // The Brief's own definition of "kept": every story graded. keptDays is
+  // keyed by the day the keeping HAPPENED; doneDates by the brief's own date
+  // (kept as fallback — the news feed can run days behind the calendar).
+  function briefKeptOn(iso) {
     const b = read('briefing.profile.v1');
-    return Boolean(b && b.doneDates && b.doneDates[new Date().toISOString().slice(0, 10)]);
+    return Boolean(b && ((b.keptDays && b.keptDays[iso]) || (b.doneDates && b.doneDates[iso])));
   }
+  const briefDoneToday = () => briefKeptOn(new Date().toISOString().slice(0, 10));
 
   // Mon..Sun of the current week as ISO dates, so the strip can look each day
   // up in the playlog. UTC to match what sync.js writes.
@@ -138,12 +140,10 @@
   // The playlog only keeps 14 days, so older weeks quietly stop showing fire.
   function completedDays() {
     const log = read(PLAYLOG_KEY) || {};
-    const brief = read('briefing.profile.v1');
-    const kept = (brief && brief.doneDates) || {};
     const done = new Set();
     for (const iso of weekDates()) {
       const played = log[iso] || [];
-      if (kept[iso] && played.some((k) => k !== 'briefing')) done.add(iso);
+      if (briefKeptOn(iso) && played.some((k) => k !== 'briefing')) done.add(iso);
     }
     return done;
   }
@@ -249,6 +249,11 @@
     if (!chip || !n) return;
     n.textContent = s.streak;
     chip.classList.toggle('cold', s.streak < 1);
+    const dot = chip.querySelector('.dot');
+    if (dot) {
+      dot.classList.toggle('fire', s.streak >= 1);
+      dot.textContent = s.streak >= 1 ? '🔥' : '';
+    }
     chip.title = s.streak
       ? `${s.streak}-day streak${s.best ? ` · best ${s.best}` : ''}`
       : 'Start a session to light this up';

@@ -50,13 +50,37 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => (
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { xp: 0, sessions: 0, scoreSum: 0, gradedCount: 0, doneDates: {}, best: {}, ...JSON.parse(raw) };
+    if (raw) return { xp: 0, sessions: 0, scoreSum: 0, gradedCount: 0, doneDates: {}, keptDays: {}, best: {}, ...JSON.parse(raw) };
   } catch (err) { /* corrupted storage — start fresh */ }
-  return { xp: 0, sessions: 0, scoreSum: 0, gradedCount: 0, doneDates: {}, best: {} };
+  return { xp: 0, sessions: 0, scoreSum: 0, gradedCount: 0, doneDates: {}, keptDays: {}, best: {} };
 }
 
 const store = loadStore();
 const saveStore = () => localStorage.setItem(STORE_KEY, JSON.stringify(store));
+
+// Backfill: a day finished before keptDays existed only stamped the brief's
+// date, so the hub's "done today" check missed it. A finished session whose
+// grades landed today is proof today was kept — stamp it once at load.
+(function backfillKeptDays() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (store.keptDays[today]) return;
+  for (const key of [DAY_KEY, 'briefing.dump.v1']) {
+    try {
+      const s = JSON.parse(localStorage.getItem(key));
+      if (!s || !s.finished || !s.tabs) continue;
+      const storyKeys = Object.keys(s.tabs).filter((k) => /^s\d+$/.test(k));
+      const kept = (storyKeys.length && storyKeys.every((k) => s.tabs[k].grade))
+        || (s.tabs.dump && s.tabs.dump.grade);
+      if (!kept) continue;
+      const lastGraded = (s.log || []).map((l) => String(l.answered_at || '').slice(0, 10)).sort().pop();
+      if (lastGraded === today) {
+        store.keptDays[today] = true;
+        saveStore();
+        return;
+      }
+    } catch { /* unreadable day state — skip */ }
+  }
+})();
 
 const levelForXp = (xp) => 1 + Math.floor(Math.sqrt(xp / 100));
 const xpAtLevel = (lv) => 100 * (lv - 1) * (lv - 1);
@@ -66,6 +90,12 @@ const letterFor = (score) =>
     : score >= 80 ? 'B+' : score >= 75 ? 'B' : score >= 70 ? 'B-'
     : score >= 65 ? 'C+' : score >= 60 ? 'C' : score >= 50 ? 'D' : 'F';
 
+// doneDates is keyed by the BRIEF's date (which brief was kept); keptDays by
+// the day the keeping happened. The news bot can run days behind, so the two
+// differ — the streak and the hub's daily duty go by keptDays. doneDates
+// doubles as a legacy fallback for days kept before keptDays existed.
+const keptOn = (iso) => Boolean(store.keptDays[iso] || store.doneDates[iso]);
+
 // Consecutive kept days, with one grace day.
 function briefStreak() {
   const day = (offset) => {
@@ -73,10 +103,10 @@ function briefStreak() {
     d.setDate(d.getDate() - offset);
     return d.toISOString().slice(0, 10);
   };
-  let start = store.doneDates[day(0)] ? 0 : store.doneDates[day(1)] ? 1 : null;
+  let start = keptOn(day(0)) ? 0 : keptOn(day(1)) ? 1 : null;
   if (start === null) return 0;
   let n = 0;
-  while (store.doneDates[day(start + n)]) n += 1;
+  while (keptOn(day(start + n))) n += 1;
   return n;
 }
 
@@ -592,8 +622,12 @@ function endGame(aborted = false) {
   store.sessions += 1;
 
   // The streak is for keeping the whole brief — every story graded. Recall
-  // and markets are bonuses, not gates.
-  if (keptToday()) store.doneDates[g.brief.date] = true;
+  // and markets are bonuses, not gates. Mark both the brief that was kept
+  // and the day the keeping happened (they differ when the feed runs behind).
+  if (keptToday()) {
+    store.doneDates[g.brief.date] = true;
+    store.keptDays[new Date().toISOString().slice(0, 10)] = true;
+  }
 
   g.finished = true;
   saveDay();
@@ -605,10 +639,22 @@ function endGame(aborted = false) {
 
   showScreen('results');
   if (window.Juice) {
-    const graded = tabKeys().filter((k) => g.tabs[k].grade);
-    const avg = graded.length ? Math.round(graded.reduce((s, k) => s + g.tabs[k].grade.score, 0) / graded.length) : 0;
-    if (avg >= 80) Juice.celebrate($('results-score'));
-    if (levelAfter > levelBefore) setTimeout(() => Juice.levelUp(levelAfter), 450);
+    if (keptToday()) {
+      // Keeping the day is THE moment — a confetti volley across the screen,
+      // then the streak gets its fire.
+      const title = $('results-title');
+      Juice.celebrate(title);
+      [0.25, 0.5, 0.75].forEach((fx, i) => setTimeout(() => {
+        Juice.spawn(innerWidth * fx, innerHeight * 0.22, 34, { spread: Math.PI * 2, speed: 8, size: 7 });
+      }, 250 + i * 220));
+      const streak = briefStreak();
+      if (streak > 1) setTimeout(() => Juice.toast(`🔥 ${streak}-day streak`), 950);
+    } else {
+      const graded = tabKeys().filter((k) => g.tabs[k].grade);
+      const avg = graded.length ? Math.round(graded.reduce((s, k) => s + g.tabs[k].grade.score, 0) / graded.length) : 0;
+      if (avg >= 80) Juice.celebrate($('results-score'));
+    }
+    if (levelAfter > levelBefore) setTimeout(() => Juice.levelUp(levelAfter), 1600);
   }
 }
 
@@ -623,7 +669,7 @@ function renderResults(xpGain = 0, levelBefore = null, levelAfter = null) {
   $('results-stats').innerHTML =
     `<div class="stat"><b>${graded.length}/${tabKeys().length}</b><span>graded</span></div>` +
     `<div class="stat"><b>${g.score.toLocaleString()}</b><span>points</span></div>` +
-    `<div class="stat"><b>${briefStreak()}</b><span>day streak</span></div>`;
+    `<div class="stat"><b>${briefStreak() > 0 ? '🔥 ' : ''}${briefStreak()}</b><span>day streak</span></div>`;
   $('results-xp').innerHTML = (levelAfter !== null && levelAfter > levelBefore)
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`
     : xpGain ? `+${xpGain} XP` : '';
@@ -662,7 +708,7 @@ function renderStats() {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const key = d.toISOString().slice(0, 10);
-    const done = Boolean(store.doneDates[key]);
+    const done = keptOn(key);
     cells.push(`<span class="daycell${done ? ' done' : ''}" title="${key}">${done ? '●' : '·'}</span>`);
   }
   $('stats-week').innerHTML = `<h3>Last 14 days</h3><div class="daygrid">${cells.join('')}</div>`;
