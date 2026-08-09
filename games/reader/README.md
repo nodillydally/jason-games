@@ -22,6 +22,7 @@ and you scored 300. Going faster only counts if understanding holds.
 | --- | --- |
 | **Benchmark 🎯** | One passage at your chosen speed, then a comprehension check. |
 | **Ladder 📈** | Speed climbs 50 wpm after every passage you pass at 70%+, and stops when comprehension breaks. This finds your actual ceiling instead of making you guess it. |
+| **My books 📚** | Jason's own library, one ~1200-word session at a time, with a fill-the-blank (cloze) check generated from what was just read. Bookmarked across sessions. The book text lives in a private database reached through a token-gated endpoint — it is deliberately **not** in this repo or on the public site. |
 | **Free read 📄** | Paste your own text — a chapter, an article, your notes — and read it at speed. Not scored; it's practice, not measurement. |
 
 ## How the display works
@@ -79,7 +80,6 @@ answerable from the text alone.
 
 ## Ideas for future versions
 
-- Import from your reading list so the passages are books you're actually reading
 - Free-recall mode: read, close, write what you remember, get it graded (needs an LLM — see the repo README)
 - Regression tracking: flag when today's effective wpm drops well below your baseline
 - Subvocalisation drill: a metronome that outpaces your inner voice
