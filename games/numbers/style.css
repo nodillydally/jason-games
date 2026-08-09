@@ -281,6 +281,196 @@
 .method-extras { margin: 20px 0 0 20px; }
 .method-extras li { font-size: 13.5px; line-height: 1.7; color: var(--ink-2); margin-bottom: 7px; }
 
+/* ------------------------------- race -------------------------------- */
+
+/* The track sits between the question clock and the question itself, so the
+   rival is in peripheral vision while you work rather than something you have
+   to look away to check. Two hairline rails, paper and ink, no chrome. */
+
+.race {
+  margin: 14px 0 2px;
+  padding: 14px 16px 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+}
+
+.race-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.race-vs { color: var(--ink-3); }
+.race-vs b { font-size: 13px; }
+
+.race-gap { font-weight: 500; transition: color .3s var(--ease); }
+.race-gap.ahead  { color: var(--good); }
+.race-gap.behind { color: var(--bad); }
+
+.race-lane {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 26px;
+}
+.lane-tag {
+  flex: 0 0 34px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.lane-legs {
+  flex: 0 0 38px;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+/* The rail carries a tick per leg, so position reads as "3 of 10" at a glance
+   rather than as an abstract percentage. */
+.rail {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--rule) 0 1px,
+    transparent 1px 10%
+  ), var(--rule-2);
+  border-radius: 2px;
+}
+.rail::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: -7px;
+  width: 2px;
+  height: 16px;
+  background: var(--ink);
+  opacity: .5;
+}
+
+.racer {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+}
+
+/* You leap a whole leg at a time; the rival creeps. The difference in easing
+   is doing real work — the snap forward is the reward for a right answer. */
+.racer.you {
+  border-color: var(--p1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p1) 12%, transparent);
+  transition: left .42s var(--ease);
+}
+.racer.rival {
+  border-color: var(--ink-3);
+  transition: left .1s linear; /* smooths the 100ms game ticker */
+}
+
+.racer.stumbling { animation: racer-fumble .5s var(--ease); }
+.racer.won { animation: racer-win .6s var(--ease); }
+
+@keyframes racer-fumble {
+  0%, 100% { transform: translate(-50%, -50%) rotate(0); }
+  30%      { transform: translate(-50%, -35%) rotate(-16deg); }
+  60%      { transform: translate(-50%, -50%) rotate(9deg); }
+}
+@keyframes racer-win {
+  0%   { transform: translate(-50%, -50%) scale(1); }
+  45%  { transform: translate(-50%, -70%) scale(1.25); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.race-note {
+  height: 14px;
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  text-align: center;
+  opacity: 0;
+}
+.race-note.good { color: var(--good); }
+.race-note.show { animation: note-flash 2s var(--ease) both; }
+
+@keyframes note-flash {
+  0%       { opacity: 0; transform: translateY(3px); }
+  12%, 65% { opacity: 1; transform: translateY(0); }
+  100%     { opacity: 0; }
+}
+
+/* The block wraps its own <h2>, so the heading's margin collapses out of it
+   and the picker ends up crowding the difficulty row above. */
+#rival-block { margin-top: 26px; }
+
+.rival-blurb {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  margin: 12px 2px 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--rule);
+}
+
+/* ----------------------------- race result ----------------------------- */
+
+.race-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--rule);
+  background: var(--paper);
+}
+.race-verdict.won  { border-color: color-mix(in srgb, var(--good) 45%, transparent); }
+.race-verdict.lost { border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
+
+.verdict-head {
+  font-family: var(--serif);
+  font-size: 19px;
+  letter-spacing: -.01em;
+}
+.race-verdict.won  .verdict-head { color: var(--good); }
+.race-verdict.lost .verdict-head { color: var(--bad); }
+
+.verdict-sub {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .racer { transition: none; }
+  .racer.stumbling, .racer.won, .race-note.show { animation: none; }
+  .race-note.show { opacity: 1; }
+}
+
 /* --------------------------- small screens --------------------------- */
 
 @media (max-width: 560px) {
@@ -294,4 +484,9 @@
   #hint-body { padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); }
   .method-problem { font-size: 22px; }
   .topic-name { flex: 0 0 38%; font-size: 13px; }
+  .race { padding: 12px 12px 10px; }
+  .race-head { font-size: 9px; letter-spacing: .1em; }
+  .lane-tag { flex: 0 0 28px; }
+  .lane-legs { flex: 0 0 34px; }
+  .verdict-head { font-size: 17px; }
 }

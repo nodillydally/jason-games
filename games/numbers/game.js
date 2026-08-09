@@ -10,12 +10,14 @@ const QUIZ_ROUNDS = 10;
 const MARATHON_LIVES = 3;
 const BLITZ_SECONDS = 60;
 const LADDER_STEP = 5; // correct answers per difficulty step
+const RACE_LEGS = 10;  // first past this many correct answers wins
 
 const MODES = [
   { id: 'classic',  label: 'Classic',  icon: '🎯', hint: '10 questions.' },
   { id: 'blitz',    label: 'Blitz',    icon: '⏱',  hint: '60 seconds — answer as many as you can.' },
   { id: 'marathon', label: 'Marathon', icon: '💀', hint: '3 lives. Questions keep coming until you miss three.' },
   { id: 'ladder',   label: 'Ladder',   icon: '📈', hint: 'Starts easy and ramps up every 5 correct. 3 lives.' },
+  { id: 'race',     label: 'Race',     icon: '🏁', hint: `First to ${RACE_LEGS} correct. A wrong answer costs you the leg.` },
   { id: 'review',   label: 'Review',   icon: '📚', hint: 'Drills only the topics you keep getting wrong.' },
 ];
 
@@ -59,6 +61,8 @@ const xpAtLevel = (lv) => 100 * (lv - 1) * (lv - 1);
 const statFor = (id) => store.stats[id] || { seen: 0, correct: 0, ms: 0 };
 const masteryOf = (id) => { const s = statFor(id); return s.seen ? s.correct / s.seen : 0; };
 const avgMsOf = (id) => { const s = statFor(id); return s.seen ? Math.round(s.ms / s.seen) : 0; };
+
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]
@@ -111,7 +115,7 @@ function drawTopic() {
 // Menu
 // ---------------------------------------------------------------------------
 
-const sel = { mode: 'classic', topic: 'mixed', difficulty: 'normal' };
+const sel = { mode: 'classic', topic: 'mixed', difficulty: 'normal', rival: 'kid' };
 
 function optionButton(item, group, active) {
   const b = document.createElement('button');
@@ -145,6 +149,13 @@ function renderMenu() {
   fill('topic-options', [{ id: 'mixed', label: 'Mixed', icon: '🎲' }, ...TOPICS], 'topic');
   fill('difficulty-options', DIFFICULTIES, 'difficulty');
 
+  const isRace = sel.mode === 'race';
+  $('rival-block').classList.toggle('hidden', !isRace);
+  if (isRace) {
+    fill('rival-options', Rival.list(), 'rival');
+    $('rival-blurb').textContent = Rival.find(sel.rival).blurb;
+  }
+
   const mode = MODES.find((m) => m.id === sel.mode);
   const reviewCount = sel.mode === 'review' ? reviewTopics().length : null;
   const isLadder = sel.mode === 'ladder';
@@ -169,7 +180,8 @@ let ticker = null;
 
 function startGame() {
   const difficulty = DIFFICULTIES.find((d) => d.id === sel.difficulty);
-  const endless = sel.mode === 'blitz' || sel.mode === 'marathon' || sel.mode === 'ladder';
+  const endless = sel.mode === 'blitz' || sel.mode === 'marathon'
+    || sel.mode === 'ladder' || sel.mode === 'race';
 
   const topicPool = sel.mode === 'review' ? reviewTopics()
     : sel.topic === 'mixed' ? TOPICS
@@ -207,6 +219,27 @@ function startGame() {
   showScreen('game');
   $('hud-clock').classList.toggle('hidden', sel.mode !== 'blitz');
   $('hud-lives').classList.toggle('hidden', g.lives === null);
+
+  // The rival paces itself off your own history, so it needs read access to
+  // the same numbers the stats screen shows — not to the store itself.
+  if (g.mode === 'race') {
+    g.rivalId = sel.rival;
+    Rival.start({
+      rivalId: sel.rival,
+      legs: RACE_LEGS,
+      difficultyId: difficulty.id,
+      difficultySeconds: difficulty.seconds,
+      drawTopic,
+      baseMsFor: avgMsOf,
+      missRateFor: (id) => {
+        const s = statFor(id);
+        return s.seen ? 1 - s.correct / s.seen : null;
+      },
+    });
+  } else {
+    Rival.stop();
+  }
+
   startTicker();
   nextQuestion();
 }
@@ -225,6 +258,10 @@ function tick() {
     $('hud-clock').textContent = `⏱ ${Math.ceil(left / 1000)}s`;
     if (left <= 0) return endGame();
   }
+
+  // Deliberately ahead of the `locked` guard: the rival keeps running while
+  // you read why you got one wrong. That pause is the cost of the mistake.
+  if (g.mode === 'race' && Rival.tick() === 'rival') return endGame();
 
   if (g.locked || g.hintOpen) return;
 
@@ -380,9 +417,18 @@ function answer(given, btn) {
   $('timer-fill').style.width = '0%';
   updateHud(scoreBefore);
 
-  // Blitz keeps moving on its own; every other mode waits so the explanation
-  // can actually be read.
-  if (g.mode === 'blitz') setTimeout(nextQuestion, right ? 450 : 1400);
+  if (g.mode === 'race') {
+    if (right) {
+      // Let the winning stride land before the screen changes.
+      if (Rival.advanceYou() === 'you') { setTimeout(() => endGame(), 700); return; }
+    } else {
+      Rival.missedLeg();
+    }
+  }
+
+  // Blitz and Race keep moving on their own; every other mode waits so the
+  // explanation can actually be read.
+  if (g.mode === 'blitz' || g.mode === 'race') setTimeout(nextQuestion, right ? 450 : 1400);
   else $('next-btn').classList.remove('hidden');
 }
 
@@ -468,6 +514,7 @@ function openHint() {
     g.hintOpen = true;
     g.hintOpenedAt = Date.now();
     g.hinted = true;
+    if (g.mode === 'race') Rival.pause();
   }
 }
 
@@ -477,6 +524,7 @@ function closeHint() {
   if (g && g.hintOpen) {
     g.questionStartedAt += Date.now() - g.hintOpenedAt;
     g.hintOpen = false;
+    if (g.mode === 'race') Rival.resume();
   }
 }
 
@@ -527,9 +575,31 @@ function syncSession(aborted, xpGain) {
   });
 }
 
+// The scoreline in the terms the race was actually run in: legs, margin, and
+// whether the rival handed it to you rather than you taking it.
+function raceVerdictHTML(race, bonus) {
+  const parts = [`${race.you}–${race.rivalLegs} on legs`];
+  if (race.stumbles) {
+    parts.push(`${race.stumbles} fumble${race.stumbles > 1 ? 's' : ''} from ${race.rival.name}`);
+  }
+  if (bonus) parts.push(`+${bonus.toLocaleString()} win bonus`);
+
+  return `
+    <div class="race-verdict ${race.won ? 'won' : 'lost'}">
+      <span class="verdict-head">${race.rival.icon} ${race.won ? 'Beat' : 'Lost to'}
+        ${esc(race.rival.name)} by ${Math.abs(race.margin).toFixed(1)}</span>
+      <span class="verdict-sub">${esc(parts.join(' · '))}</span>
+    </div>`;
+}
+
 function endGame(aborted = false) {
   clearInterval(ticker);
   ticker = null;
+
+  // Read the race off before tearing the track down — the results screen is
+  // the only place the margin ever gets stated.
+  const race = g && g.mode === 'race' ? Rival.result() : null;
+  Rival.stop();
 
   if (aborted) {
     syncSession(true, 0);
@@ -540,12 +610,21 @@ function endGame(aborted = false) {
     return;
   }
 
+  // A win pays out, and a comfortable win pays more than a scrape — but the
+  // margin is capped, so thrashing a rival can't dwarf the round itself.
+  const raceBonus = race && race.won
+    ? Math.round((250 + 70 * clamp(race.margin, 0, 3)) * g.difficulty.mult)
+    : 0;
+  g.score += raceBonus;
+
   const levelBefore = levelForXp(store.xp);
   const xpGain = Math.round(g.score / 10);
   store.xp += xpGain;
   store.games += 1;
 
-  const bestKey = `${g.mode}|${g.topic}|${g.difficulty.id}`;
+  // Bests are per rival — beating The Metronome and beating Kid Lightning are
+  // not the same achievement, so they don't share a record.
+  const bestKey = `${g.mode}|${g.topic}|${g.difficulty.id}${race ? `|${g.rivalId}` : ''}`;
   const isBest = g.score > 0 && g.score > (store.best[bestKey] || 0);
   if (isBest) store.best[bestKey] = g.score;
   saveStore();
@@ -556,11 +635,15 @@ function endGame(aborted = false) {
   const avgMs = g.log.length ? Math.round(g.log.reduce((sum, a) => sum + a.ms, 0) / g.log.length) : 0;
 
   $('results-title').textContent =
-    g.mode === 'blitz' ? "Time's up!"
+    race ? (race.won
+      ? (race.photoFinish ? '🏁 Photo finish — you took it!' : '🏁 You won!')
+      : `🏁 ${race.rival.name} took it`)
+      : g.mode === 'blitz' ? "Time's up!"
       : g.dead ? `💀 Out of lives — ${g.correct} correct`
       : g.mode === 'ladder' ? `📈 Reached level ${g.level}`
       : 'Round complete';
 
+  $('results-race').innerHTML = race ? raceVerdictHTML(race, raceBonus) : '';
   $('results-score').innerHTML = `${g.score.toLocaleString()}<span> pts</span>${isBest ? ' <em>new best!</em>' : ''}`;
   $('results-stats').innerHTML =
     `<div class="stat"><b>${g.correct}/${g.answered}</b><span>correct</span></div>` +
@@ -595,7 +678,7 @@ function endGame(aborted = false) {
       replay(scoreEl, 'pop');
       // The payoff lands on the number, not on the screen change: confetti for
       // a clean round or a new best, and the level-up takes the whole screen.
-      if (isBest || acc >= 80) Juice.celebrate(scoreEl);
+      if (isBest || acc >= 80 || (race && race.won)) Juice.celebrate(scoreEl);
       if (levelAfter > levelBefore) setTimeout(() => Juice.levelUp(levelAfter), 450);
     }
   };

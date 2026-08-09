@@ -14,6 +14,7 @@ play, or serve the repo root and visit `/games/numbers/`.
 | **Blitz ⏱** | 60 seconds — answer as many as you can. Auto-advances. |
 | **Marathon 💀** | 3 lives. Questions keep coming until you miss three. |
 | **Ladder 📈** | Starts easy and steps up a level every 5 correct. 3 lives. |
+| **Race 🏁** | First to 10 correct against a simulated rival. A wrong answer costs you the leg. |
 | **Review 📚** | Drills only the topics you're below 85% on. |
 
 ## Topics
@@ -26,6 +27,39 @@ you're weak.
 Difficulty sets the size of the numbers. **Hard also removes the multiple
 choice** — you type the answer, which is a genuinely different skill from
 recognising it among four options.
+
+## The rival (Race mode)
+
+The opponent in Race is **not random**. Its pace comes from your own recorded
+per-topic times, so every race is close by construction and beating one means
+you actually got faster. A rival rolling dice would be either trivial or
+unfair, and both are boring.
+
+| Rival | Character |
+| --- | --- |
+| **The Metronome** ⏱ | 7.5 seconds a question, forever, never wrong. The only rival that ignores your history — a fixed bar, so Hard is brutal. |
+| **Kid Lightning** ⚡ | Faster than you, but rushes one in four and loses more time sulking than it gained. Wild swings. |
+| **The Professor** 🎓 | Slow at plain arithmetic, near-instant at anything with structure. Take your lead on × and ÷ before it takes it back on √ and `( )`. |
+| **Your Ghost** 👤 | Your own pace and your own miss rate, per topic, with rubber-banding off. |
+
+Three details do most of the work:
+
+**A leg is not your thinking time.** It's your thinking time plus the beat
+before the next question, and a miss costs the longer beat *and* the leg.
+Pacing a rival off raw answer times alone makes it about 20% faster than the
+player it was supposedly cloned from — in simulation that dropped Your Ghost,
+which should be a coin flip, to a 7% win rate.
+
+**Rivals fumble visibly.** A leg rolled as a stumble runs to 92% of the way and
+then holds there. You can watch the comeback happen rather than just noticing
+the gap changed.
+
+**You leap, it creeps.** Your token jumps a whole leg on a correct answer while
+the rival advances continuously. The difference in easing is the reward.
+
+Rubber-banding is mild (±14%) and switchable per rival. Simulated across weak,
+average and strong players, Your Ghost lands at 42–52% wins with roughly one
+race in eight decided inside half a leg.
 
 ## Two design rules
 
@@ -60,3 +94,9 @@ matches, options never contain the answer, and nothing is a duplicate.
 - A "estimate" mode: accept anything within 5% of the answer, for real-world speed
 - Track time-of-day performance — mental math is unusually sensitive to tiredness
 - Two-player pass-and-play
+- A 2D character on the race track, driven off the events `lib/juice.js` already
+  fires, with cosmetics unlocked by level so the XP bar finally pays out
+- Scenario modes that change the *failure condition* rather than reskinning
+  "10 questions" — cracking a safe where wrong answers raise an alarm, a market
+  day run in percentages where you can go broke
+- Bank-or-push after a streak, and a date-seeded daily challenge
