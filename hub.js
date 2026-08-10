@@ -119,7 +119,18 @@
   // (kept as fallback — the news feed can run days behind the calendar).
   function briefKeptOn(iso) {
     const b = read('briefing.profile.v1');
-    return Boolean(b && ((b.keptDays && b.keptDays[iso]) || (b.doneDates && b.doneDates[iso])));
+    if (b && ((b.keptDays && b.keptDays[iso]) || (b.doneDates && b.doneDates[iso]))) return true;
+    // Fall back to the EVIDENCE rather than trusting a flag: the day state
+    // carries the graded takes and when they landed. If a take was graded on
+    // this date the brief happened, whatever the flag says or which device
+    // set it.
+    for (const key of ['briefing.day.v1', 'briefing.dump.v1']) {
+      const s = read(key);
+      if (!s || !s.tabs) continue;
+      if (!Object.values(s.tabs).some((t) => t && t.grade)) continue;
+      if ((s.log || []).some((l) => String(l.answered_at || '').slice(0, 10) === iso)) return true;
+    }
+    return false;
   }
   const briefDoneToday = () => briefKeptOn(new Date().toISOString().slice(0, 10));
 
@@ -319,7 +330,20 @@
         ${b.domains.map((d) => d.rating !== null
           ? `<div class="elo-row"><span class="er-label">${d.icon} ${d.label}</span><b>${Math.round(d.rating)}</b><small>${d.detail || ''}</small></div>`
           : `<div class="elo-row unrated"><span class="er-label">${d.icon} ${d.label}</span><b>—</b><small>not yet rated</small></div>`).join('')}
+        <div class="elo-sync">${syncLine()}</div>
       </div>`;
+  }
+
+  // Answers "is this device actually syncing?" without opening a database.
+  function syncLine() {
+    if (!window.Sync || !Sync.isEnabled()) return '☁ Cloud sync off — progress stays on this device.';
+    const s = read('games.roam.status.v1');
+    if (!s || !s.pull) return '☁ Syncing…';
+    const ago = (t) => {
+      const m = Math.round((Date.now() - t) / 60000);
+      return m < 1 ? 'just now' : m < 60 ? `${m}m ago` : `${Math.round(m / 60)}h ago`;
+    };
+    return `☁ Profile synced ${ago(s.pull)}${s.push ? ` · sent ${ago(s.push)}` : ''}`;
   }
   // Each game card wears its domain rating next to the level: the level is
   // the loot economy, the rating is the truth.
