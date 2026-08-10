@@ -539,6 +539,13 @@ function submitTake() {
   apiPost('game-grade', payload).then((grade) => {
     state.pending = false;
     state.grade = grade;
+    // The day is stamped the moment a take is GRADED, not when the session is
+    // closed: writing a take is the work, and it must count whether or not
+    // "Done for the day" ever gets pressed (or the tab survives that long).
+    // Deliberately ahead of the session guard — a grade landing late is still
+    // a grade earned today.
+    store.keptDays[new Date().toISOString().slice(0, 10)] = true;
+    saveStore();
     if (g !== session) return;  // day was closed while grading — take is safe server-side
     g.score += grade.score;
     store.scoreSum += grade.score;
