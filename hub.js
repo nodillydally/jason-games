@@ -321,7 +321,8 @@
     if (!host || !window.EloBoard) return;
     const b = EloBoard.board();
     if (!b.ratedCount) {
-      host.innerHTML = '<div class="elo-rows"><div class="elo-row unrated">Play anything — ratings appear as answers land.</div></div>';
+      host.innerHTML = '<div class="elo-rows"><div class="elo-row unrated">Play anything — ratings appear as answers land.</div>'
+        + `<div class="elo-sync">${syncLine()}</div></div>`;
       return;
     }
     host.innerHTML = `
