@@ -185,8 +185,8 @@
     host.innerHTML = `
       <div class="today-label">${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][dayIdx]}${bothDone ? ' — day complete' : ''}</div>
       ${duty('briefing', GAMES.briefing, 'The Brief',
-        briefDone ? 'Kept — every story graded.' : briefStarted ? 'Started — some stories still ungraded.' : 'Recall yesterday · keep today · graded.',
-        briefDone, 'Kept ✓')}
+        briefDone ? 'Done for today.' : briefStarted ? 'Started — finish one take and it counts.' : 'Recall yesterday · keep today · graded.',
+        briefDone, 'Done ✓')}
       ${duty(pick.key, pick.game, `${pick.game.name} · ${pick.mode}`, pick.why, gameDone, 'Played ✓')}
       <div class="week-strip">${strip}</div>`;
 

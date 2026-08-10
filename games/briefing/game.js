@@ -67,10 +67,10 @@ const saveStore = () => localStorage.setItem(STORE_KEY, JSON.stringify(store));
   for (const key of [DAY_KEY, 'briefing.dump.v1']) {
     try {
       const s = JSON.parse(localStorage.getItem(key));
-      if (!s || !s.finished || !s.tabs) continue;
-      const storyKeys = Object.keys(s.tabs).filter((k) => /^s\d+$/.test(k));
-      const kept = (storyKeys.length && storyKeys.every((k) => s.tabs[k].grade))
-        || (s.tabs.dump && s.tabs.dump.grade);
+      if (!s || !s.tabs) continue;
+      // Any graded take makes the day count — partial mornings are real work,
+      // finished or not (leaving without "Done" doesn't erase the takes).
+      const kept = Object.values(s.tabs).some((t) => t && t.grade);
       if (!kept) continue;
       const lastGraded = (s.log || []).map((l) => String(l.answered_at || '').slice(0, 10)).sort().pop();
       if (lastGraded === today) {
@@ -626,10 +626,12 @@ function endGame(aborted = false) {
   // The streak is for keeping the whole brief — every story graded. Recall
   // and markets are bonuses, not gates. Mark both the brief that was kept
   // and the day the keeping happened (they differ when the feed runs behind).
-  if (keptToday()) {
-    store.doneDates[g.brief.date] = true;
-    store.keptDays[new Date().toISOString().slice(0, 10)] = true;
-  }
+  // Two different records: doneDates marks a FULL keep of this brief (every
+  // story graded — the per-brief archive). keptDays marks that today's brief
+  // work HAPPENED — any graded take counts, because two stories over coffee
+  // is still doing the brief. The hub duty and the streak run on keptDays.
+  if (keptToday()) store.doneDates[g.brief.date] = true;
+  if (gradedCount() > 0) store.keptDays[new Date().toISOString().slice(0, 10)] = true;
 
   g.finished = true;
   saveDay();
@@ -641,7 +643,7 @@ function endGame(aborted = false) {
 
   showScreen('results');
   if (window.Juice) {
-    if (keptToday()) {
+    if (gradedCount() > 0) {
       // Keeping the day is THE moment — a confetti volley across the screen,
       // then the streak gets its fire.
       const title = $('results-title');
@@ -666,7 +668,10 @@ function renderResults(xpGain = 0, levelBefore = null, levelAfter = null) {
   const graded = tabKeys().filter((k) => g.tabs[k].grade);
   const avg = graded.length ? Math.round(graded.reduce((s, k) => s + g.tabs[k].grade.score, 0) / graded.length) : 0;
 
-  $('results-title').textContent = keptToday() ? (g.type === 'dump' ? 'Day dumped & kept' : 'Brief kept') : 'Progress banked';
+  $('results-title').textContent = keptToday()
+    ? (g.type === 'dump' ? 'Day dumped & kept' : 'Brief kept — every story')
+    : graded.length ? 'Day logged'
+    : 'Progress banked';
   $('results-score').innerHTML = `${letterFor(avg)}<span> · ${avg}/100 average</span>`;
   $('results-stats').innerHTML =
     `<div class="stat"><b>${graded.length}/${tabKeys().length}</b><span>graded</span></div>` +
@@ -677,7 +682,9 @@ function renderResults(xpGain = 0, levelBefore = null, levelAfter = null) {
     : xpGain ? `+${xpGain} XP` : '';
   $('results-note').textContent = keptToday()
     ? 'Tomorrow opens with cold recall of today.'
-    : 'Streak counts full briefs — some stories are still ungraded.';
+    : graded.length
+    ? 'Counts for the day. The ungraded stories are still there if you come back.'
+    : 'Nothing graded yet — write one take and the day counts.';
 
   $('results-review').innerHTML = graded.map((k) => {
     const grade = g.tabs[k].grade;
