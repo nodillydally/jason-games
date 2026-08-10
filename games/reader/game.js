@@ -328,8 +328,8 @@ function renderMenu() {
 
 function renderBookList() {
   const el = $('book-list');
-  if (!Sync.isEnabled()) {
-    el.innerHTML = '<p class="book-note">Your library rides the same code as cloud sync — turn sync on below and the passages appear here.</p>';
+  if (!Auth.isOwner()) {
+    el.innerHTML = '<p class="book-note">The book library is private to this site’s owner. Every other mode uses the built-in passages and works for everyone.</p>';
     return;
   }
   if (passageError) {
@@ -397,7 +397,7 @@ async function startGame() {
   // Book sessions fetch their passage from the private library first.
   let bookSession = null;
   if (sel.mode === 'book') {
-    if (!Sync.isEnabled()) { $('setup-hint').textContent = 'Turn on Cloud sync below first — the library needs it.'; return; }
+    if (!Auth.isOwner()) { $('setup-hint').textContent = 'The book library is private — pick another mode.'; return; }
     if (!sel.passageId) { $('setup-hint').textContent = 'Pick a passage from the list.'; return; }
     const startBtn = $('start-btn');
     startBtn.disabled = true;
@@ -594,7 +594,12 @@ function finishReading() {
   // check: free recall, graded by AI against the passage. A quiz can be
   // guessed; a blank box can't. (Ladder keeps typed cloze: recall latency
   // between rungs would kill its rhythm.)
-  if ((SCROLL_MODES.has(g.mode) || g.mode === 'benchmark') && Sync.isEnabled()) return beginRecall();
+  //
+  // Grading spends the owner's API credits, so everyone else takes the authored
+  // multiple-choice route instead — a weaker check, but a working one. Gating on
+  // isOwner rather than merely being signed in is what stops a friend being
+  // walked into a recall box that 403s when they submit it.
+  if ((SCROLL_MODES.has(g.mode) || g.mode === 'benchmark') && Auth.isOwner()) return beginRecall();
   // Rare: a passage too fragmented for cloze generation. Bank the reading.
   if (g.mode === 'book' && g.passage.questions.length < 3) return endGame();
 
@@ -1162,6 +1167,10 @@ document.addEventListener('keydown', (e) => {
 Wardrobe.attach('reader');
 renderMenu();
 Sync.mountUI();
+
+// The menu is drawn before the server has said whether this player owns the
+// private library, so redraw when that lands (and on any sign in or out).
+Auth.onChange(() => renderMenu());
 
 // Quick play (hub / next-game links carry ?play=1): arriving means START.
 // No baseline yet -> the audit comes first; otherwise a flash read just above

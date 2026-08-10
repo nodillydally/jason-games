@@ -337,7 +337,7 @@
 
   // Answers "is this device actually syncing?" without opening a database.
   function syncLine() {
-    if (!window.Sync || !Sync.isEnabled()) return '☁ Cloud sync off — progress stays on this device.';
+    if (!window.Sync || !Sync.isEnabled()) return '☁ Not signed in — progress stays on this device.';
     const s = read('games.roam.status.v1');
     if (!s || !s.pull) return '☁ Syncing…';
     const ago = (t) => {
@@ -364,6 +364,11 @@
 
   renderEloBoard();
   stampCardRatings();
+  // The hub is where a friend lands first, so the account card lives here too
+  // rather than only inside the games.
+  if (window.Sync) Sync.mountUI();
+  // Signing in adopts a different profile — the board is about to be wrong.
+  if (window.Auth) Auth.onChange(() => { renderEloBoard(); renderStreak(); });
   window.addEventListener('pageshow', (e) => { if (e.persisted) renderEloBoard(); });
 
   // The locker: the shared character stands in the hub like a lobby, with the

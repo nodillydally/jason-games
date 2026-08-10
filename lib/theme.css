@@ -640,7 +640,12 @@ button.ghost:hover { background: var(--paper-2); color: var(--ink); }
 #feedback b { color: var(--ink); font-weight: 500; }
 
 /* Inputs */
-input[type="text"], input[type="password"], input:not([type]), textarea {
+/* Typed selectors rather than a bare `input` so checkboxes, radios and range
+   sliders keep their native rendering. Add new text-ish types here — one that
+   is missing falls back to the browser default, which on a dark theme means a
+   white box (how email arrived with the account card). */
+input[type="text"], input[type="email"], input[type="password"],
+input:not([type]), textarea {
   font-family: var(--sans);
   font-size: 15px;
   color: var(--ink);

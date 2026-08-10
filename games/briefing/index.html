@@ -41,21 +41,7 @@
       <button id="dump-btn" class="ghost big">🎙 News dump — heard it elsewhere</button>
     </div>
 
-    <div class="card sync-card">
-      <div class="sync-row">
-        <span id="sync-status" class="sync-status">☁ Cloud sync off</span>
-        <button id="sync-btn" class="sync-btn">Set up</button>
-      </div>
-      <div id="sync-panel" class="sync-panel hidden">
-        <p>Paste your sync code to save results to Atlas and track progress over
-          time. Stored in this browser only — the game plays fine without it.</p>
-        <div class="sync-form">
-          <input id="sync-input" type="password" placeholder="Sync code" autocomplete="off" spellcheck="false">
-          <button id="sync-save" class="primary">Save</button>
-          <button id="sync-clear">Turn off</button>
-        </div>
-      </div>
-    </div>
+    <div class="card account-card" id="account-card"></div>
   </section>
 
   <!-- ============================== Day ============================== -->
@@ -99,6 +85,7 @@
 
 </div>
 
+<script src="../../lib/auth.js"></script>
 <script src="../../lib/sync.js"></script>
 <script src="../../lib/roam.js"></script>
 <script src="../../lib/juice.js"></script>

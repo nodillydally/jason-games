@@ -71,3 +71,109 @@
   .sync-form input { flex: 1 1 100%; }
   .sync-form button { flex: 1; }
 }
+
+/* ---------------------------------------------------------------------------
+   Account card (lib/auth.js)
+
+   The sync card's successor. It inherits the sync shapes wholesale rather than
+   restating them, because it occupies the same slot on the same screens and
+   should not look like a second kind of thing.
+   --------------------------------------------------------------------------- */
+
+.account-card { margin-top: 14px; padding: 20px 26px; }
+
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.account-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.account-status.ok { color: var(--good); }
+
+.account-btn {
+  flex: none;
+  padding: 8px 16px;
+  min-height: 38px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* Sync state, written by lib/sync.js into the slot the account card leaves it.
+   Subordinate to the status line above by design — who you are is the headline,
+   whether the last upload landed is the footnote. */
+.account-sync {
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  color: var(--ink-3);
+}
+.account-sync.ok { color: var(--good); }
+.account-sync.bad { color: var(--bad); }
+.account-sync.busy { color: var(--a2); }
+
+.account-panel {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--rule);
+  animation: fade-up .3s var(--ease) both;
+}
+.account-panel p {
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.65;
+  margin-bottom: 14px;
+}
+
+.account-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.account-form input { flex: 1 1 200px; }
+.account-form button { flex: 0 0 auto; }
+/* Display name only appears while creating an account; hidden must win over
+   the flex display the inputs above carry. */
+.account-form input[hidden] { display: none; }
+
+.account-msg {
+  margin-top: 12px;
+  min-height: 1.2em;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  color: var(--ink-3);
+}
+.account-msg.bad { color: var(--bad); }
+
+/* A plain text button — switching between sign in and sign up is a change of
+   mind, not an action, and shouldn't compete with the real one above it. */
+.account-link {
+  margin-top: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  min-height: 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  color: var(--ink-3);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.account-link:hover { color: var(--ink-2); }
+
+@media (max-width: 460px) {
+  .account-form input { flex: 1 1 100%; }
+  .account-form button { flex: 1; }
+}

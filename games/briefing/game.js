@@ -178,11 +178,14 @@ function renderMenu() {
     `<span><b>${Object.keys(store.doneDates).length}</b> briefs kept</span>` +
     `<span><b>${avg !== null ? `${letterFor(avg)} (${avg})` : '—'}</b> avg grade</span>`;
 
-  // News dump only needs grading, not the feed — any synced day qualifies.
-  $('dump-btn').disabled = !Sync.isEnabled();
+  // News dump only needs grading, not the feed — any graded day qualifies.
+  $('dump-btn').disabled = !Auth.isOwner();
 
-  if (!Sync.isEnabled()) {
-    $('setup-hint').textContent = 'Briefing reads your private news feed — turn on Cloud sync below first.';
+  // The whole game reads Jason's private news feed and grades against it, so
+  // unlike the other four this one has nothing to offer a friend. It says so
+  // rather than presenting a start button that fails.
+  if (!Auth.isOwner()) {
+    $('setup-hint').textContent = 'Briefing runs on a private news feed — it is the one game that is owner-only.';
     $('start-btn').disabled = true;
     return;
   }
@@ -756,4 +759,8 @@ $('stats-back').addEventListener('click', () => { showScreen('menu'); renderMenu
 Wardrobe.attach('briefing');
 renderMenu();
 Sync.mountUI();
-if (Sync.isEnabled()) loadBriefs();
+if (Auth.isOwner()) loadBriefs();
+
+// Ownership is confirmed by the server after the first paint; redraw when the
+// answer lands, and fetch the feed if it turned out to be yes.
+Auth.onChange(() => { renderMenu(); if (Auth.isOwner()) loadBriefs(); });
