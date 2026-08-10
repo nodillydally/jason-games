@@ -802,19 +802,29 @@ function endGame(aborted = false) {
   if (lvUp) $('results-levelup').textContent = `⬆ Level up! You reached level ${levelAfter}`;
 
   const acc = g.answered ? Math.round((g.correct / g.answered) * 100) : 0;
+  // Each tile leads with its own mark, so the row can be read by shape before
+  // any of the numbers are. The learned tile used to trail a 🎉 after its
+  // label, which was the only icon on the row and sat on the wrong side.
+  const tile = (icon, value, label) =>
+    `<div class="stat"><i class="ic">${icon}</i><b>${value}</b><span>${label}</span></div>`;
+
   $('results-stats').innerHTML =
-    `<div class="stat"><b>${g.correct}/${g.answered}</b><span>correct</span></div>` +
-    `<div class="stat"><b>${acc}%</b><span>accuracy</span></div>` +
-    `<div class="stat"><b>${g.bestStreak}</b><span>best streak</span></div>` +
-    `<div class="stat"><b>${store.best[bestKey] || 0}</b><span>best score</span></div>` +
-    (g.newlyLearned ? `<div class="stat"><b>+${g.newlyLearned}</b><span>learned 🎉</span></div>` : '') +
-    (g.newlyLost ? `<div class="stat"><b>−${g.newlyLost}</b><span>slipped — review them</span></div>` : '') +
+    tile('🎯', `${g.correct}/${g.answered}`, 'correct') +
+    tile('📊', `${acc}%`, 'accuracy') +
+    tile('🔥', g.bestStreak, 'best streak') +
+    tile('🏆', store.best[bestKey] || 0, 'best score') +
+    (g.newlyLearned ? tile('🧠', `+${g.newlyLearned}`, 'learned') : '') +
+    (g.newlyLost ? tile('🩹', `−${g.newlyLost}`, 'slipped — review them') : '') +
     // The session's rating movement — points are the reward, this is the truth.
     (() => {
       const moves = Object.entries(g.eloMoves || {}).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
       if (!moves.length || Math.abs(moves[0][1]) < 1) return '';
       const [cont, d] = moves[0];
-      return `<div class="stat"><b>${d > 0 ? '+' : '−'}${Math.abs(Math.round(d))}</b><span>${cont} elo → ${Math.round(store.elo[cont].r)}</span></div>`;
+      // The rating tile's mark carries the direction, so a drop is legible
+      // before you have parsed the sign.
+      return tile(d > 0 ? '📈' : '📉',
+        `${d > 0 ? '+' : '−'}${Math.abs(Math.round(d))}`,
+        `${cont} elo → ${Math.round(store.elo[cont].r)}`);
     })();
 
   const missedEl = $('results-missed');

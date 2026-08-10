@@ -723,6 +723,14 @@ input:focus, textarea:focus {
   border-right: 1px solid var(--rule);
 }
 .results-stats .stat:last-child, .stat:last-child { border-right: 0; }
+/* An optional mark above the figure. Sized to read at a glance without
+   competing with the number, which is still the thing being reported. */
+.stat .ic {
+  font-style: normal;
+  font-size: 14px;
+  line-height: 1;
+  opacity: .9;
+}
 .stat b {
   font-family: var(--serif);
   font-style: italic;
