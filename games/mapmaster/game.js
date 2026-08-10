@@ -45,7 +45,22 @@ const QUIZ_LIKE = ['quiz', 'blitz', 'marathon', 'review', 'race'];
 
 const CONTINENTS = [
   'World', 'Africa', 'Americas', 'Asia',
-  'Europe', 'North America', 'Oceania', 'South America',
+  'Europe', 'Middle East', 'North America', 'Oceania', 'South America',
+];
+
+// The Middle East is a region, not a continent: it spans Asia, plus Egypt in
+// Africa and Cyprus in Europe. So it is a filter over the country list rather
+// than a value in each country's `continent` field — that field still keys the
+// per-region pace stats, the rivals' per-continent pacing and the distractor
+// picker, and reassigning it would quietly corrupt all three.
+//
+// Where a region begins and ends is a judgement call. This is the common
+// geopolitical reading, including Türkiye, Cyprus and Egypt. Bahrain is absent
+// because Natural Earth's 1:110m geometry drops the smallest states, so there
+// is no shape to highlight.
+const MIDDLE_EAST = [
+  'CY', 'EG', 'IR', 'IQ', 'IL', 'JO', 'KW', 'LB',
+  'OM', 'PS', 'QA', 'SA', 'SY', 'TR', 'AE', 'YE',
 ];
 
 const DIFFICULTIES = [
@@ -114,6 +129,9 @@ function poolFor(continent) {
   if (continent === 'World') return COUNTRIES.slice();
   if (continent === 'Americas') {
     return COUNTRIES.filter((c) => c.continent === 'North America' || c.continent === 'South America');
+  }
+  if (continent === 'Middle East') {
+    return COUNTRIES.filter((c) => MIDDLE_EAST.includes(c.cca2));
   }
   return COUNTRIES.filter((c) => c.continent === continent);
 }
