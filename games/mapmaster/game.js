@@ -683,6 +683,14 @@ function startGame() {
       // The rival can cross the line while you're mid-question; the round in
       // progress still resolves, then nextRound routes to the results.
       if (Rival.tick() && g && g.locked === false) updateHud();
+      // But if it crosses while you are not mid-answer, nextRound never runs
+      // and the race sits there finished. Route to the results directly.
+      const r = Rival.active() && Rival.result();
+      if (r && r.finishedBy && g && g.locked === false) {
+        clearInterval(raceInterval);
+        raceInterval = null;
+        endGame();
+      }
     }, 100);
   }
 
