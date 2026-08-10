@@ -42,6 +42,13 @@ const CHUNKS = [
 // ---------------------------------------------------------------------------
 
 const $ = (id) => document.getElementById(id);
+
+// Each results tile leads with its own mark, so the row reads by shape before
+// any of the numbers do. Module scope: results rows get built from more than
+// one place in some games, and a function-scoped helper is a ReferenceError
+// waiting for whichever branch was not the one you tested.
+const tile = (icon, value, label) =>
+  `<div class="stat"><i class="ic">${icon}</i><b>${value}</b><span>${label}</span></div>`;
 const screens = {
   menu: $('screen-menu'),
   read: $('screen-read'),
@@ -945,8 +952,8 @@ function endGame(aborted = false) {
     $('results-title').textContent = 'Done';
     $('results-score').innerHTML = `${g.words.length.toLocaleString()}<span> words</span>`;
     $('results-stats').innerHTML =
-      `<div class="stat"><b>${wpm}</b><span>wpm</span></div>` +
-      `<div class="stat"><b>${(g.lastElapsedMs / 60000).toFixed(1)}m</b><span>elapsed</span></div>`;
+      tile('⚡', wpm, 'wpm') +
+      tile('⏱', `${(g.lastElapsedMs / 60000).toFixed(1)}m`, 'elapsed');
     $('results-note').textContent = 'Free reads aren\'t scored — run a Benchmark to see whether that speed is holding.';
     $('results-review').innerHTML = '';
   } else if (!last) {
@@ -963,12 +970,12 @@ function endGame(aborted = false) {
       : last.passage;
     $('results-score').innerHTML = `${last.effective}<span> effective wpm</span>`;
     $('results-stats').innerHTML =
-      `<div class="stat"><b>${last.wpm}</b><span>raw wpm</span></div>` +
-      `<div class="stat"><b>${comp}%</b><span>comprehension</span></div>` +
+      tile('⚡', last.wpm, 'raw wpm') +
+      tile('🧠', `${comp}%`, 'comprehension') +
       (last.ai
-        ? `<div class="stat"><b>${last.ai.letter}</b><span>recall grade</span></div>`
-        : `<div class="stat"><b>${last.correct}/${last.total}</b><span>correct</span></div>`) +
-      (g.mode === 'ladder' ? `<div class="stat"><b>${g.rung}</b><span>rungs climbed</span></div>` : '');
+        ? tile('✍️', last.ai.letter, 'recall grade')
+        : tile('🎯', `${last.correct}/${last.total}`, 'correct')) +
+      (g.mode === 'ladder' ? tile('📈', g.rung, 'rungs climbed') : '');
 
     if (g.mode === 'baseline' && last.comprehension < BASELINE_MIN_COMP) {
       $('results-title').textContent = '⏱ Baseline not set';

@@ -57,6 +57,13 @@ const pacingFor = (t) => ({
 // ---------------------------------------------------------------------------
 
 const $ = (id) => document.getElementById(id);
+
+// Each results tile leads with its own mark, so the row reads by shape before
+// any of the numbers do. Module scope: results rows get built from more than
+// one place in some games, and a function-scoped helper is a ReferenceError
+// waiting for whichever branch was not the one you tested.
+const tile = (icon, value, label) =>
+  `<div class="stat"><i class="ic">${icon}</i><b>${value}</b><span>${label}</span></div>`;
 const screens = {
   menu: $('screen-menu'),
   game: $('screen-game'),
@@ -861,21 +868,24 @@ function endGame(aborted = false) {
     ? `${avgAfter}<span> elo · ${sessionNet >= 0 ? '+' : '−'}${Math.abs(Math.round(sessionNet))} this session</span>`
     : `${g.score.toLocaleString()}<span> pts</span>`;
   $('results-stats').innerHTML =
-    `<div class="stat"><b>${g.correct}/${g.answered}</b><span>correct</span></div>` +
-    `<div class="stat"><b>${acc}%</b><span>accuracy</span></div>` +
-    `<div class="stat"><b>${(avgMs / 1000).toFixed(1)}s</b><span>avg time</span></div>` +
-    `<div class="stat"><b>${g.bestStreak}</b><span>best streak</span></div>` +
-    (g.newlyLearned ? `<div class="stat"><b>+${g.newlyLearned}</b><span>facts learned 🎉</span></div>` : '') +
-    (g.newlyLost ? `<div class="stat"><b>−${g.newlyLost}</b><span>slipped</span></div>` : '') +
+    tile('🎯', `${g.correct}/${g.answered}`, 'correct') +
+    tile('📊', `${acc}%`, 'accuracy') +
+    tile('⏱', `${(avgMs / 1000).toFixed(1)}s`, 'avg time') +
+    tile('🔥', g.bestStreak, 'best streak') +
+    (g.newlyLearned ? tile('🧠', `+${g.newlyLearned}`, 'facts learned') : '') +
+    (g.newlyLost ? tile('🩹', `−${g.newlyLost}`, 'slipped') : '') +
     // The session's biggest single-topic move, then the points footnote.
     (() => {
       const moves = Object.entries(g.eloMoves || {}).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
       if (!moves.length || Math.abs(moves[0][1]) < 1) return '';
       const [topicId, d] = moves[0];
       const label = TOPICS.find((t) => t.id === topicId).label;
-      return `<div class="stat"><b>${d > 0 ? '+' : '−'}${Math.abs(Math.round(d))}</b><span>${label} → ${Math.round(eloOf(topicId))}</span></div>`;
+      // The mark carries the direction, so a drop is legible before the sign.
+      return tile(d > 0 ? '📈' : '📉',
+        `${d > 0 ? '+' : '−'}${Math.abs(Math.round(d))}`,
+        `${label} → ${Math.round(eloOf(topicId))}`);
     })() +
-    `<div class="stat"><b>${g.score.toLocaleString()}</b><span>pts${isBest ? ' · new best!' : ''}</span></div>`;
+    tile(isBest ? '🏆' : '🎲', g.score.toLocaleString(), `pts${isBest ? ' · new best!' : ''}`);
 
   $('results-xp').innerHTML = levelAfter > levelBefore
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`

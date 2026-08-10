@@ -79,6 +79,13 @@ const STORE_KEY = 'mapmaster-v1';
 // ---------------------------------------------------------------------------
 
 const $ = (id) => document.getElementById(id);
+
+// Each results tile leads with its own mark, so the row reads by shape before
+// any of the numbers do. Module scope: results rows get built from more than
+// one place in some games, and a function-scoped helper is a ReferenceError
+// waiting for whichever branch was not the one you tested.
+const tile = (icon, value, label) =>
+  `<div class="stat"><i class="ic">${icon}</i><b>${value}</b><span>${label}</span></div>`;
 const screens = {
   menu: $('screen-menu'),
   game: $('screen-game'),
@@ -802,12 +809,6 @@ function endGame(aborted = false) {
   if (lvUp) $('results-levelup').textContent = `⬆ Level up! You reached level ${levelAfter}`;
 
   const acc = g.answered ? Math.round((g.correct / g.answered) * 100) : 0;
-  // Each tile leads with its own mark, so the row can be read by shape before
-  // any of the numbers are. The learned tile used to trail a 🎉 after its
-  // label, which was the only icon on the row and sat on the wrong side.
-  const tile = (icon, value, label) =>
-    `<div class="stat"><i class="ic">${icon}</i><b>${value}</b><span>${label}</span></div>`;
-
   $('results-stats').innerHTML =
     tile('🎯', `${g.correct}/${g.answered}`, 'correct') +
     tile('📊', `${acc}%`, 'accuracy') +

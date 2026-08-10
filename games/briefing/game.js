@@ -32,6 +32,13 @@ const MIN_WORDS = 15;
 // ---------------------------------------------------------------------------
 
 const $ = (id) => document.getElementById(id);
+
+// Each results tile leads with its own mark, so the row reads by shape before
+// any of the numbers do. Module scope: results rows get built from more than
+// one place in some games, and a function-scoped helper is a ReferenceError
+// waiting for whichever branch was not the one you tested.
+const tile = (icon, value, label) =>
+  `<div class="stat"><i class="ic">${icon}</i><b>${value}</b><span>${label}</span></div>`;
 const screens = {
   menu: $('screen-menu'),
   day: $('screen-day'),
@@ -681,9 +688,10 @@ function renderResults(xpGain = 0, levelBefore = null, levelAfter = null) {
     : 'Progress banked';
   $('results-score').innerHTML = `${letterFor(avg)}<span> · ${avg}/100 average</span>`;
   $('results-stats').innerHTML =
-    `<div class="stat"><b>${graded.length}/${tabKeys().length}</b><span>graded</span></div>` +
-    `<div class="stat"><b>${g.score.toLocaleString()}</b><span>points</span></div>` +
-    `<div class="stat"><b>${briefStreak() > 0 ? '🔥 ' : ''}${briefStreak()}</b><span>day streak</span></div>`;
+    tile('📰', `${graded.length}/${tabKeys().length}`, 'graded') +
+    tile('🎯', g.score.toLocaleString(), 'points') +
+    // The flame used to be glued to the number; it belongs with the others.
+    tile('🔥', briefStreak(), 'day streak');
   $('results-xp').innerHTML = (levelAfter !== null && levelAfter > levelBefore)
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`
     : xpGain ? `+${xpGain} XP` : '';

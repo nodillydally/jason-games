@@ -38,6 +38,12 @@ const screens = {
   study: $('screen-study'),
 };
 
+// Each results tile leads with its own mark, so the row reads by shape before
+// any of the numbers do. Module scope because both endGame() and finishStudy()
+// build a results row.
+const tile = (icon, value, label) =>
+  `<div class="stat"><i class="ic">${icon}</i><b>${value}</b><span>${label}</span></div>`;
+
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]
 ));
@@ -791,11 +797,11 @@ function endGame(aborted = false) {
     ? `${Math.round(store.elo.r)}<span> elo · ${netDelta >= 0 ? '+' : '−'}${Math.abs(Math.round(netDelta))} this session · ${g.score.toLocaleString()} pts${isBest ? ' · new best!' : ''}</span>`
     : `${g.score.toLocaleString()}<span> pts</span>${isBest ? ' <em>new best!</em>' : ''}`;
   $('results-stats').innerHTML =
-    `<div class="stat"><b>${g.correct}/${g.answered}</b><span>correct</span></div>` +
-    `<div class="stat"><b>${acc}%</b><span>accuracy</span></div>` +
-    `<div class="stat"><b>${g.bestStreak}</b><span>best streak</span></div>` +
-    (g.newlyLearned ? `<div class="stat"><b>+${g.newlyLearned}</b><span>learned 🎉</span></div>` : '') +
-    (g.newlyLost ? `<div class="stat"><b>−${g.newlyLost}</b><span>slipped — review them</span></div>` : '');
+    tile('🎯', `${g.correct}/${g.answered}`, 'correct') +
+    tile('📊', `${acc}%`, 'accuracy') +
+    tile('🔥', g.bestStreak, 'best streak') +
+    (g.newlyLearned ? tile('🧠', `+${g.newlyLearned}`, 'learned') : '') +
+    (g.newlyLost ? tile('🩹', `−${g.newlyLost}`, 'slipped — review them') : '');
 
   $('results-xp').innerHTML = levelAfter > levelBefore
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`
@@ -1478,10 +1484,10 @@ function finishStudy() {
     ? `${cold}%<i class="score-arrow">→</i>${warm}%<span>ordering — cold, then after reading</span>`
     : `${st.correct}/${st.answered}<span>recalled</span>`;
   $('results-stats').innerHTML =
-    `<div class="stat"><b>${totalSections()}</b><span>passages</span></div>`
-    + `<div class="stat"><b>${acc}%</b><span>accuracy</span></div>`
-    + (st.pinned.length ? `<div class="stat"><b>+${st.pinned.length}</b><span>placed 📍</span></div>` : '')
-    + `<div class="stat"><b>+${xpGain}</b><span>XP</span></div>`;
+    tile('📖', totalSections(), 'passages')
+    + tile('📊', `${acc}%`, 'accuracy')
+    + (st.pinned.length ? tile('📍', `+${st.pinned.length}`, 'placed') : '')
+    + tile('⭐', `+${xpGain}`, 'XP');
   renderStrip($('results-strip'), { fresh: st.pinned, focus: st.syl.era ? st.syl.id : null });
   $('results-xp').innerHTML = levelAfter > levelBefore
     ? `+${xpGain} XP — <b>level ${levelAfter}!</b>`
