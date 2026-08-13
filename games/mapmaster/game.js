@@ -28,21 +28,21 @@ const VERSUS_LIVES = 3;      // Lives format
 const CLIMB_STEP_MS = 15000; // Climb: difficulty rises this often
 
 const MODES = [
-  { id: 'quiz', label: 'Classic quiz', sub: 'Ten rounds, take your time' },
-  { id: 'blitz', label: 'Blitz ⏱', sub: '60 seconds, go fast' },
-  { id: 'marathon', label: 'Marathon 💀', sub: '3 lives — how far can you go?' },
-  { id: 'race', label: 'Race 🏁', sub: `First to ${RACE_LEGS} — beat your rival` },
-  { id: 'versus', label: 'Versus 🤝', sub: 'Two players, one device' },
-  { id: 'find', label: 'Find it 🎯', sub: 'Spot it on the map' },
-  { id: 'review', label: 'Review 📚', sub: 'Drill the ones you miss' },
-  { id: 'explore', label: 'Explore 🧭', sub: 'Browse & learn, no score' },
+  { id: 'quiz', icon: '🎯', label: 'Classic', sub: 'Ten rounds' },
+  { id: 'blitz', icon: '⏱', label: 'Blitz', sub: '60 seconds' },
+  { id: 'marathon', icon: '💀', label: 'Marathon', sub: '3 lives' },
+  { id: 'race', icon: '🏁', label: 'Race', sub: `First to ${RACE_LEGS}` },
+  { id: 'versus', icon: '🤝', label: 'Versus', sub: 'Two players' },
+  { id: 'find', icon: '📍', label: 'Find it', sub: 'Spot it on the map' },
+  { id: 'review', icon: '📚', label: 'Review', sub: 'Ones you miss' },
+  { id: 'explore', icon: '🧭', label: 'Explore', sub: 'No score' },
 ];
 
 const QUESTIONS = [
-  { id: 'location', label: 'Locations 🗺️', sub: 'Name what\'s highlighted' },
-  { id: 'capital', label: 'Capitals 🏛️', sub: 'Name the capital' },
-  { id: 'flag', label: 'Flags 🚩', sub: 'Whose flag is it?' },
-  { id: 'mix', label: 'Mix 🎲', sub: 'A bit of everything' },
+  { id: 'location', icon: '🗺️', label: 'Locations', sub: 'Name the country' },
+  { id: 'capital', icon: '🏛️', label: 'Capitals', sub: 'Name the capital' },
+  { id: 'flag', icon: '🚩', label: 'Flags', sub: 'Whose flag?' },
+  { id: 'mix', icon: '🎲', label: 'Mix', sub: 'A bit of everything' },
 ];
 
 // Quiz-style modes share the highlight-and-answer round loop.
@@ -56,10 +56,10 @@ const isVersus = () => g && g.mode === 'versus';
 // Four ways to run a head-to-head. Each defines only how a TURN ends; the
 // question loop, scoring and handoff are shared.
 const VERSUS_FORMATS = [
-  { id: 'turns', label: 'Turns', sub: `${VERSUS_TURNS} questions each` },
-  { id: 'timed', label: 'Timed ⏱', sub: `${VERSUS_SECONDS}s each — most points` },
-  { id: 'climb', label: 'Climb 📈', sub: 'Harder every 15s' },
-  { id: 'lives', label: 'Lives 💀', sub: `${VERSUS_LIVES} lives each` },
+  { id: 'turns', icon: '🔄', label: 'Turns', sub: `${VERSUS_TURNS} each, alternating` },
+  { id: 'timed', icon: '⏱', label: 'Timed', sub: `${VERSUS_SECONDS}s each` },
+  { id: 'climb', icon: '📈', label: 'Climb', sub: 'Harder every 15s' },
+  { id: 'lives', icon: '💀', label: 'Lives', sub: `${VERSUS_LIVES} lives each` },
 ];
 const vsFormat = () => (g && g.vs ? g.vs.format : 'turns');
 
@@ -75,6 +75,20 @@ const CONTINENTS = [
   'World', 'Africa', 'Americas', 'Asia',
   'Europe', 'Middle East', 'North America', 'Oceania', 'South America',
 ];
+
+// The globe emoji are rotated to the region they actually show, so the row of
+// region cards reads as a set of maps rather than nine identical planets.
+const REGION_ICON = {
+  World: '🌐',
+  Africa: '🌍',
+  Americas: '🌎',
+  Asia: '🌏',
+  Europe: '🏰',
+  'Middle East': '🕌',
+  'North America': '🗽',
+  Oceania: '🏝',
+  'South America': '🗿',
+};
 
 // The Middle East is a region, not a continent: it spans Asia, plus Egypt in
 // Africa and Cyprus in Europe. So it is a filter over the country list rather
@@ -92,9 +106,9 @@ const MIDDLE_EAST = [
 ];
 
 const DIFFICULTIES = [
-  { id: 'easy', label: 'Easy', sub: '3 choices', choices: 3, attempts: 3, points: 100 },
-  { id: 'medium', label: 'Medium', sub: '6 tricky choices', choices: 6, attempts: 2, points: 150 },
-  { id: 'hard', label: 'Hard', sub: 'Type the name', choices: 0, attempts: 1, points: 200 },
+  { id: 'easy', icon: '🟢', label: 'Easy', sub: '3 choices', choices: 3, attempts: 3, points: 100 },
+  { id: 'medium', icon: '🟡', label: 'Medium', sub: '6 near neighbours', choices: 6, attempts: 2, points: 150 },
+  { id: 'hard', icon: '🔴', label: 'Hard', sub: 'Type the name', choices: 0, attempts: 1, points: 200 },
 ];
 
 const QUIZ_ROUNDS = 10;
@@ -504,9 +518,10 @@ function renderOptionGroup(el, options, selectedId, onPick) {
   for (const opt of options) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.innerHTML = opt.sub
-      ? `${opt.label}<span class="sub">${opt.sub}</span>`
-      : opt.label;
+    b.innerHTML =
+      (opt.icon ? `<span class="opt-icon">${opt.icon}</span>` : '')
+      + opt.label
+      + (opt.sub ? `<span class="sub">${opt.sub}</span>` : '');
     if (opt.id === selectedId) b.classList.add('selected');
     b.addEventListener('click', () => onPick(opt.id));
     el.appendChild(b);
@@ -533,7 +548,7 @@ function renderMenu() {
   renderOptionGroup($('question-options'), QUESTIONS, sel.question, (id) => { sel.question = id; renderMenu(); });
   renderOptionGroup(
     $('continent-options'),
-    CONTINENTS.map((c) => ({ id: c, label: c, sub: `${poolFor(c).length} countries` })),
+    CONTINENTS.map((c) => ({ id: c, icon: REGION_ICON[c] || '🌍', label: c, sub: `${poolFor(c).length} countries` })),
     sel.continent,
     (id) => { sel.continent = id; renderMenu(); }
   );
@@ -548,7 +563,7 @@ function renderMenu() {
   const isRace = sel.mode === 'race';
   $('rival-block').classList.toggle('hidden', !isRace);
   if (isRace && window.Rival) {
-    const rivalOpts = [...Rival.list().map((r) => ({ id: r.id, label: `${r.icon} ${r.label}` })), { id: 'random', label: '🎲 Random' }];
+    const rivalOpts = [...Rival.list().map((r) => ({ id: r.id, icon: r.icon, label: r.label })), { id: 'random', icon: '🎲', label: 'Random' }];
     renderOptionGroup($('rival-options'), rivalOpts, sel.rival, (id) => { sel.rival = id; renderMenu(); });
     $('rival-blurb').textContent = sel.rival === 'random'
       ? 'Take whoever shows up at the line — the rival is revealed when the race starts.'
@@ -661,9 +676,7 @@ function startGame() {
     round: 0,
     // Only the Turns format has a fixed length; the rest end on a clock or on
     // lives, so the queue has to keep producing.
-    rounds: (endless || (versus && sel.vsFormat !== 'turns')) ? Infinity
-      : versus ? Math.min(VERSUS_TURNS * 2, pool.length)
-      : Math.min(QUIZ_ROUNDS, pool.length),
+    rounds: (endless || versus) ? Infinity : Math.min(QUIZ_ROUNDS, pool.length),
     vs: versus ? {
       format: sel.vsFormat,
       turn: 0,
@@ -674,8 +687,8 @@ function startGame() {
       turnStartedAt: 0,
       turnEndsAt: 0,
       players: [
-        { name: ($('p1-name').value.trim() || 'Player 1').slice(0, 12), score: 0, correct: 0, answered: 0 },
-        { name: ($('p2-name').value.trim() || 'Player 2').slice(0, 12), score: 0, correct: 0, answered: 0 },
+        { name: ($('p1-name').value.trim() || 'Player 1').slice(0, 12), score: 0, correct: 0, answered: 0, streak: 0 },
+        { name: ($('p2-name').value.trim() || 'Player 2').slice(0, 12), score: 0, correct: 0, answered: 0, streak: 0 },
       ],
     } : null,
     score: 0,
@@ -813,9 +826,11 @@ function syncSession(aborted, xpGain) {
 // Each player answers VERSUS_TURNS in a row, and the device changes hands once.
 function versusPlayer() { return g.vs.players[g.vs.turn]; }
 
-// Everything a fresh turn needs, whatever the format.
+// Everything a fresh turn needs, whatever the format. A streak belongs to the
+// PLAYER, not the seat — in alternating play it has to survive the opponent's
+// question and pick up where that player left off.
 function beginVersusTurn() {
-  g.streak = 0;
+  g.streak = versusPlayer().streak || 0;
   g.vs.turnStartedAt = Date.now();
   g.vs.turnEndsAt = Date.now() + VERSUS_SECONDS * 1000;
   g.vs.lives = VERSUS_LIVES;
@@ -827,14 +842,22 @@ function beginVersusTurn() {
   versusTimer = clocked ? setInterval(tickVersus, 150) : null;
 }
 
-// One place decides a turn is over, so the formats stay one-liners.
+// One place decides a turn is over, so the formats stay one-liners. Turns
+// alternates every single question — the device changes hands each time, which
+// is what makes it feel like a board game rather than two solo runs.
 function versusTurnOver() {
   switch (vsFormat()) {
     case 'timed':
     case 'climb': return Date.now() >= g.vs.turnEndsAt;
     case 'lives': return g.vs.lives <= 0;
-    default:      return g.vs.turnRounds >= g.vs.turnsEach;
+    default:      return g.vs.turnRounds >= 1;
   }
+}
+
+// The whole match is done when nobody has a turn left to take.
+function versusMatchOver() {
+  if (vsFormat() !== 'turns') return g.vs.turn === 1;
+  return g.vs.players.every((p) => p.answered >= g.vs.turnsEach);
 }
 
 function tickVersus() {
@@ -868,22 +891,27 @@ function tickVersus() {
 function endVersusTurn() {
   clearInterval(versusTimer);
   versusTimer = null;
-  if (g.vs.turn === 0) return showHandoff();
-  endGame();
+  if (versusMatchOver()) return endGame();
+  showHandoff(g.vs.turn === 0 ? 1 : 0);
 }
 
-function showHandoff() {
-  const done = g.vs.players[0];
-  const up = g.vs.players[1];
-  const target = { turns: '', timed: '', climb: '', lives: '' }[vsFormat()];
+function showHandoff(nextTurn) {
+  const up = g.vs.players[nextTurn];
+  const other = g.vs.players[nextTurn === 0 ? 1 : 0];
+  const alternating = vsFormat() === 'turns';
+
   $('handoff-title').textContent = `${up.name}, you're up`;
-  $('handoff-sub').innerHTML =
-    `${esc(done.name)} scored <b>${done.score}</b> — ${done.correct}/${done.answered} correct.`
-    + `<br>Beat it. Hand the device over — no peeking at the last answer.${target}`;
+  $('handoff-sub').innerHTML = alternating
+    // Mid-match state is the interesting thing when turns swap constantly.
+    ? `${esc(up.name)} <b>${up.score}</b> · ${esc(other.name)} <b>${other.score}</b>`
+      + `<br>Question ${Math.min(up.answered + 1, g.vs.turnsEach)} of ${g.vs.turnsEach}. Pass the device.`
+    : `${esc(other.name)} scored <b>${other.score}</b> — ${other.correct}/${other.answered} correct.`
+      + `<br>Beat it. Hand the device over — no peeking at the last answer.`;
+
   $('handoff').classList.remove('hidden');
   $('handoff-go').onclick = () => {
     $('handoff').classList.add('hidden');
-    g.vs.turn = 1;
+    g.vs.turn = nextTurn;
     beginVersusTurn();
     nextRound();
   };
@@ -1066,12 +1094,13 @@ function recordAnswer(country, wasCorrect) {
     g.vs.turnRounds += 1;
     if (wasCorrect) {
       p.correct += 1;
-      g.streak += 1;
+      p.streak = (p.streak || 0) + 1;
     } else {
-      g.streak = 0;
+      p.streak = 0;
       g.missed.push(country);
       if (vsFormat() === 'lives') g.vs.lives -= 1;
     }
+    g.streak = p.streak;
     updateHud();
     return;
   }
@@ -1156,7 +1185,7 @@ function updateHud() {
         ? `${versusPlayer().name} · ${curDiff().label}`
         : f === 'timed'
         ? versusPlayer().name
-        : `${versusPlayer().name} · ${Math.min(g.vs.turnRounds + 1, g.vs.turnsEach)}/${g.vs.turnsEach}`;
+        : `${versusPlayer().name} · ${Math.min(versusPlayer().answered + 1, g.vs.turnsEach)}/${g.vs.turnsEach}`;
     const streakEl = $('hud-streak');
     streakEl.textContent = g.streak >= 2 ? `🔥 ${g.streak}` : '';
     return;
