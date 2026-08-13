@@ -54,6 +54,21 @@
         <p id="rival-blurb" class="rival-blurb"></p>
       </div>
 
+      <div id="versus-block" class="hidden">
+        <h2>Format</h2>
+        <div class="opt-grid" id="vsformat-options"></div>
+
+        <h2>Players</h2>
+        <div class="vs-names">
+          <input id="p1-name" maxlength="12" autocomplete="off" placeholder="Player 1">
+          <span class="vs-v">vs</span>
+          <input id="p2-name" maxlength="12" autocomplete="off" placeholder="Player 2">
+        </div>
+        <p class="rival-blurb">Five questions each, then the device changes hands.
+          Versus never touches your rating, learned countries or stats — someone
+          else is answering.</p>
+      </div>
+
       <div id="setup-hint" class="setup-hint"></div>
       <button id="start-btn" class="primary big">Start</button>
     </div>
@@ -91,6 +106,17 @@
         </div>
       </div>
       <div id="race-note" class="race-note"></div>
+    </div>
+
+    <!-- Covers the board between turns so the next player can't read the last
+         answer off the screen. -->
+    <div id="handoff" class="handoff hidden">
+      <div class="handoff-card">
+        <div class="handoff-icon">🤝</div>
+        <h2 id="handoff-title"></h2>
+        <p id="handoff-sub"></p>
+        <button id="handoff-go" class="primary big">Ready</button>
+      </div>
     </div>
 
     <div class="map-wrap">
