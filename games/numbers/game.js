@@ -18,8 +18,45 @@ const MODES = [
   { id: 'marathon', label: 'Marathon', icon: '💀', hint: '3 lives. Questions keep coming until you miss three.' },
   { id: 'ladder',   label: 'Ladder',   icon: '📈', hint: 'Starts easy and ramps up every 5 correct. 3 lives.' },
   { id: 'race',     label: 'Race',     icon: '🏁', hint: `First to ${RACE_LEGS} correct. A wrong answer costs you the leg.` },
+  { id: 'versus',   label: 'Versus',   icon: '🤝', hint: 'Two players, one device — pass it back and forth.' },
   { id: 'review',   label: 'Review',   icon: '📚', hint: 'Drills only the topics you keep getting wrong.' },
 ];
+
+// ---------------------------------------------------------------------------
+// Versus — two people on one device
+// ---------------------------------------------------------------------------
+
+// A party mode, and deliberately sealed off from the record: a friend
+// answering on your device must never move your topic ratings, learned facts,
+// per-topic stats, XP or sync. Nothing here is evidence about YOUR arithmetic.
+const VERSUS_TURNS = 5;      // Turns: questions each
+const VERSUS_SECONDS = 45;   // Timed: clock per player
+const VERSUS_LIVES = 3;
+// Climb: every question is bigger than the last. Five questions in, the two of
+// you are a full tier past where you started; there is no ceiling, so the
+// match ends when both players have spent their lives rather than on a clock.
+const CLIMB_PER_Q = 0.2;
+
+const VERSUS_FORMATS = [
+  { id: 'turns', icon: '🔄', label: 'Turns', hint: `${VERSUS_TURNS} questions each, alternating.` },
+  { id: 'timed', icon: '⏱', label: 'Timed', hint: `${VERSUS_SECONDS} seconds each — most points wins.` },
+  { id: 'climb', icon: '📈', label: 'Climb', hint: `Alternating, and every question is bigger than the last. ${VERSUS_LIVES} lives each — last one standing.` },
+  { id: 'lives', icon: '💀', label: 'Lives', hint: `${VERSUS_LIVES} lives each, played in one go. A miss costs one.` },
+];
+
+const isVersus = () => g && g.mode === 'versus';
+const vsFormat = () => (g && g.vs ? g.vs.format : 'turns');
+const versusPlayer = () => g.vs.players[g.vs.turn];
+
+// Both players face the SAME size of number, so the match is a contest and not
+// a handicap: versus ignores Jason's per-topic ratings and runs off the picked
+// difficulty. Climb walks that up a full tier every 15 seconds.
+function versusT() {
+  if (vsFormat() !== 'climb') return g.vs.baseT;
+  // Keyed to the PLAYER's own count, so both climb the identical ladder no
+  // matter who is ahead.
+  return g.vs.baseT + versusPlayer().answered * CLIMB_PER_Q;
+}
 
 const DIFFICULTIES = [
   { id: 'easy',   label: 'Easy',   level: 1, choices: 4, seconds: 20, mult: 1 },
@@ -213,7 +250,7 @@ function drawTopic() {
 // Menu
 // ---------------------------------------------------------------------------
 
-const sel = { mode: 'classic', topic: 'mixed', difficulty: 'adaptive', rival: 'kid' };
+const sel = { mode: 'classic', topic: 'mixed', difficulty: 'adaptive', rival: 'kid', vsFormat: 'turns' };
 
 function optionButton(item, group, active) {
   const b = document.createElement('button');
@@ -251,6 +288,15 @@ function renderMenu() {
   fill('topic-options', [{ id: 'mixed', label: 'Mixed', icon: '🎲' }, ...TOPICS], 'topic');
   fill('difficulty-options', [ADAPTIVE, ...DIFFICULTIES], 'difficulty');
 
+  const isVs = sel.mode === 'versus';
+  $('versus-block').classList.toggle('hidden', !isVs);
+  if (isVs) {
+    fill('vsformat-options', VERSUS_FORMATS, 'vsFormat');
+    const f = VERSUS_FORMATS.find((x) => x.id === sel.vsFormat) || VERSUS_FORMATS[0];
+    $('vsformat-blurb').textContent =
+      `${f.hint} Difficulty applies to both players; Adaptive falls back to Normal so nobody gets a handicap.`;
+  }
+
   const isRace = sel.mode === 'race';
   $('rival-block').classList.toggle('hidden', !isRace);
   if (isRace) {
@@ -285,10 +331,11 @@ let ticker = null;
 function startGame() {
   // Ladder has its own global ramp, so adaptive per-topic levels don't apply
   // there — it falls back to the normal preset for pacing and scoring.
-  const adaptive = sel.difficulty === 'adaptive' && sel.mode !== 'ladder';
+  const adaptive = sel.difficulty === 'adaptive' && sel.mode !== 'ladder' && sel.mode !== 'versus';
   const preset = DIFFICULTIES.find((d) => d.id === sel.difficulty) || DIFFICULTIES[1];
   const difficulty = adaptive ? ADAPTIVE : preset;
-  const endless = sel.mode === 'blitz' || sel.mode === 'marathon'
+  const versus = sel.mode === 'versus';
+  const endless = versus || sel.mode === 'blitz' || sel.mode === 'marathon'
     || sel.mode === 'ladder' || sel.mode === 'race';
 
   const topicPool = sel.mode === 'review' ? reviewTopics()
@@ -327,10 +374,29 @@ function startGame() {
     locked: false,
     current: null,
     endsAt: sel.mode === 'blitz' ? Date.now() + BLITZ_SECONDS * 1000 : null,
+    vs: versus ? {
+      format: sel.vsFormat,
+      turn: 0,
+      turnsEach: VERSUS_TURNS,
+      turnRounds: 0,
+      lives: VERSUS_LIVES,
+      tier: 0,
+      turnStartedAt: 0,
+      turnEndsAt: 0,
+      // Adaptive is meaningless with two players, so versus runs off the
+      // picked preset (Adaptive falls back to Normal) and both face the same.
+      baseT: Math.max(0, (preset.level || 2) - 1),
+      players: [
+        { name: ($('p1-name').value.trim() || 'Player 1').slice(0, 12), score: 0, correct: 0, answered: 0, streak: 0, lives: VERSUS_LIVES },
+        { name: ($('p2-name').value.trim() || 'Player 2').slice(0, 12), score: 0, correct: 0, answered: 0, streak: 0, lives: VERSUS_LIVES },
+      ],
+    } : null,
   };
 
+  if (versus) beginVersusTurn();
+
   showScreen('game');
-  $('hud-clock').classList.toggle('hidden', sel.mode !== 'blitz');
+  if (!versus) $('hud-clock').classList.toggle('hidden', sel.mode !== 'blitz');
   $('hud-lives').classList.toggle('hidden', g.lives === null);
 
   // The rival paces itself off your own history, so it needs read access to
@@ -382,7 +448,8 @@ function tick() {
   if (g.endsAt) {
     const left = Math.max(0, g.endsAt - Date.now());
     $('hud-clock').textContent = `⏱ ${Math.ceil(left / 1000)}s`;
-    if (left <= 0) return endGame();
+    // In versus the clock ends a TURN, not the match.
+    if (left <= 0) return isVersus() ? endVersusTurn() : endGame();
   }
 
   // Deliberately ahead of the `locked` guard: the rival keeps running while
@@ -407,8 +474,99 @@ function tick() {
   if (spent >= limit) answer(null);
 }
 
+// A turn is over when the format says so; the match when nobody has one left.
+function versusTurnOver() {
+  switch (vsFormat()) {
+    case 'timed': return Date.now() >= g.vs.turnEndsAt;
+    case 'lives': return versusPlayer().lives <= 0;
+    // Turns and Climb both hand the device over after every single question.
+    default:      return g.vs.turnRounds >= 1;
+  }
+}
+
+function versusMatchOver() {
+  if (vsFormat() === 'turns') return g.vs.players.every((p) => p.answered >= g.vs.turnsEach);
+  // Climb runs until nobody has a life left; whoever climbed furthest wins.
+  if (vsFormat() === 'climb') return g.vs.players.every((p) => p.lives <= 0);
+  return g.vs.turn === 1;
+}
+
+// The next seat is the other player — unless they're already out, in which
+// case the survivor keeps climbing alone until their own lives run out.
+function nextVersusSeat() {
+  const other = g.vs.turn === 0 ? 1 : 0;
+  if (vsFormat() !== 'climb') return other;
+  if (g.vs.players[other].lives > 0) return other;
+  return versusPlayer().lives > 0 ? g.vs.turn : other;
+}
+
+// A streak belongs to the player, not the seat — it survives the opponent's go.
+function beginVersusTurn() {
+  g.streak = versusPlayer().streak || 0;
+  g.vs.turnStartedAt = Date.now();
+  g.vs.turnEndsAt = Date.now() + VERSUS_SECONDS * 1000;
+  if (vsFormat() === 'lives') versusPlayer().lives = VERSUS_LIVES;
+  g.vs.turnRounds = 0;
+  g.endsAt = vsFormat() === 'timed' ? g.vs.turnEndsAt : null;
+  $('hud-clock').classList.toggle('hidden', !g.endsAt);
+  $('hud-lives').classList.add('hidden');   // lives live in the progress slot here
+}
+
+function endVersusTurn() {
+  if (versusMatchOver()) return endGame();
+  const seat = nextVersusSeat();
+  // Nobody to pass to — the survivor just carries on.
+  if (seat === g.vs.turn) { g.vs.turnRounds = 0; return nextQuestion(); }
+  showHandoff(seat);
+}
+
+function showHandoff(nextTurn) {
+  const up = g.vs.players[nextTurn];
+  const other = g.vs.players[nextTurn === 0 ? 1 : 0];
+  const alternating = vsFormat() === 'turns';
+  $('handoff-title').textContent = `${up.name}, you're up`;
+  $('handoff-sub').innerHTML = alternating
+    ? `${esc(up.name)} <b>${up.score.toLocaleString()}</b> · ${esc(other.name)} <b>${other.score.toLocaleString()}</b>`
+      + `<br>Question ${Math.min(up.answered + 1, g.vs.turnsEach)} of ${g.vs.turnsEach}. Pass the device.`
+    : `${esc(other.name)} scored <b>${other.score.toLocaleString()}</b> — ${other.correct}/${other.answered} correct.`
+      + `<br>Beat it. Hand the device over.`;
+  $('handoff').classList.remove('hidden');
+  $('handoff-go').onclick = () => {
+    $('handoff').classList.add('hidden');
+    g.vs.turn = nextTurn;
+    beginVersusTurn();
+    nextQuestion();
+  };
+}
+
+function endVersus() {
+  const [a, b] = g.vs.players;
+  const winner = a.score === b.score ? null : (a.score > b.score ? a : b);
+  const fmt = VERSUS_FORMATS.find((f) => f.id === g.vs.format) || VERSUS_FORMATS[0];
+
+  $('results-title').textContent = winner ? `🏆 ${winner.name} wins` : '🤝 Dead heat';
+  $('results-score').innerHTML =
+    `${a.score.toLocaleString()}<span> ${esc(a.name)} · ${esc(b.name)} ${b.score.toLocaleString()}</span>`;
+  $('results-stats').innerHTML =
+    `<div class="stat"><b>${a.correct}/${a.answered}</b><span>${esc(a.name)}</span></div>` +
+    `<div class="stat"><b>${b.correct}/${b.answered}</b><span>${esc(b.name)}</span></div>` +
+    `<div class="stat"><b>${Math.abs(a.score - b.score).toLocaleString()}</b><span>margin</span></div>` +
+    (g.vs.format === 'climb'
+      ? `<div class="stat"><b>${a.answered} · ${b.answered}</b><span>questions deep</span></div>`
+      : `<div class="stat"><b>${fmt.label}</b><span>format</span></div>`);
+  $('results-xp').innerHTML = '';
+  $('results-missed').innerHTML =
+    '<p class="versus-note">Versus doesn\'t touch your ratings, learned facts or stats — someone else was answering.</p>';
+
+  showScreen('results');
+  replay($('results-score'), 'pop');
+  if (winner) Juice.celebrate($('results-score'));
+  g = null;
+}
+
 function nextQuestion() {
   if (!g) return;
+  if (isVersus() && versusTurnOver()) return endVersusTurn();
   if (g.dead || g.round >= g.rounds) return endGame();
 
   g.round += 1;
@@ -421,8 +579,8 @@ function nextQuestion() {
   // Manual difficulties and Ladder serve at fixed t (old level − 1).
   const draw = () => {
     const topicId = drawTopic();
-    const t = g.adaptive
-      ? tOf(eloOf(topicId)) + (Math.random() * 0.5 - 0.2)
+    const t = isVersus() ? versusT()
+      : g.adaptive ? tOf(eloOf(topicId)) + (Math.random() * 0.5 - 0.2)
       : g.level - 1;
     return makeQuestion(topicId, t);
   };
@@ -434,7 +592,14 @@ function nextQuestion() {
     if (!f || !f.learned) break;
     g.current = draw();
   }
-  if (g.adaptive) g.qdiff = pacingFor(g.current.t);
+  if (g.adaptive || isVersus()) g.qdiff = pacingFor(g.current.t);
+  if (isVersus() && vsFormat() === 'climb') {
+    const tier = Math.floor(g.current.t - g.vs.baseT);
+    if (tier !== g.vs.tier) {
+      g.vs.tier = tier;
+      Juice.toast(`📈 The numbers just grew`);
+    }
+  }
   g.questionStartedAt = Date.now();
   g.hinted = false;
   g.strained = false;
@@ -514,6 +679,23 @@ function replay(el, cls) {
 }
 
 function updateHud(scoreFrom = null) {
+  if (isVersus()) {
+    const [a, b] = g.vs.players;
+    const f = vsFormat();
+    $('hud-progress').textContent =
+      f === 'lives' ? `${versusPlayer().name} · ${'❤'.repeat(Math.max(0, versusPlayer().lives))}`
+      : f === 'climb' ? `${versusPlayer().name} · ${'❤'.repeat(Math.max(0, versusPlayer().lives))} · Q${versusPlayer().answered + 1}`
+      : f === 'timed' ? versusPlayer().name
+      : `${versusPlayer().name} · ${Math.min(versusPlayer().answered + 1, g.vs.turnsEach)}/${g.vs.turnsEach}`;
+    $('hud-score').innerHTML =
+      `<span class="${g.vs.turn === 0 ? 'vs-on' : ''}">${esc(a.name)} ${a.score.toLocaleString()}</span>`
+      + `<span class="vs-sep"> · </span>`
+      + `<span class="${g.vs.turn === 1 ? 'vs-on' : ''}">${esc(b.name)} ${b.score.toLocaleString()}</span>`;
+    const streakEl = $('hud-streak');
+    streakEl.textContent = g.streak >= 2 ? `🔥 ${g.streak}` : '';
+    return;
+  }
+
   $('hud-progress').textContent = Number.isFinite(g.rounds)
     ? `Q ${Math.min(g.round, g.rounds)}/${g.rounds}`
     : `${g.answered} answered`;
@@ -587,12 +769,36 @@ function answer(given, btn) {
 
   // Blitz and Race keep moving on their own; every other mode waits so the
   // explanation can actually be read.
-  if (g.mode === 'blitz' || g.mode === 'race') setTimeout(nextQuestion, right ? 450 : 1400);
+  if (isVersus()) setTimeout(nextQuestion, right ? 900 : 2000);
+  else if (g.mode === 'blitz' || g.mode === 'race') setTimeout(nextQuestion, right ? 450 : 1400);
   else $('next-btn').classList.remove('hidden');
 }
 
 function recordAnswer(q, wasCorrect, elapsedMs) {
   g.answered += 1;
+
+  // Versus: score the turn, then stop. Everything below this line is
+  // measurement of Jason, and the person answering might not be him.
+  if (isVersus()) {
+    const p = versusPlayer();
+    p.answered += 1;
+    g.vs.turnRounds += 1;
+    if (wasCorrect) {
+      p.correct += 1;
+      p.streak = (p.streak || 0) + 1;
+    } else {
+      p.streak = 0;
+      if (vsFormat() === 'lives' || vsFormat() === 'climb') {
+        p.lives -= 1;
+        if (p.lives <= 0 && vsFormat() === 'climb' && window.Juice) {
+          Juice.toast(`💀 ${p.name} is out — ${p.answered} questions deep`);
+        }
+      }
+    }
+    g.streak = p.streak;
+    return;
+  }
+
   store.answered += 1;
 
   const s = store.stats[q.topic] || (store.stats[q.topic] = { seen: 0, correct: 0, ms: 0 });
@@ -671,6 +877,7 @@ function awardPoints(elapsedMs) {
   const streakBonus = 10 * Math.min(g.streak, 10);
   const ladderBonus = g.mode === 'ladder' ? 1 + (g.level - 1) * 0.3 : 1;
   const pts = Math.round((base + streakBonus) * g.qdiff.mult * ladderBonus);
+  if (isVersus()) versusPlayer().score += pts;
   g.score += pts;
   return pts;
 }
@@ -799,6 +1006,8 @@ function endGame(aborted = false) {
   // the only place the margin ever gets stated.
   const race = g && g.mode === 'race' ? Rival.result() : null;
   Rival.stop();
+
+  if (g && isVersus() && !aborted) return endVersus();
 
   if (aborted) {
     poseAll('idle');

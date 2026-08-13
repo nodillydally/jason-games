@@ -23,9 +23,9 @@
 
 const RACE_LEGS = 10;
 const VERSUS_TURNS = 5;      // Turns format: questions each
-const VERSUS_SECONDS = 45;   // Timed + Climb: clock per player
-const VERSUS_LIVES = 3;      // Lives format
-const CLIMB_STEP_MS = 15000; // Climb: difficulty rises this often
+const VERSUS_SECONDS = 45;   // Timed: clock per player
+const VERSUS_LIVES = 3;
+const CLIMB_PER_Q = 3;       // Climb: a harder tier every N questions, per player
 
 const MODES = [
   { id: 'quiz', icon: '🎯', label: 'Classic', sub: 'Ten rounds' },
@@ -58,8 +58,8 @@ const isVersus = () => g && g.mode === 'versus';
 const VERSUS_FORMATS = [
   { id: 'turns', icon: '🔄', label: 'Turns', sub: `${VERSUS_TURNS} each, alternating` },
   { id: 'timed', icon: '⏱', label: 'Timed', sub: `${VERSUS_SECONDS}s each` },
-  { id: 'climb', icon: '📈', label: 'Climb', sub: 'Harder every 15s' },
-  { id: 'lives', icon: '💀', label: 'Lives', sub: `${VERSUS_LIVES} lives each` },
+  { id: 'climb', icon: '📈', label: 'Climb', sub: `Harder each turn, ${VERSUS_LIVES} lives` },
+  { id: 'lives', icon: '💀', label: 'Lives', sub: `${VERSUS_LIVES} lives, one go` },
 ];
 const vsFormat = () => (g && g.vs ? g.vs.format : 'turns');
 
@@ -67,7 +67,10 @@ const vsFormat = () => (g && g.vs ? g.vs.format : 'turns');
 // Climb, where it steps up on the clock — so points rise as the vice tightens.
 function curDiff() {
   if (!g) return DIFFICULTIES[0];
-  if (isVersus() && vsFormat() === 'climb') return DIFFICULTIES[Math.min(g.vs.tier, DIFFICULTIES.length - 1)];
+  if (isVersus() && vsFormat() === 'climb') {
+    const tier = Math.floor(versusPlayer().answered / CLIMB_PER_Q);
+    return DIFFICULTIES[Math.min(tier, DIFFICULTIES.length - 1)];
+  }
   return g.difficulty;
 }
 
@@ -687,8 +690,8 @@ function startGame() {
       turnStartedAt: 0,
       turnEndsAt: 0,
       players: [
-        { name: ($('p1-name').value.trim() || 'Player 1').slice(0, 12), score: 0, correct: 0, answered: 0, streak: 0 },
-        { name: ($('p2-name').value.trim() || 'Player 2').slice(0, 12), score: 0, correct: 0, answered: 0, streak: 0 },
+        { name: ($('p1-name').value.trim() || 'Player 1').slice(0, 12), score: 0, correct: 0, answered: 0, streak: 0, lives: VERSUS_LIVES },
+        { name: ($('p2-name').value.trim() || 'Player 2').slice(0, 12), score: 0, correct: 0, answered: 0, streak: 0, lives: VERSUS_LIVES },
       ],
     } : null,
     score: 0,
@@ -833,10 +836,9 @@ function beginVersusTurn() {
   g.streak = versusPlayer().streak || 0;
   g.vs.turnStartedAt = Date.now();
   g.vs.turnEndsAt = Date.now() + VERSUS_SECONDS * 1000;
-  g.vs.lives = VERSUS_LIVES;
-  g.vs.tier = 0;
+  if (vsFormat() === 'lives') versusPlayer().lives = VERSUS_LIVES;
   g.vs.turnRounds = 0;
-  const clocked = vsFormat() === 'timed' || vsFormat() === 'climb';
+  const clocked = vsFormat() === 'timed';
   $('hud-timer').classList.toggle('hidden', !clocked);
   clearInterval(versusTimer);
   versusTimer = clocked ? setInterval(tickVersus, 150) : null;
@@ -847,17 +849,27 @@ function beginVersusTurn() {
 // is what makes it feel like a board game rather than two solo runs.
 function versusTurnOver() {
   switch (vsFormat()) {
-    case 'timed':
-    case 'climb': return Date.now() >= g.vs.turnEndsAt;
-    case 'lives': return g.vs.lives <= 0;
+    case 'timed': return Date.now() >= g.vs.turnEndsAt;
+    case 'lives': return versusPlayer().lives <= 0;
+    // Turns and Climb both pass the device after every single question.
     default:      return g.vs.turnRounds >= 1;
   }
 }
 
 // The whole match is done when nobody has a turn left to take.
 function versusMatchOver() {
-  if (vsFormat() !== 'turns') return g.vs.turn === 1;
-  return g.vs.players.every((p) => p.answered >= g.vs.turnsEach);
+  if (vsFormat() === 'turns') return g.vs.players.every((p) => p.answered >= g.vs.turnsEach);
+  if (vsFormat() === 'climb') return g.vs.players.every((p) => p.lives <= 0);
+  return g.vs.turn === 1;
+}
+
+// The other player — unless they're already out, in which case the survivor
+// climbs on alone until their own lives are gone.
+function nextVersusSeat() {
+  const other = g.vs.turn === 0 ? 1 : 0;
+  if (vsFormat() !== 'climb') return other;
+  if (g.vs.players[other].lives > 0) return other;
+  return versusPlayer().lives > 0 ? g.vs.turn : other;
 }
 
 function tickVersus() {
@@ -866,18 +878,6 @@ function tickVersus() {
   const secs = Math.ceil(left / 1000);
   $('hud-timer').textContent = `⏱ ${secs}s`;
   $('hud-timer').classList.toggle('urgent', secs <= 10);
-
-  if (vsFormat() === 'climb') {
-    const tier = Math.min(
-      DIFFICULTIES.length - 1,
-      Math.floor((Date.now() - g.vs.turnStartedAt) / CLIMB_STEP_MS)
-    );
-    if (tier !== g.vs.tier) {
-      g.vs.tier = tier;
-      Juice.toast(`📈 ${DIFFICULTIES[tier].label} — ${DIFFICULTIES[tier].points} a country`);
-      updateHud();
-    }
-  }
 
   if (left <= 0) {
     clearInterval(versusTimer);
@@ -892,7 +892,9 @@ function endVersusTurn() {
   clearInterval(versusTimer);
   versusTimer = null;
   if (versusMatchOver()) return endGame();
-  showHandoff(g.vs.turn === 0 ? 1 : 0);
+  const seat = nextVersusSeat();
+  if (seat === g.vs.turn) { g.vs.turnRounds = 0; return nextRound(); }
+  showHandoff(seat);
 }
 
 function showHandoff(nextTurn) {
@@ -1098,7 +1100,12 @@ function recordAnswer(country, wasCorrect) {
     } else {
       p.streak = 0;
       g.missed.push(country);
-      if (vsFormat() === 'lives') g.vs.lives -= 1;
+      if (vsFormat() === 'lives' || vsFormat() === 'climb') {
+        p.lives -= 1;
+        if (p.lives <= 0 && vsFormat() === 'climb' && window.Juice) {
+          Juice.toast(`💀 ${p.name} is out — ${p.answered} deep`);
+        }
+      }
     }
     g.streak = p.streak;
     updateHud();
@@ -1180,9 +1187,9 @@ function updateHud() {
     const f = vsFormat();
     $('hud-progress').textContent =
       f === 'lives'
-        ? `${versusPlayer().name} · ${'❤️'.repeat(Math.max(0, g.vs.lives))}${'🖤'.repeat(VERSUS_LIVES - Math.max(0, g.vs.lives))}`
+        ? `${versusPlayer().name} · ${'❤️'.repeat(Math.max(0, versusPlayer().lives))}${'🖤'.repeat(VERSUS_LIVES - Math.max(0, versusPlayer().lives))}`
         : f === 'climb'
-        ? `${versusPlayer().name} · ${curDiff().label}`
+        ? `${versusPlayer().name} · ${'❤️'.repeat(Math.max(0, versusPlayer().lives))} · ${curDiff().label}`
         : f === 'timed'
         ? versusPlayer().name
         : `${versusPlayer().name} · ${Math.min(versusPlayer().answered + 1, g.vs.turnsEach)}/${g.vs.turnsEach}`;
@@ -1248,6 +1255,15 @@ function nextRound() {
   if (g.mode === 'race' && Rival.active() && Rival.result().finishedBy) return endGame();
   if (isVersus() && versusTurnOver()) return endVersusTurn();
   if (g.round >= g.rounds) return endGame();
+
+  if (isVersus() && vsFormat() === 'climb') {
+    const p = versusPlayer();
+    const tier = Math.min(DIFFICULTIES.length - 1, Math.floor(p.answered / CLIMB_PER_Q));
+    if (p.lastTier !== undefined && tier > p.lastTier && window.Juice) {
+      Juice.toast(`📈 ${p.name} — ${DIFFICULTIES[tier].label} now`);
+    }
+    p.lastTier = tier;
+  }
   g.round += 1;
   g.locked = false;
   g.target = drawNextTarget();

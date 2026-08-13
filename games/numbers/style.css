@@ -537,3 +537,46 @@
   margin-left: 4px;
   vertical-align: 1px;
 }
+
+/* ------------------------------ versus (1v1) ------------------------------ */
+
+.vs-names { display: flex; align-items: center; gap: 10px; }
+.vs-names input { flex: 1; min-width: 0; padding: 12px 14px; border-radius: var(--r-md); font-size: 15px; }
+.vs-v { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--ink-3); flex: none; }
+
+#hud-score .vs-on { color: var(--p1); font-weight: 600; }
+#hud-score .vs-sep { opacity: .4; }
+
+/* Opaque on purpose: it covers the board so the last answer can't be read. */
+.handoff {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--paper);
+}
+.handoff.hidden { display: none; }
+.handoff-card {
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--card-bg);
+  padding: 34px 28px;
+  box-shadow: var(--shadow);
+  animation: rise .3s var(--ease) both;
+}
+.handoff-icon { font-size: 34px; }
+.handoff-card h2 {
+  font-family: var(--serif);
+  font-size: 30px;
+  letter-spacing: -.02em;
+  margin: 10px 0 8px;
+}
+.handoff-card p { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; margin-bottom: 22px; }
+.handoff-card button { width: 100%; }
+
+.versus-note { margin-top: 14px; font-size: 12.5px; line-height: 1.55; color: var(--ink-3); }
