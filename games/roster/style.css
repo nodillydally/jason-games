@@ -1,0 +1,228 @@
+/* style.css — the roster's own parts.
+ *
+ * Consumes lib/theme.css tokens only, so it wears whatever theme the site is
+ * in without knowing which. The default accent stays Revvive's navy: this page
+ * belongs to no single game, so it borrows no single game's colour.
+ */
+
+.seg {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.seg-btn {
+  padding: 8px 14px;
+  min-height: 38px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color .2s ease, border-color .2s ease, background .2s ease;
+}
+.seg-btn:hover { color: var(--ink-2); border-color: var(--stroke-hi); }
+.seg-btn.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+/* ----------------------------- roster cards ----------------------------- */
+
+.roster { display: flex; flex-direction: column; gap: 10px; }
+
+.pcard {
+  display: grid;
+  grid-template-columns: 34px 64px 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+}
+/* Your own row is marked by weight, not by colour — the ladders already use
+   colour for rank and two signals in one place read as noise. */
+.pcard.is-you { border-color: var(--stroke-hi); }
+
+.pc-rank {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  color: var(--ink-3);
+  text-align: center;
+}
+.pcard:nth-child(1) .pc-rank { color: var(--a1); }
+
+.pc-fig {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+/* The sprites are drawn small; scale up without smoothing them into mush. */
+.pc-fig .avatar { transform: scale(1.6); image-rendering: pixelated; }
+
+/* Signed up, never opened this page — so there is no card to draw from. */
+.pc-fig.empty::after {
+  content: "?";
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--rule);
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.pc-name {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  line-height: 1.2;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+.pc-you {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-pill);
+  padding: 2px 7px;
+}
+
+.pc-meta {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  color: var(--ink-3);
+}
+.pc-meta b { color: var(--ink); font-weight: 500; }
+
+.pc-domains {
+  margin-top: 9px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pc-dom {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .04em;
+  color: var(--ink-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-pill);
+  padding: 3px 9px;
+}
+.pc-dom.none { color: var(--ink-3); border-style: dashed; }
+
+.pc-last {
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+@media (max-width: 520px) {
+  .pcard { grid-template-columns: 26px 52px 1fr; gap: 10px; padding: 14px; }
+  .pc-fig { width: 52px; height: 52px; }
+  .pc-fig .avatar { transform: scale(1.3); }
+  .pc-name { font-size: 1.1rem; }
+}
+
+/* -------------------------------- ladders -------------------------------- */
+
+.ladder-card { margin-top: 22px; padding: 22px 24px; }
+
+.ladder-title {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  line-height: 1.1;
+}
+.ladder-note {
+  margin-top: 8px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+.ladders {
+  margin-top: 20px;
+  display: grid;
+  /* Wide enough that "nobody rated yet" stays on one line — a wrapped empty
+     state reads as broken layout rather than as an empty state. */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px 26px;
+}
+
+.ladder h3 {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.ladder ol { list-style: none; margin-top: 8px; }
+
+.ladder li {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13.5px;
+  border-bottom: 1px solid var(--rule-2);
+}
+.ladder li:last-child { border-bottom: 0; }
+.ladder li.is-you .ld-n { color: var(--ink); font-weight: 500; }
+.ladder li b { font-family: var(--mono); font-size: 12px; }
+
+.ld-i { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.ld-n {
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ld-empty {
+  grid-template-columns: 1fr;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-style: italic;
+}
+
+/* -------------------------------- states -------------------------------- */
+
+.gate-note, .roster-status {
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+.roster-status {
+  margin-top: 18px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  color: var(--ink-3);
+}

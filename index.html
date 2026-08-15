@@ -511,6 +511,29 @@
   }
 
 
+  /* Deliberately not styled as a sixth game tile — it isn't one, and putting it
+     in the grid would make the grid lie about how many games there are. */
+  .players-link {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 14px;
+    padding: 18px 22px;
+    background: var(--card-bg);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color .2s ease, transform .2s var(--ease);
+  }
+  .players-link:hover { border-color: var(--stroke-hi); transform: translateY(-1px); }
+  .pl-icon { font-size: 1.6rem; line-height: 1; }
+  .pl-body { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .pl-body b { font-family: var(--serif); font-size: 1.3rem; font-weight: 400; }
+  .pl-body span { color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
+  .pl-go { color: var(--ink-3); font-size: 1.1rem; }
+
   footer {
     margin-top: 44px;
     padding-top: 22px;
@@ -647,6 +670,15 @@
     </a>
   </div>
 
+  <a class="players-link" href="games/roster/">
+    <span class="pl-icon">🏆</span>
+    <span class="pl-body">
+      <b>Players</b>
+      <span>Everyone playing, their characters, and the ladders.</span>
+    </span>
+    <span class="pl-go">→</span>
+  </a>
+
   <div class="card account-card" id="account-card"></div>
 
   <footer>
@@ -667,6 +699,8 @@
 <script src="lib/gear.js"></script>
 <script src="lib/avatar.js"></script>
 <script src="lib/wardrobe.js"></script>
+<!-- After elo/wardrobe: the card it publishes is built from what they compute. -->
+<script src="lib/roster.js"></script>
 <script src="hub.js"></script>
 </body>
 </html>
