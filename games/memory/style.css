@@ -1,0 +1,363 @@
+/* Memory — skin over lib/theme.css.
+ *
+ * Deep teal, the one hue not already claimed by another game. The shared theme
+ * owns everything common; this file owns the sequence stage, the slots and
+ * pads, the 4×4 grid and the pairs board. */
+
+:root {
+  --p1: #2C6560;          /* teal */
+  --p2: #5E9A94;
+}
+
+/* Loaded after lib/theme.css, so this keeps Memory teal at night rather than
+   inheriting the shared blue. */
+:root[data-theme="dark"] {
+  --p1: #79BDB5;
+  --p2: #5E9A94;
+}
+
+#app { max-width: 620px; }
+
+/* ---------------------------- sequence stage ---------------------------- */
+
+.question-card {
+  text-align: center;
+  padding: 30px 22px 26px;
+  margin-top: 6px;
+}
+
+.question-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.topic-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-pill);
+  padding: 5px 13px;
+}
+
+/* Which half of the trial you are in — the single most important thing on the
+   screen while a sequence is running, and the thing a player glances at when
+   they look up mid-flash. */
+.phase-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  transition: color .2s ease;
+}
+.phase-tag.showing { color: var(--a2); }
+.phase-tag.recalling { color: var(--p1); }
+
+/* The stage holds its height whether an item is on screen or not — a box that
+   collapses between flashes makes the whole card jump, which is exactly the
+   sort of motion that costs you a place. */
+.show {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 168px;
+  margin-bottom: 18px;
+}
+
+.show .item {
+  font-family: var(--serif);
+  font-size: clamp(60px, 20vw, 104px);
+  line-height: 1;
+  letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+  animation: item-in .16s var(--ease) both;
+}
+/* Words are long — they cannot take the digit size or they wrap mid-flash. */
+.show.kind-words .item {
+  font-size: clamp(34px, 9.5vw, 56px);
+  letter-spacing: -.01em;
+}
+@keyframes item-in {
+  from { opacity: 0; transform: scale(.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ------------------------------- the grid ------------------------------- */
+
+.show.kind-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), 1fr);
+  gap: 8px;
+  max-width: 320px;
+  margin: 0 auto 18px;
+  min-height: 0;
+}
+
+.show .cell {
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 0;
+  border-radius: var(--r-md);
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  box-shadow: none;
+  transition: background .12s ease, transform .12s ease, border-color .12s ease;
+}
+.show .cell:disabled { opacity: 1; cursor: default; }
+.show .cell.lit {
+  background: var(--p1);
+  border-color: var(--p1);
+  transform: scale(1.06);
+}
+.show.live .cell { cursor: pointer; }
+.show.live .cell:hover { border-color: var(--p2); }
+/* Chosen during recall — a hollow mark, deliberately unlike the solid fill the
+   sequence used, so a board you are filling in never reads as a board being
+   shown to you. */
+.show.live .cell.chosen {
+  background: var(--paper-2);
+  border-color: var(--p1);
+  box-shadow: inset 0 0 0 3px var(--p1);
+}
+
+/* -------------------------------- slots -------------------------------- */
+
+/* One box per place, filled left to right. Showing the shape of what you owe
+   before you start entering is half the point: you can see you have five to
+   give even after the fifth has already faded. */
+.slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.slots .slot {
+  min-width: 38px;
+  height: 40px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 15px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper-2);
+  color: var(--ink-3);
+}
+.slots .slot.filled {
+  background: var(--card-bg);
+  border-color: var(--p1);
+  color: var(--ink);
+  animation: fade-up .18s var(--ease) both;
+}
+.slots.kind-words .slot { min-width: 0; font-size: 12.5px; }
+
+/* --------------------------------- pads --------------------------------- */
+
+.pad {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+.pad-digits { grid-template-columns: repeat(5, 1fr); }
+.pad-letters { grid-template-columns: repeat(5, 1fr); }
+.pad-words { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+
+.pad .key {
+  padding: 12px 6px;
+  min-height: 50px;
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: var(--r-md);
+  overflow-wrap: anywhere;
+}
+.pad-words .key { font-size: 13px; line-height: 1.3; }
+.pad .key.tapped { background: var(--p1); border-color: var(--p1); color: var(--paper); }
+.pad .key:disabled { opacity: .25; }
+
+.recall-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.recall-actions button { min-width: 120px; }
+
+/* ------------------------------- feedback ------------------------------- */
+
+#feedback { min-height: 26px; }
+
+/* The answer laid against what you gave, place by place — the only feedback
+   that says WHERE it broke, which is the part worth reading. */
+.cmp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+  margin-top: 12px;
+}
+.cmp {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+}
+.cmp.ok { border-color: var(--good); color: var(--good); }
+.cmp.no { border-color: var(--bad); color: var(--bad); }
+.cmp.no em {
+  font-style: normal;
+  opacity: .65;
+  margin-left: 6px;
+  text-decoration: line-through;
+}
+
+#next-btn { margin-top: 18px; padding: 14px 36px; }
+#hud-lives { letter-spacing: .16em; }
+#hud-span { font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: .1em; }
+
+/* ----------------------------- pairs board ----------------------------- */
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), 1fr);
+  gap: 8px;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.card-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 3 / 4;
+  min-height: 0;
+  padding: 0;
+  border-radius: var(--r-md);
+  background: var(--p1);
+  border: 1px solid var(--p1);
+  box-shadow: var(--shadow);
+  transition: background .2s ease, border-color .2s ease, transform .2s var(--ease), opacity .3s ease;
+}
+/* Face-down cards carry a hairline mark rather than being flat colour — a
+   grid of identical rectangles is hard to keep your place in. */
+.card-tile::after {
+  content: "";
+  position: absolute;
+  inset: 22%;
+  border: 1px solid #ffffff2e;
+  border-radius: 4px;
+}
+.card-tile .face {
+  font-size: clamp(20px, 6vw, 30px);
+  opacity: 0;
+  transition: opacity .14s ease;
+}
+.card-tile.up, .card-tile.done {
+  background: var(--card-bg);
+  border-color: var(--rule);
+  transform: none;
+}
+.card-tile.up::after, .card-tile.done::after { display: none; }
+.card-tile.up .face, .card-tile.done .face { opacity: 1; }
+.card-tile.done { opacity: .38; box-shadow: none; cursor: default; }
+.card-tile:not(.up):not(.done):hover { transform: translateY(-2px); }
+
+.pairs-note {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  text-align: center;
+  margin-top: 18px;
+  line-height: 1.6;
+}
+
+/* -------------------------------- pickers -------------------------------- */
+
+.kind-blurb {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-3);
+  margin: 10px 0 0;
+}
+
+/* ---------------------------------- how ---------------------------------- */
+
+.learn-intro {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  margin: 0 0 20px;
+  max-width: 56ch;
+}
+
+#how-body { margin-top: 22px; }
+#how-body.fade-in { animation: fade-up .32s var(--ease) both; }
+
+#how-body h3 {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -.01em;
+  margin: 0 0 14px;
+}
+#how-body p {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--ink-2);
+  margin: 0 0 14px;
+}
+#how-body em { font-style: italic; color: var(--p1); }
+#how-body b { color: var(--ink); font-weight: 600; }
+
+#how-body .how-line {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+  background: var(--paper-2);
+  border-left: 2px solid var(--p1);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: 12px 16px;
+}
+#how-body .how-note {
+  font-size: 13.5px;
+  color: var(--ink-3);
+  border-top: 1px solid var(--rule);
+  padding-top: 14px;
+  margin-top: 18px;
+}
+
+/* --------------------------------- stats --------------------------------- */
+
+.topic-lv {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-style: normal;
+  color: var(--p1);
+  margin-left: 6px;
+}
+#stats-kinds { margin-top: 22px; }
+
+/* --------------------------------- phone --------------------------------- */
+
+@media (max-width: 560px) {
+  .question-card { padding: 24px 16px 20px; }
+  .show { min-height: 132px; }
+  .pad-digits, .pad-letters { grid-template-columns: repeat(5, 1fr); }
+  .pad-words { grid-template-columns: repeat(2, 1fr); }
+  .pad .key { min-height: 46px; font-size: 15px; }
+  .slots .slot { min-width: 32px; height: 36px; font-size: 13.5px; }
+  .recall-actions button { min-width: 0; flex: 1; }
+  .show.kind-grid { max-width: 280px; }
+  .board { max-width: 100%; }
+}

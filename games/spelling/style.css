@@ -1,0 +1,250 @@
+/* Spelling — skin over lib/theme.css.
+ *
+ * Aubergine, so it reads as its own domain next to Reader's terracotta without
+ * drifting into Chronicle's brown. The shared theme owns everything common;
+ * this file owns the clue stage (definition, sentence, blank), the choice
+ * buttons, and the Rules screen. */
+
+:root {
+  --p1: #6B3F5E;          /* aubergine */
+  --p2: #9A6C8B;
+}
+
+/* Loaded after lib/theme.css, so this keeps Spelling plum at night rather than
+   inheriting the shared blue. */
+:root[data-theme="dark"] {
+  --p1: #CB9CBC;
+  --p2: #9A6C8B;
+}
+
+#app { max-width: 660px; }
+
+/* ------------------------------ clue stage ------------------------------ */
+
+.question-card {
+  text-align: center;
+  padding: 34px 24px 28px;
+  margin-top: 6px;
+}
+
+.question-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 26px;
+}
+.question-head .topic-tag { margin-bottom: 0; }
+
+.topic-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-pill);
+  padding: 5px 13px;
+}
+
+/* Five pips, filled to the word's tier — the difficulty said in the same
+   breath as the trap, without a second number to read. */
+.tier-tag {
+  font-size: 9px;
+  letter-spacing: .22em;
+  color: var(--p2);
+  white-space: nowrap;
+}
+
+/* The definition is the question, so it gets the serif and the size. */
+#definition {
+  font-family: var(--serif);
+  font-size: clamp(24px, 6.2vw, 33px);
+  line-height: 1.22;
+  letter-spacing: -.015em;
+  margin: 0 0 20px;
+}
+
+/* The sentence is evidence, not the question — smaller, and set in the sans so
+   the two never compete. */
+#sentence {
+  font-size: 15.5px;
+  line-height: 1.62;
+  color: var(--ink-2);
+  max-width: 44ch;
+  margin: 0 auto 28px;
+}
+
+/* Drawn, not typed: a run of underscores in a serif face is indistinguishable
+   from a rule, and a real element can carry a colour and a pulse. */
+.blank {
+  display: inline-block;
+  width: 5.2em;
+  height: 1.05em;
+  vertical-align: -.18em;
+  margin: 0 .12em;
+  border-bottom: 2px solid var(--p1);
+  border-radius: 1px;
+  opacity: .75;
+  animation: blank-breathe 2.4s var(--ease) infinite;
+}
+@keyframes blank-breathe {
+  0%, 100% { opacity: .75; }
+  50%      { opacity: .35; }
+}
+
+/* ------------------------------- answering ------------------------------- */
+
+#choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+#choices button {
+  padding: 17px 12px;
+  min-height: 60px;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: .01em;
+  border-radius: var(--r-md);
+  /* Long words (onomatopoeia, idiosyncrasy) must not spill or shrink the
+     button — wrapping mid-word is fine here, the letters are the point. */
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+#choices button .key {
+  font-size: 9px;
+  color: var(--ink-3);
+  margin-right: 8px;
+  vertical-align: 1px;
+}
+#choices button.enter { animation: rise .32s var(--ease) both; }
+#choices button.enter:nth-child(2) { animation-delay: .04s; }
+#choices button.enter:nth-child(3) { animation-delay: .08s; }
+#choices button.enter:nth-child(4) { animation-delay: .12s; }
+#choices button:disabled { opacity: 1; }
+#choices button:disabled:not(.correct):not(.wrong) { opacity: .3; }
+
+#type-form { display: flex; gap: 8px; justify-content: center; }
+#type-input {
+  font-family: var(--mono);
+  font-size: 17px;
+  letter-spacing: .04em;
+  text-align: center;
+  width: 260px;
+  max-width: 100%;
+}
+
+#feedback { min-height: 26px; }
+#feedback em { font-style: normal; text-decoration: line-through; opacity: .7; }
+#feedback b { font-family: var(--mono); font-size: .95em; letter-spacing: .02em; }
+
+#next-btn { margin-top: 20px; padding: 14px 36px; }
+
+#hud-lives { letter-spacing: .16em; }
+
+/* ------------------------------- companion ------------------------------- */
+
+/* The runner travels a hairline above the card — the same rail Numbers uses,
+   so the two games read as siblings. */
+.companion { margin: 10px 0 4px; }
+.companion .rail {
+  position: relative;
+  display: block;
+  height: 34px;
+  border-bottom: 1px solid var(--rule);
+}
+.companion .racer {
+  position: absolute;
+  bottom: 0;
+  width: 34px;
+  height: 34px;
+  transform: translateX(-50%);
+  transition: left .5s var(--ease);
+}
+/* An open rail means the mode has no finish line, so there is nothing to
+   measure against and the fence comes down. */
+.companion .rail.open { border-bottom-style: dashed; opacity: .5; }
+
+/* -------------------------------- pickers -------------------------------- */
+
+.cat-blurb {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-3);
+  margin: 10px 0 0;
+}
+
+/* --------------------------------- rules --------------------------------- */
+
+.learn-intro {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  margin: 0 0 20px;
+  max-width: 56ch;
+}
+
+#rules-body { margin-top: 22px; }
+#rules-body.fade-in { animation: fade-up .32s var(--ease) both; }
+
+#rules-body h3 {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -.01em;
+  margin: 0 0 14px;
+}
+#rules-body p {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--ink-2);
+  margin: 0 0 14px;
+}
+#rules-body em { font-style: normal; color: var(--p1); font-weight: 600; }
+#rules-body b { color: var(--ink); font-weight: 600; }
+
+/* A worked line, set apart from the prose that explains it. */
+#rules-body .rule-line {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--ink);
+  background: var(--paper-2);
+  border-left: 2px solid var(--p1);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: 12px 16px;
+}
+#rules-body .rule-note {
+  font-size: 13.5px;
+  color: var(--ink-3);
+  border-top: 1px solid var(--rule);
+  padding-top: 14px;
+  margin-top: 18px;
+}
+
+/* --------------------------------- stats --------------------------------- */
+
+.topic-lv {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-style: normal;
+  color: var(--p1);
+  margin-left: 6px;
+}
+#stats-cats { margin-top: 22px; }
+
+#results-missed .missed-row code {
+  font-size: 13px;
+  letter-spacing: .03em;
+}
+
+/* --------------------------------- phone --------------------------------- */
+
+@media (max-width: 560px) {
+  .question-card { padding: 26px 18px 22px; }
+  #choices { grid-template-columns: 1fr; }
+  #choices button { min-height: 54px; font-size: 14.5px; }
+  #type-form { flex-direction: column; }
+  #type-input { width: 100%; }
+  #sentence { font-size: 15px; }
+  .blank { width: 4.4em; }
+}

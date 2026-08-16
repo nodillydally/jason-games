@@ -21,6 +21,8 @@
     numbers: { name: 'Numbers', href: 'games/numbers/', icon: '🔢', store: 'numbers.profile.v1' },
     reader: { name: 'Reader', href: 'games/reader/', icon: '📖', store: 'reader.profile.v1' },
     chronicle: { name: 'Chronicle', href: 'games/chronicle/', icon: '🏛️', store: 'chronicle.profile.v1' },
+    spelling: { name: 'Spelling', href: 'games/spelling/', icon: '🔤', store: 'spelling.profile.v1' },
+    memory: { name: 'Memory', href: 'games/memory/', icon: '🧠', store: 'memory.profile.v1' },
     // elements:  { name: 'Elements',  href: 'games/elements/',  icon: '🧪' },  // science
     briefing: { name: 'Briefing', href: 'games/briefing/', icon: '📰', store: 'briefing.profile.v1' },
   };
@@ -34,10 +36,12 @@
     [{ g: 'chronicle', mode: 'Classic', why: 'History day — place the eras, learn the whys.' },
      { g: 'reader', mode: 'Flash read', why: 'Speed with comprehension held — train just above baseline.' }],
     [{ g: 'mapmaster', mode: 'Review', why: 'Spaced repetition day — clear the trouble spots.' }],
-    [{ g: 'elements', mode: 'Decks', why: 'Science day — spaced repetition on the fundamentals.' },
+    [{ g: 'memory', mode: 'Span', why: 'Capacity day — find today’s ceiling, then push one place past it.' },
+     { g: 'elements', mode: 'Decks', why: 'Science day — spaced repetition on the fundamentals.' },
      { g: 'numbers', mode: 'Blitz', why: 'Volume day — as many as the clock allows.' }],
     [{ g: 'reader', mode: 'Book passages', why: 'Friday is books — one signature passage, kept for good.' }],
-    [{ g: 'chronicle', mode: 'Sequence', why: 'Order four events — the drill that builds the actual timeline.' },
+    [{ g: 'spelling', mode: 'Classic', why: 'Language day — spell from the meaning, and learn the trap behind it.' },
+     { g: 'chronicle', mode: 'Sequence', why: 'Order four events — the drill that builds the actual timeline.' },
      { g: 'mapmaster', mode: 'Find it', why: 'The reverse drill — recall is stronger than recognition.' }],
     [{ g: 'reader', mode: 'Timed read', why: 'Whole-page reading under a clock — closest to real reading.' }],
   ];
@@ -251,10 +255,14 @@
     // games — countries + events (per-item stats) + math facts. Each game
     // marks items learned on a 3-in-a-row run and unlearns on 2 misses, so
     // this number can go down — that's the point.
+    // Memory is absent on purpose: it has no items to bank. A span is a
+    // capacity, not a thing learned, and counting trials here would inflate
+    // the one number on this page that is supposed to be hard to move.
     const learned =
       Object.values((read('mapmaster-v1') || {}).stats || {}).filter((s) => s.learned).length +
       Object.values((read('chronicle.profile.v1') || {}).stats || {}).filter((s) => s.learned).length +
-      Object.values((read('numbers.profile.v1') || {}).facts || {}).filter((f) => f.learned).length;
+      Object.values((read('numbers.profile.v1') || {}).facts || {}).filter((f) => f.learned).length +
+      Object.values((read('spelling.profile.v1') || {}).words || {}).filter((w) => w.learned).length;
 
     if (label) {
       label.textContent = totalXp
@@ -326,7 +334,7 @@
       return;
     }
     host.innerHTML = `
-      <div class="elo-overall"><b>${b.overall}</b><small>overall elo · ${b.ratedCount}/5 domains</small></div>
+      <div class="elo-overall"><b>${b.overall}</b><small>overall elo · ${b.ratedCount}/${b.domains.length} domains</small></div>
       <div class="elo-rows">
         ${b.domains.map((d) => d.rating !== null
           ? `<div class="elo-row"><span class="er-label">${d.icon} ${d.label}</span><b>${Math.round(d.rating)}</b><small>${d.detail || ''}</small></div>`

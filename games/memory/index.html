@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#F6EFE2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Memory — How Much Can You Hold?</title>
+  <link rel="stylesheet" href="../../lib/theme.css">
+  <script src="../../lib/theme.js"></script>
+  <link rel="stylesheet" href="../../lib/sync.css">
+  <link rel="stylesheet" href="../../lib/wardrobe.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================= Menu ============================= -->
+  <section id="screen-menu" class="screen active">
+    <a class="hub-link" href="../../">← All games</a>
+
+    <header class="title">
+      <h1>🧠 Memory</h1>
+      <p>How much can you hold at once — and for how long?</p>
+    </header>
+
+    <div class="card profile-card">
+      <div class="level-badge">Lv&nbsp;<span id="menu-level">1</span></div>
+      <div class="xp">
+        <div class="xp-bar"><div id="xp-fill"></div></div>
+        <span id="xp-label"></span>
+      </div>
+      <div class="profile-stats" id="profile-stats"></div>
+      <button id="stats-btn" title="Your stats">📊 Stats</button>
+    </div>
+
+    <div class="card setup-card">
+      <h2>Mode</h2>
+      <div class="opt-grid" id="mode-options"></div>
+
+      <div id="kind-block">
+        <h2>What to hold</h2>
+        <div class="opt-grid" id="kind-options"></div>
+        <p id="kind-blurb" class="kind-blurb"></p>
+      </div>
+
+      <h2>Difficulty</h2>
+      <div class="opt-grid" id="difficulty-options"></div>
+
+      <div id="setup-hint" class="setup-hint"></div>
+      <button id="start-btn" class="primary big">Start</button>
+      <button id="how-btn" class="ghost big">📘 How memory actually works</button>
+    </div>
+
+    <div class="card account-card" id="account-card"></div>
+  </section>
+
+  <!-- ============================= Game ============================= -->
+  <section id="screen-game" class="screen">
+    <div class="hud">
+      <button id="quit-btn" title="Back to menu">✕</button>
+      <span id="hud-progress"></span>
+      <span id="hud-span"></span>
+      <span class="hud-spacer"></span>
+      <span id="hud-lives" class="hidden"></span>
+      <span id="hud-streak"></span>
+      <b id="hud-score">0 pts</b>
+    </div>
+
+    <div class="timer-track"><div id="timer-fill"></div></div>
+
+    <!-- ---------------------- span modes ---------------------- -->
+    <div id="span-stage" class="card question-card">
+      <div class="question-head">
+        <div id="kind-tag" class="topic-tag"></div>
+        <span id="phase-tag" class="phase-tag"></span>
+      </div>
+
+      <!-- The sequence, while it is on screen. -->
+      <div id="show" class="show"></div>
+
+      <!-- What you have entered so far, during recall. -->
+      <div id="slots" class="slots hidden"></div>
+
+      <!-- Recall input: a keypad, a word bank, or the grid itself. -->
+      <div id="pad" class="pad hidden"></div>
+
+      <div class="recall-actions hidden" id="recall-actions">
+        <button id="undo-btn" class="ghost">← Undo</button>
+        <button id="submit-btn" class="primary">Submit</button>
+      </div>
+
+      <div id="feedback"></div>
+      <button id="next-btn" class="primary hidden">Next</button>
+    </div>
+
+    <!-- ------------------------ pairs ------------------------ -->
+    <div id="pairs-stage" class="card question-card hidden">
+      <div class="question-head">
+        <div id="pairs-tag" class="topic-tag">Pairs</div>
+        <span id="pairs-moves" class="phase-tag"></span>
+      </div>
+      <div id="board" class="board"></div>
+      <div id="pairs-note" class="pairs-note"></div>
+    </div>
+  </section>
+
+  <!-- ============================ Results ============================ -->
+  <section id="screen-results" class="screen">
+    <div class="card results-card">
+      <h2 id="results-title"></h2>
+      <div id="results-score"></div>
+      <div id="results-stats" class="results-stats"></div>
+      <div id="results-xp" class="results-xp"></div>
+      <div id="results-detail"></div>
+      <div class="results-actions">
+        <button id="results-chest" class="primary big hidden">Open your chest</button>
+        <button id="again-btn" class="primary big">Play again</button>
+        <button id="menu-btn">Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== How ============================== -->
+  <section id="screen-how" class="screen">
+    <div class="card stats-card">
+      <h2>How memory actually works</h2>
+      <p class="learn-intro">Working memory is small and fixed — you cannot make
+        it bigger by wanting to. What you can change is how much each slot
+        holds, and that is a learnable skill.</p>
+      <div class="opt-grid" id="how-topics"></div>
+      <div id="how-body"></div>
+      <button id="how-back" class="primary">Back</button>
+    </div>
+  </section>
+
+  <!-- ============================= Stats ============================= -->
+  <section id="screen-stats" class="screen">
+    <div class="card stats-card">
+      <h2>Your memory</h2>
+      <div id="stats-summary" class="profile-stats"></div>
+      <div id="stats-kinds"></div>
+      <div id="stats-pairs"></div>
+      <button id="stats-back" class="primary">Back</button>
+    </div>
+  </section>
+
+</div>
+
+<script src="../../lib/auth.js"></script>
+<script src="../../lib/sync.js"></script>
+<script src="../../lib/roam.js"></script>
+<script src="../../lib/juice.js"></script>
+<script src="../../lib/pixel.js"></script>
+<script src="../../lib/gear.js"></script>
+<script src="../../lib/avatar.js"></script>
+<script src="../../lib/wardrobe.js"></script>
+<script src="../../lib/next.js"></script>
+<script src="data/pools.js"></script>
+<script src="how.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

@@ -11,8 +11,12 @@ Play them at **https://nodillydally.github.io/jason-games/**
 | [Mapmaster](games/mapmaster/) | `games/mapmaster/` | World geography |
 | [Numbers](games/numbers/) | `games/numbers/` | Mental math |
 | [Reader](games/reader/) | `games/reader/` | Speed reading + comprehension |
+| [Chronicle](games/chronicle/) | `games/chronicle/` | History and the timeline |
+| [Briefing](games/briefing/) | `games/briefing/` | The daily news, kept and graded |
+| [Spelling](games/spelling/) | `games/spelling/` | Spelling from the meaning |
+| [Memory](games/memory/) | `games/memory/` | Working memory span, and pairs |
 
-Planned: vocabulary, books/facts from reading, chess.
+Planned: books/facts from reading, chess, science.
 
 Every game so far is deliberately AI-free — they run offline, cost nothing per
 session, and never wait on a network round trip. The open question is whether to
