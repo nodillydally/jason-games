@@ -53,6 +53,35 @@ spoken alongside it.
 Everywhere else, both clues stay hidden until you ask. Asking is free and
 always allowed; the clock is the only cost.
 
+## Difficulty, and finding your level
+
+250 words across five tiers, weighted where a good speller actually lives:
+
+| Tier | Words | |
+|---|---|---|
+| 1 | 23 | most adults get this |
+| 2 | 60 | |
+| 3 | 64 | |
+| 4 | 72 | |
+| 5 | 31 | most adults don't |
+
+The first cut of this list was calibrated to "most adults" and was the wrong
+list for the person playing it: 57% sat at tiers 1-2 while the top two tiers
+held twenty words between them, so choosing Hard cycled the same handful.
+
+Finding your level had the same problem from the other side. Elo moves a
+rating by K·(1−expected), at most 34 points — about a ninth of a tier — so
+climbing from the 1000 floor to the tier-5 words took roughly **thirty correct
+answers per category**, across seven categories. That is several sessions
+spent on words you cannot get wrong.
+
+So an unrated trap now starts in the **middle** of the range rather than at the
+floor, and the first four answers move it a **whole tier at a time** instead of
+by expectation. That is a staircase, not a rating update — the same bisection
+Memory runs on span. A strong speller is on tier-5 words by the third question;
+someone who misses everything is down to tier 1 just as fast. Elo takes over
+once it has something honest to refine.
+
 ## Traps, not topics
 
 Words are grouped by **the mistake they invite**, not by subject:
@@ -84,14 +113,23 @@ answers "which mistake do I still make" rather than "which words did I miss".
 
 ## Adaptive difficulty
 
-Default. Every trap carries a chess-style rating starting at 1000, every word
-carries a difficulty derived from its tier (1–5, spanning 1000 to 1720), and
-answering is a match between the two. Words are served *just above* your
-rating, so the game sits at your edge and there's no ceiling to hit.
+Default. Every trap carries a chess-style rating, every word carries a
+difficulty derived from its tier (1–5, spanning 1000 to 1720), and answering is
+a match between the two. Words are served *just above* your rating, so the game
+sits at your edge. An unrated trap starts mid-range and bisects — see
+**Difficulty, and finding your level** above.
 
-Past a rating of about 1360 the multiple choice disappears and words must be
-**typed**. Picking the right spelling out of four is recognition, and
-recognition stops being worth anything once you can do it.
+The input hardens as the rating climbs, because each step stops being worth
+anything once you can do it:
+
+| Rating | Input |
+| --- | --- |
+| below ~1225 | pick the right spelling from four |
+| ~1225–1525 | build the word from a bank of letters |
+| above ~1525 | type it |
+
+The fixed difficulties map to the same three: Easy picks, Normal builds, Hard
+types.
 
 ## The wrong answers are the real design work
 
@@ -133,8 +171,19 @@ six months later?" answerable.
 
 `data/words.js`. Each entry needs `w`, `cat`, `tier` (1–5), `def` and `sent` —
 and `sent` must contain `___` where the word goes. Never write the word into
-the sentence; the clue is the whole question. `near` is optional and should be
-a *real* confusable, not a misspelling.
+the sentence.
+
+`near` is optional and holds the single best wrong answer: usually a real
+confusable (*principal* for *principle*), sometimes the misspelling everyone
+actually writes (*miniscule*, *supercede*, *momento*). It beats a generated
+variant either way.
+
+Two rules the generator can't enforce for you:
+
+- **A `homophones` entry must name its partner in `near`**, and its sentence has
+  to do the whole job of saying which word is wanted — the voice can't.
+- **Avoid words with legitimate variant spellings** (*judgement/judgment*,
+  *ageing/aging*). A spelling test with two right answers isn't one.
 
 ## Ideas for future versions
 

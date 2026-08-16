@@ -105,6 +105,26 @@ const ELO_PER_T = 300;
 const tOf = (r) => Math.max(0, (r - ELO_START) / ELO_PER_T);
 const dqOf = (t) => ELO_START + ELO_PER_T * t;
 
+/* ------------------------------- calibration -------------------------------
+ *
+ * Elo alone is far too slow to find a good speller. A win moves the rating by
+ * K·(1−expected), which is at most 34 points — about a ninth of a tier — so
+ * walking from the 1000 floor up to the tier-5 words took roughly thirty
+ * correct answers. Per category. Across seven categories that is several
+ * sessions spent on words you cannot get wrong, which is exactly the boring
+ * half of an adaptive test.
+ *
+ * So an unrated trap starts in the MIDDLE of the range rather than at the
+ * floor, and the first few answers move it by a whole tier at a time instead
+ * of by expectation. That is a staircase, not a rating update — it is the
+ * same bisection Memory runs on span, and it lands on roughly the right level
+ * in four answers in either direction. Elo takes over once it has something
+ * honest to refine.
+ */
+const CAL_ANSWERS = 4;                    // answers before Elo proper takes over
+const CAL_STEP = ELO_PER_T * 0.6;         // one tier per answer
+const ELO_SEED = dqOf(1.2);               // tier 3 — the middle of the word list
+
 // Continuous pacing, walking the same three inputs as the fixed difficulties.
 // Recognition stops being worth anything once you can do it, so the choices go
 // away at t≈1.0 and the letters go away at t≈2.0.
@@ -168,10 +188,10 @@ const wordState = (w) => store.words[w] || { seen: 0, correct: 0, run: 0, miss: 
 const learnedCount = () => Object.values(store.words).filter((f) => f.learned).length;
 
 function eloState(cat) {
-  if (!store.elo[cat]) store.elo[cat] = { r: ELO_START, n: 0 };
+  if (!store.elo[cat]) store.elo[cat] = { r: ELO_SEED, n: 0 };
   return store.elo[cat];
 }
-const eloOf = (cat) => (store.elo[cat] ? store.elo[cat].r : ELO_START);
+const eloOf = (cat) => (store.elo[cat] ? store.elo[cat].r : ELO_SEED);
 
 // Mean of the traps that have been played at all — the one number on the
 // stats card, and what lib/elo.js reads for the cross-game board.
@@ -295,8 +315,16 @@ function choicesFor(entry, n) {
   // rhythm, whistle — have almost no surface for them to work on.
   if (wrong.length < n - 1) take(transpositions(entry.w));
 
-  return shuffle([entry.w, ...wrong.slice(0, n - 1)]);
+  // Every generated variant is lowercase, so a capitalised answer (February,
+  // Mediterranean) would be the only option wearing a capital — which answers
+  // the question without reading any of the letters. Match the answer's case
+  // across the whole row rather than stripping it, since the capital is part
+  // of how the word is correctly written.
+  const options = [entry.w, ...wrong.slice(0, n - 1)];
+  return shuffle(/^[A-Z]/.test(entry.w) ? options.map(capitalise) : options);
 }
+
+const capitalise = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 /* -------------------------------- the voice -------------------------------
  *
@@ -1001,11 +1029,19 @@ function tick() {
 function eloUpdate(catId, dq, won) {
   const e = eloState(catId);
   const before = e.r;
-  const expected = 1 / (1 + 10 ** ((dq - e.r) / 400));
-  // K falls as a trap accumulates evidence — early answers should move the
-  // rating fast, the hundredth should barely nudge it.
-  const k = Math.max(12, 34 - e.n * 0.5);
-  e.r = Math.max(600, e.r + k * ((won ? 1 : 0) - expected));
+
+  if (e.n < CAL_ANSWERS) {
+    // Still bisecting. A whole tier per answer, ignoring expectation entirely —
+    // the point here is to arrive at the right level, not to score fairly.
+    e.r = Math.max(600, e.r + (won ? CAL_STEP : -CAL_STEP));
+  } else {
+    const expected = 1 / (1 + 10 ** ((dq - e.r) / 400));
+    // K falls as a trap accumulates evidence — early answers should move the
+    // rating fast, the hundredth should barely nudge it.
+    const k = Math.max(12, 34 - (e.n - CAL_ANSWERS) * 0.5);
+    e.r = Math.max(600, e.r + k * ((won ? 1 : 0) - expected));
+  }
+
   e.n += 1;
   g.eloMoves[catId] = (g.eloMoves[catId] || 0) + (e.r - before);
   return e;
