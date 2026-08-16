@@ -27,12 +27,63 @@ const MODES = [
   { id: 'marathon', label: 'Marathon', icon: '💀', hint: '3 lives. Words keep coming until you miss three.' },
   { id: 'ladder',   label: 'Ladder',   icon: '📈', hint: 'Starts easy, climbs a tier every 5 correct. 3 lives.' },
   { id: 'review',   label: 'Review',   icon: '📚', hint: 'Only the words you have actually got wrong.' },
+  { id: 'versus',   label: 'Versus',   icon: '🤝', hint: 'Two players, one device — pass it back and forth.' },
 ];
 
+/* --------------------------------- versus --------------------------------- */
+
+const VERSUS_TURNS = 5;      // Turns: words each
+const VERSUS_SECONDS = 45;   // Timed: clock per player
+const VERSUS_LIVES = 3;
+// Climb: every word is harder than the last. Five words in, both players are a
+// full tier past where they started; there is no ceiling, so the match ends
+// when both have spent their lives rather than on a clock.
+const CLIMB_PER_Q = 0.2;
+// The word set tops out at tier 5, so past this the climb stops climbing and
+// a strong speller would never be beaten by the format. Reaching the ceiling
+// ends a run the same way a third miss does.
+const MAX_T = 2.4;
+// Lives runs at a FIXED difficulty, so a player comfortable at that level
+// never misses and the turn never ends. High enough that a normal turn ends on
+// lives, not on the count.
+const VERSUS_LIVES_CAP = 12;
+
+const VERSUS_FORMATS = [
+  { id: 'turns', icon: '🔄', label: 'Turns', hint: `${VERSUS_TURNS} words each, alternating.` },
+  { id: 'timed', icon: '⏱', label: 'Timed', hint: `${VERSUS_SECONDS} seconds each — most points wins.` },
+  { id: 'climb', icon: '📈', label: 'Climb', hint: `Alternating, and every word is harder than the last. ${VERSUS_LIVES} lives each — last one standing.` },
+  { id: 'lives', icon: '💀', label: 'Lives', hint: `${VERSUS_LIVES} lives each, or ${VERSUS_LIVES_CAP} words — whichever comes first.` },
+];
+
+const isVersus = () => g && g.mode === 'versus';
+const vsFormat = () => (g && g.vs ? g.vs.format : 'turns');
+const versusPlayer = () => g.vs.players[g.vs.turn];
+
+// Both players face the same size of word, so the match is a contest and not a
+// handicap: versus ignores Jason's per-trap ratings and runs off the picked
+// difficulty. Climb walks that up a tier every five words.
+function versusT() {
+  if (vsFormat() !== 'climb') return g.vs.baseT;
+  // Keyed to the PLAYER's own count, so both climb the identical ladder no
+  // matter who is ahead.
+  return g.vs.baseT + versusPlayer().answered * CLIMB_PER_Q;
+}
+
+// Three ways of answering, in the order they stop being easy. Picking the
+// right spelling out of four is recognition; building it from loose letters is
+// recall with the alphabet in front of you; typing it is recall with nothing.
+//
+//   choice  four spellings, one right
+//   tiles   a bank of letters, click them in order
+//   type    a text box
+//
+// Time goes UP as the input gets harder, not down. The thing being trained is
+// whether you know the word, and tiles genuinely take longer to operate than a
+// tap even when you are certain.
 const DIFFICULTIES = [
-  { id: 'easy',   label: 'Easy',   t: 0.2, choices: 4, seconds: 40, mult: 1 },
-  { id: 'normal', label: 'Normal', t: 1.0, choices: 4, seconds: 32, mult: 1.6 },
-  { id: 'hard',   label: 'Hard',   t: 1.8, choices: 0, seconds: 45, mult: 2.6 },
+  { id: 'easy',   label: 'Easy',   t: 0.2, input: 'choice', choices: 4, seconds: 40, mult: 1 },
+  { id: 'normal', label: 'Normal', t: 1.0, input: 'tiles',  choices: 0, seconds: 50, mult: 1.9 },
+  { id: 'hard',   label: 'Hard',   t: 1.8, input: 'type',   choices: 0, seconds: 45, mult: 2.8 },
 ];
 
 // Adaptive is the default and runs on Elo, exactly like Numbers: every trap
@@ -40,20 +91,34 @@ const DIFFICULTIES = [
 // is a match between the two. Words are served just above your rating, so the
 // game sits at your edge instead of at a fixed level.
 const ADAPTIVE = { id: 'adaptive', label: 'Adaptive', icon: '🎚' };
+
+// Which of the three inputs a difficulty means, said plainly on the menu —
+// the jump from picking to building is the biggest step in the game.
+const INPUT_HINT = {
+  easy: 'Easy picks the right spelling from four.',
+  normal: 'Normal gives you loose letters — build the word.',
+  hard: 'Hard means typing every word.',
+  adaptive: 'Adaptive starts you picking, moves to letters, then to typing.',
+};
 const ELO_START = 1000;
 const ELO_PER_T = 300;
 const tOf = (r) => Math.max(0, (r - ELO_START) / ELO_PER_T);
 const dqOf = (t) => ELO_START + ELO_PER_T * t;
 
-// Continuous pacing. Past t≈1.2 the choices disappear and the word must be
-// typed — picking the right spelling out of four is recognition, and
-// recognition stops being worth anything once you can do it.
-const pacingFor = (t) => ({
-  id: 'adaptive',
-  seconds: Math.min(45, Math.round(26 + 6 * t)),
-  choices: t < 1.2 ? 4 : 0,
-  mult: 1 + 0.7 * t,
-});
+// Continuous pacing, walking the same three inputs as the fixed difficulties.
+// Recognition stops being worth anything once you can do it, so the choices go
+// away at t≈1.0 and the letters go away at t≈2.0.
+const inputFor = (t) => (t < 1.0 ? 'choice' : t < 2.0 ? 'tiles' : 'type');
+const pacingFor = (t) => {
+  const input = inputFor(t);
+  return {
+    id: 'adaptive',
+    input,
+    choices: input === 'choice' ? 4 : 0,
+    seconds: Math.min(50, Math.round((input === 'tiles' ? 38 : 26) + 6 * t)),
+    mult: 1 + 0.7 * t + (input === 'tiles' ? 0.3 : 0),
+  };
+};
 
 /* ------------------------------ DOM handles ------------------------------ */
 
@@ -233,6 +298,51 @@ function choicesFor(entry, n) {
   return shuffle([entry.w, ...wrong.slice(0, n - 1)]);
 }
 
+/* ------------------------------ letter bank ------------------------------ */
+
+// One tile per LETTER, and tiles are reusable — tap c twice for "accommodate".
+//
+// The obvious build is a Scrabble rack: the word's letters, shuffled, consumed
+// as you place them. It cannot be used here. A rack holding two c's and two
+// m's has already answered "accommodate", because the letter counts ARE the
+// trap this game is about. Padding the rack with spares only moves the tell:
+// whichever letters end up with three copies are the doubled ones.
+//
+// A reusable bank carries no count information at all. What it gives you is
+// the alphabet narrowed to plausible letters — a real step down from typing
+// blind, and a real step up from picking one of four — while leaving every
+// doubling, every silent letter and every ending entirely for you to know.
+// For the same reason the answer grows as it is built rather than filling a
+// row of slots: eleven empty boxes would give the length away.
+// Decoys are counted against the word's OWN letters, never against a fixed
+// bank size: "necessarily" already uses nine distinct letters, and a bank of
+// nine would have been its exact letter set — most of the answer, handed over.
+const MIN_DECOYS = 3;
+const BANK_MAX = 14;
+const FILLER = 'aeioustrnlcdmpgh';
+
+function letterBank(entry) {
+  const w = entry.w.toLowerCase();
+  const own = new Set(w);
+  const decoys = new Set();
+
+  // First choice of decoy: letters a plausible misspelling reaches for and the
+  // word never uses — the a in "definately", the e in "seperate". Those make
+  // the wrong spelling as buildable as the right one.
+  for (const wrong of [entry.near, ...misspellings(w)].filter(Boolean)) {
+    for (const ch of wrong.toLowerCase()) if (!own.has(ch)) decoys.add(ch);
+  }
+  for (const ch of shuffle(FILLER.split(''))) {
+    if (decoys.size >= MIN_DECOYS) break;
+    if (!own.has(ch)) decoys.add(ch);
+  }
+
+  // Trimmed so the rack still fits a phone, but never below the decoy floor
+  // and never at the expense of a letter the answer needs.
+  const room = Math.max(MIN_DECOYS, BANK_MAX - own.size);
+  return shuffle([...own, ...shuffle([...decoys]).slice(0, room)]);
+}
+
 /* ------------------------------ word choice ------------------------------ */
 
 const CAT_BY_ID = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
@@ -295,7 +405,7 @@ function pickWord(catId, targetT) {
 
 /* --------------------------------- menu --------------------------------- */
 
-const sel = { mode: 'classic', cat: 'mixed', difficulty: 'adaptive' };
+const sel = { mode: 'classic', cat: 'mixed', difficulty: 'adaptive', vsFormat: 'turns' };
 
 function optionButton(item, group, active) {
   const b = document.createElement('button');
@@ -332,6 +442,15 @@ function renderMenu() {
   fill('cat-options', [{ id: 'mixed', label: 'All traps', icon: '🎲' }, ...CATEGORIES], 'cat');
   fill('difficulty-options', [ADAPTIVE, ...DIFFICULTIES], 'difficulty');
 
+  const isVs = sel.mode === 'versus';
+  $('versus-block').classList.toggle('hidden', !isVs);
+  if (isVs) {
+    fill('vsformat-options', VERSUS_FORMATS, 'vsFormat');
+    const f = VERSUS_FORMATS.find((x) => x.id === sel.vsFormat) || VERSUS_FORMATS[0];
+    $('vsformat-blurb').textContent =
+      `${f.hint} Difficulty applies to both players; Adaptive falls back to Normal so nobody gets a handicap.`;
+  }
+
   const cat = CAT_BY_ID[sel.cat];
   $('cat-blurb').textContent = cat ? cat.note : 'Every trap in rotation, weighted towards the ones you keep falling into.';
 
@@ -342,7 +461,10 @@ function renderMenu() {
     reviewCount === 0 ? 'Nothing to review yet — play a round, miss something, then come back.'
       : reviewCount ? `${mode.hint} ${reviewCount} word${reviewCount === 1 ? '' : 's'} waiting.`
       : sel.mode === 'ladder' ? `${mode.hint} Difficulty is set by the ladder, not the picker.`
-      : `${mode.hint}${sel.difficulty === 'hard' ? ' Hard means typing every word.' : ''}`;
+      // Versus never runs Adaptive, so it must not promise the Adaptive
+      // progression — it says the input both players will actually face.
+      : isVs ? `${mode.hint} ${INPUT_HINT[sel.difficulty === 'adaptive' ? 'normal' : sel.difficulty]}`
+      : `${mode.hint}${INPUT_HINT[sel.difficulty] ? ` ${INPUT_HINT[sel.difficulty]}` : ''}`;
 }
 
 function showScreen(name) {
@@ -389,13 +511,22 @@ let ticker = null;
 function startGame() {
   const mode = sel.mode;
   const catPool = sel.cat === 'mixed' ? CATEGORIES.slice() : [CAT_BY_ID[sel.cat]];
+  const versus = mode === 'versus';
+  // Adaptive is meaningless with two players — it would serve each of them
+  // words sized to JASON's ratings. Versus falls back to Normal so both face
+  // the same words with the same input.
+  const preset = sel.difficulty === 'adaptive' || sel.difficulty === undefined
+    ? DIFFICULTIES.find((d) => d.id === 'normal')
+    : DIFFICULTIES.find((d) => d.id === sel.difficulty);
 
   g = {
     id: `sp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     mode,
     cat: sel.cat,
     catPool,
-    difficulty: sel.difficulty === 'adaptive' ? ADAPTIVE : DIFFICULTIES.find((d) => d.id === sel.difficulty),
+    difficulty: versus ? preset
+      : sel.difficulty === 'adaptive' ? ADAPTIVE
+      : DIFFICULTIES.find((d) => d.id === sel.difficulty),
     rounds: mode === 'classic' ? QUIZ_ROUNDS : Infinity,
     round: 0,
     score: 0,
@@ -416,10 +547,26 @@ function startGame() {
     startedAt: Date.now(),
     endsAt: mode === 'blitz' ? Date.now() + BLITZ_SECONDS * 1000 : 0,
     qdiff: { mult: 1 },
+    vs: versus ? {
+      format: sel.vsFormat,
+      turn: 0,
+      turnsEach: VERSUS_TURNS,
+      turnRounds: 0,
+      tier: 0,
+      turnEndsAt: 0,
+      baseT: preset.t,
+      players: [
+        { name: ($('p1-name').value.trim() || 'Player 1').slice(0, 12), score: 0, correct: 0, answered: 0, streak: 0, lives: VERSUS_LIVES },
+        { name: ($('p2-name').value.trim() || 'Player 2').slice(0, 12), score: 0, correct: 0, answered: 0, streak: 0, lives: VERSUS_LIVES },
+      ],
+    } : null,
   };
 
-  $('hud-clock').classList.toggle('hidden', mode !== 'blitz');
-  $('hud-lives').classList.toggle('hidden', !Number.isFinite(g.lives));
+  if (versus) beginVersusTurn();
+  else {
+    $('hud-clock').classList.toggle('hidden', mode !== 'blitz');
+    $('hud-lives').classList.toggle('hidden', !Number.isFinite(g.lives));
+  }
   $('results-chest').classList.add('hidden');
 
   showScreen('game');
@@ -434,13 +581,114 @@ function startGame() {
 // your rating in the trap being asked; the ladder walks up on its own; the
 // manual difficulties are flat.
 function targetT(catId) {
+  if (isVersus()) return versusT();
   if (g.mode === 'ladder') return 0.2 + g.rung * 0.5;
   if (g.difficulty.id !== 'adaptive') return g.difficulty.t;
   return tOf(eloOf(catId)) + 0.25;   // just above you, never level with you
 }
 
+/* ---------------------------- versus turn cycle ---------------------------- */
+
+// A turn is over when the format says so; the match when nobody has one left.
+// Past the ceiling the climb stops being a climb — the words cannot get any
+// harder, so a player who has reached it has finished their run whether or not
+// they still hold lives.
+const atCeiling = (p) => g.vs.baseT + p.answered * CLIMB_PER_Q > MAX_T;
+
+function versusTurnOver() {
+  switch (vsFormat()) {
+    case 'timed': return Date.now() >= g.vs.turnEndsAt;
+    case 'lives': return versusPlayer().lives <= 0 || g.vs.turnRounds >= VERSUS_LIVES_CAP;
+    // Turns and Climb both hand the device over after every single word.
+    default:      return g.vs.turnRounds >= 1;
+  }
+}
+
+function versusMatchOver() {
+  if (vsFormat() === 'turns') return g.vs.players.every((p) => p.answered >= g.vs.turnsEach);
+  // Climb runs until nobody is left standing; whoever climbed furthest wins.
+  if (vsFormat() === 'climb') return g.vs.players.every((p) => p.lives <= 0 || atCeiling(p));
+  return g.vs.turn === 1;
+}
+
+// The next seat is the other player — unless they are already out, in which
+// case the survivor keeps climbing alone until their own run ends.
+function nextVersusSeat() {
+  const other = g.vs.turn === 0 ? 1 : 0;
+  if (vsFormat() !== 'climb') return other;
+  const done = (p) => p.lives <= 0 || atCeiling(p);
+  if (!done(g.vs.players[other])) return other;
+  return done(versusPlayer()) ? other : g.vs.turn;
+}
+
+// A streak belongs to the player, not the seat — it survives the opponent's go.
+function beginVersusTurn() {
+  g.streak = versusPlayer().streak || 0;
+  g.vs.turnEndsAt = Date.now() + VERSUS_SECONDS * 1000;
+  if (vsFormat() === 'lives') versusPlayer().lives = VERSUS_LIVES;
+  g.vs.turnRounds = 0;
+  g.endsAt = vsFormat() === 'timed' ? g.vs.turnEndsAt : 0;
+  $('hud-clock').classList.toggle('hidden', !g.endsAt);
+  $('hud-lives').classList.add('hidden');   // lives ride in the progress slot here
+}
+
+function endVersusTurn() {
+  if (versusMatchOver()) return endGame();
+  const seat = nextVersusSeat();
+  // Nobody to pass to — the survivor just carries on.
+  if (seat === g.vs.turn) { g.vs.turnRounds = 0; return nextQuestion(); }
+  showHandoff(seat);
+}
+
+function showHandoff(nextTurn) {
+  const up = g.vs.players[nextTurn];
+  const other = g.vs.players[nextTurn === 0 ? 1 : 0];
+  const alternating = vsFormat() === 'turns';
+  $('handoff-title').textContent = `${up.name}, you're up`;
+  $('handoff-sub').innerHTML = alternating
+    ? `${esc(up.name)} <b>${up.score.toLocaleString()}</b> · ${esc(other.name)} <b>${other.score.toLocaleString()}</b>`
+      + `<br>Word ${Math.min(up.answered + 1, g.vs.turnsEach)} of ${g.vs.turnsEach}. Pass the device.`
+    : `${esc(other.name)} scored <b>${other.score.toLocaleString()}</b> — ${other.correct}/${other.answered} correct.`
+      + `<br>Beat it. Hand the device over.`;
+  $('handoff').classList.remove('hidden');
+  $('handoff-go').onclick = () => {
+    $('handoff').classList.add('hidden');
+    g.vs.turn = nextTurn;
+    beginVersusTurn();
+    nextQuestion();
+  };
+}
+
+function endVersus() {
+  const [a, b] = g.vs.players;
+  const winner = a.score === b.score ? null : (a.score > b.score ? a : b);
+  const fmt = VERSUS_FORMATS.find((f) => f.id === g.vs.format) || VERSUS_FORMATS[0];
+
+  $('results-title').textContent = winner ? `🏆 ${winner.name} wins` : '🤝 Dead heat';
+  $('results-score').innerHTML =
+    `${a.score.toLocaleString()}<span> ${esc(a.name)} · ${esc(b.name)} ${b.score.toLocaleString()}</span>`;
+  $('results-stats').innerHTML =
+    `<div class="stat"><b>${a.correct}/${a.answered}</b><span>${esc(a.name)}</span></div>` +
+    `<div class="stat"><b>${b.correct}/${b.answered}</b><span>${esc(b.name)}</span></div>` +
+    `<div class="stat"><b>${Math.abs(a.score - b.score).toLocaleString()}</b><span>margin</span></div>` +
+    (g.vs.format === 'climb'
+      ? `<div class="stat"><b>${a.answered} · ${b.answered}</b><span>words deep</span></div>`
+      : `<div class="stat"><b>${fmt.label}</b><span>format</span></div>`);
+  $('results-xp').innerHTML = '';
+  $('results-missed').innerHTML =
+    '<p class="versus-note">Versus doesn\'t touch your ratings, learned words or stats — someone else was answering.</p>';
+
+  showScreen('results');
+  if (window.Juice) {
+    Juice.replay($('results-score'), 'pop');
+    if (winner) Juice.celebrate($('results-score'));
+  }
+  g = null;
+}
+
 function nextQuestion() {
   if (!g) return;
+  if (isVersus() && versusTurnOver()) { endVersusTurn(); return; }
   if (g.round >= g.rounds) { endGame(); return; }
   if (g.mode === 'blitz' && Date.now() >= g.endsAt) { endGame(); return; }
 
@@ -452,16 +700,29 @@ function nextQuestion() {
   const entry = pickWord(catId, t);
   g.used.add(entry.w);
 
-  const pacing = g.difficulty.id === 'adaptive' || g.mode === 'ladder'
-    ? pacingFor(t)
+  // Versus keeps the picked input for both players even as Climb raises the
+  // difficulty — swapping someone onto typing mid-match because the words got
+  // harder would change the game under them.
+  const pacing = isVersus()
+    ? { ...pacingFor(t), input: g.difficulty.input, choices: g.difficulty.choices }
+    : g.difficulty.id === 'adaptive' || g.mode === 'ladder' ? pacingFor(t)
     : g.difficulty;
   g.qdiff = pacing;
+
+  if (isVersus() && vsFormat() === 'climb') {
+    const tier = Math.floor(t - g.vs.baseT);
+    if (tier !== g.vs.tier) {
+      g.vs.tier = tier;
+      if (window.Juice) Juice.toast('📈 The words just got harder');
+    }
+  }
 
   g.q = {
     entry,
     cat: entry.cat,
     dq: dqOf(TIER_T[entry.tier]),
-    typed: pacing.choices === 0,
+    input: pacing.input || (pacing.choices ? 'choice' : 'type'),
+    built: [],
   };
   g.questionStartedAt = Date.now();
   g.questionEndsAt = Date.now() + pacing.seconds * 1000;
@@ -478,23 +739,26 @@ function nextQuestion() {
 
   $('feedback').textContent = '';
   $('feedback').className = '';
+  $('build-slots').className = 'build-slots';
   $('next-btn').classList.add('hidden');
 
   const choicesEl = $('choices');
   const form = $('type-form');
-  if (g.q.typed) {
-    choicesEl.innerHTML = '';
-    choicesEl.classList.add('hidden');
-    form.classList.remove('hidden');
+  const build = $('build');
+  choicesEl.innerHTML = '';
+  choicesEl.classList.toggle('hidden', g.q.input !== 'choice');
+  form.classList.toggle('hidden', g.q.input !== 'type');
+  build.classList.toggle('hidden', g.q.input !== 'tiles');
+
+  if (g.q.input === 'type') {
     $('type-input').value = '';
     $('type-input').disabled = false;
     // Autofocus only where a keyboard is already present — popping the
     // on-screen keyboard on a phone hides the sentence being asked about.
     if (window.matchMedia('(hover: hover)').matches) $('type-input').focus();
+  } else if (g.q.input === 'tiles') {
+    mountBank(entry);
   } else {
-    form.classList.add('hidden');
-    choicesEl.classList.remove('hidden');
-    choicesEl.innerHTML = '';
     choicesFor(entry, pacing.choices).forEach((option, i) => {
       const b = document.createElement('button');
       b.className = 'enter';
@@ -513,8 +777,81 @@ function nextQuestion() {
   poseAll('run');
 }
 
+/* ------------------------------ tile input ------------------------------- */
+
+function mountBank(entry) {
+  const bank = $('build-bank');
+  bank.innerHTML = '';
+  letterBank(entry).forEach((ch, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tile';
+    b.textContent = ch;
+    b.dataset.ch = ch;
+    b.dataset.i = i;
+    b.addEventListener('click', () => placeLetter(b));
+    bank.appendChild(b);
+  });
+  paintBuild();
+}
+
+function paintBuild() {
+  const slots = $('build-slots');
+  const word = g.q.built.join('');
+  slots.textContent = word;
+  slots.classList.toggle('empty', word === '');
+  if (word === '') slots.dataset.placeholder = 'Tap the letters';
+  $('build-submit').disabled = word === '';
+  $('build-undo').disabled = word === '';
+}
+
+function placeLetter(btn) {
+  if (!g || g.locked) return;
+  // Longer than any word in the set, with room to spare — a guard against a
+  // stuck key, not a limit anyone will meet.
+  if (g.q.built.length >= 24) return;
+  g.q.built.push(btn.dataset.ch);
+  paintBuild();
+  btn.classList.remove('hit');
+  void btn.offsetWidth;         // restart the animation on a repeated letter
+  btn.classList.add('hit');
+  if (window.Juice) Juice.buzz(8);
+}
+
+function undoLetter() {
+  if (!g || g.locked || !g.q.built.length) return;
+  g.q.built.pop();
+  paintBuild();
+}
+
+function submitBuild() {
+  if (!g || g.locked) return;
+  const word = g.q.built.join('');
+  if (!word) return;
+  answer(word, $('build-submit'));
+}
+
 function paintHud() {
   if (!g) return;
+
+  if (isVersus()) {
+    const [a, b] = g.vs.players;
+    const f = vsFormat();
+    const up = versusPlayer();
+    $('hud-progress').textContent =
+      f === 'lives' ? `${up.name} · ${'♥'.repeat(Math.max(0, up.lives))}`
+      : f === 'climb' ? `${up.name} · ${'♥'.repeat(Math.max(0, up.lives))} · #${up.answered + 1}`
+      : f === 'timed' ? up.name
+      : `${up.name} · ${Math.min(up.answered + 1, g.vs.turnsEach)}/${g.vs.turnsEach}`;
+    $('hud-score').innerHTML =
+      `<span class="${g.vs.turn === 0 ? 'vs-on' : ''}">${esc(a.name)} ${a.score.toLocaleString()}</span>`
+      + '<span class="vs-sep"> · </span>'
+      + `<span class="${g.vs.turn === 1 ? 'vs-on' : ''}">${esc(b.name)} ${b.score.toLocaleString()}</span>`;
+    $('hud-streak').textContent = g.streak >= 2 ? `🔥 ${g.streak}` : '';
+    if (g.endsAt) $('hud-clock').textContent = `${Math.max(0, Math.ceil((g.endsAt - Date.now()) / 1000))}s`;
+    return;
+  }
+
   $('hud-score').textContent = `${g.score.toLocaleString()} pts`;
   $('hud-streak').textContent = g.streak >= 2 ? `🔥 ${g.streak}` : '';
   if (Number.isFinite(g.lives)) $('hud-lives').textContent = '♥'.repeat(Math.max(0, g.lives));
@@ -526,6 +863,9 @@ function paintHud() {
 function tick() {
   if (!g) return;
   if (g.mode === 'blitz' && Date.now() >= g.endsAt) { endGame(); return; }
+  // In versus the clock ends a TURN, not the match — and only once the current
+  // word has been answered, so nobody loses one mid-thought to the handover.
+  if (isVersus() && g.endsAt && Date.now() >= g.endsAt && g.locked) { endVersusTurn(); return; }
   paintHud();
   placeCompanion();
 
@@ -579,18 +919,27 @@ function answer(given, btn) {
   const won = clean === entry.w.toLowerCase();
 
   g.answered += 1;
-  store.answered += 1;
-  if (won) { g.correct += 1; store.correct += 1; }
+  if (won) g.correct += 1;
 
-  // Per-trap running stats, then the rating, then the word itself.
-  const s = { ...statFor(cat) };
-  s.seen += 1;
-  s.ms += ms;
-  if (won) s.correct += 1;
-  store.stats[cat] = s;
+  // Versus is someone else's hands on the device, so it records nothing: no
+  // rating, no learned word, no lifetime accuracy. A guest losing five in a
+  // row must not cost Jason a trap rating he spent weeks earning.
+  const solo = !isVersus();
+  let e = null;
+  if (solo) {
+    store.answered += 1;
+    if (won) store.correct += 1;
 
-  const e = eloUpdate(cat, dq, won);
-  bankWord(entry, won);
+    // Per-trap running stats, then the rating, then the word itself.
+    const s = { ...statFor(cat) };
+    s.seen += 1;
+    s.ms += ms;
+    if (won) s.correct += 1;
+    store.stats[cat] = s;
+
+    e = eloUpdate(cat, dq, won);
+    bankWord(entry, won);
+  }
 
   let pts = 0;
   if (won) {
@@ -611,6 +960,18 @@ function answer(given, btn) {
     g.missed.push({ w: entry.w, def: entry.def, given: clean });
   }
 
+  // The seated player carries their own totals; g.score and g.streak are just
+  // the live view of whoever is holding the device.
+  if (isVersus()) {
+    const p = versusPlayer();
+    p.answered += 1;
+    p.score += pts;
+    p.streak = g.streak;
+    if (won) p.correct += 1;
+    else if (vsFormat() === 'lives' || vsFormat() === 'climb') p.lives -= 1;
+    g.vs.turnRounds += 1;
+  }
+
   g.log.push({
     item_id: entry.w,
     item_name: entry.w,
@@ -622,12 +983,18 @@ function answer(given, btn) {
   });
 
   // Paint the verdict.
-  if (!g.q.typed) {
+  if (g.q.input === 'choice') {
     Array.from($('choices').children).forEach((b) => {
       b.disabled = true;
       if (b.dataset.value.toLowerCase() === entry.w.toLowerCase()) b.classList.add('correct');
       else if (b === btn) b.classList.add('wrong');
     });
+  } else if (g.q.input === 'tiles') {
+    Array.from($('build-bank').children).forEach((b) => { b.disabled = true; });
+    $('build-submit').disabled = true;
+    $('build-slots').classList.remove('empty');
+    $('build-undo').disabled = true;
+    $('build-slots').classList.add(won ? 'good' : 'bad');
   } else {
     $('type-input').disabled = true;
   }
@@ -650,16 +1017,21 @@ function answer(given, btn) {
   }
   flashAll(won ? 'cheer' : 'stumble', 700);
 
-  if (won && store.words[entry.w].learned && store.words[entry.w].run === LEARN_RUN && window.Juice) {
+  if (solo && won && store.words[entry.w].learned && store.words[entry.w].run === LEARN_RUN && window.Juice) {
     Juice.toast(`✓ ${entry.w} learned — ${learnedCount()} words`);
-  } else if (window.Juice && g.answered % 5 === 0) {
+  } else if (solo && window.Juice && g.answered % 5 === 0) {
     // Every fifth answer, not every answer: a rating that announces itself
     // constantly stops being read at all.
     Juice.toast(`${catLabel(cat)} rating ${Math.round(e.r)}`);
   }
 
-  saveStore();
+  if (solo) saveStore();
   paintHud();
+
+  if (isVersus()) {
+    $('next-btn').classList.remove('hidden');
+    return;
+  }
 
   const dead = Number.isFinite(g.lives) && g.lives <= 0;
   if (dead) g.dead = true;
@@ -707,13 +1079,17 @@ function endGame(aborted = false) {
 
   if (aborted) {
     poseAll('idle');
-    syncSession(true, 0);
-    saveStore();
+    if (!isVersus()) { syncSession(true, 0); saveStore(); }
     showScreen('menu');
     renderMenu();
     g = null;
     return;
   }
+
+  // Versus has its own scoreboard and deliberately banks nothing: no XP, no
+  // chest, no session synced to Atlas. Two people took turns on one device;
+  // there is no single player whose record it would belong to.
+  if (isVersus()) { endVersus(); return; }
 
   const levelBefore = levelForXp(store.xp);
   const xpGain = Math.round(g.score / 10);
@@ -876,18 +1252,35 @@ $('type-form').addEventListener('submit', (e) => {
   answer(raw, null);
 });
 
+$('build-undo').addEventListener('click', undoLetter);
+$('build-submit').addEventListener('click', submitBuild);
+
 document.addEventListener('keydown', (e) => {
   if (!screens.game.classList.contains('active')) return;
   if (e.target === $('type-input')) {
     if (e.key === 'Enter' && g && g.locked && !$('next-btn').classList.contains('hidden')) nextQuestion();
     return;
   }
+  if (e.key === 'Enter' && !$('next-btn').classList.contains('hidden')) { nextQuestion(); return; }
+
+  // A keyboard, where there is one, drives the tiles directly — typing the
+  // letter takes the leftmost tile bearing it. The bank is still the limit, so
+  // this is a faster hand on the same puzzle, not a way round it.
+  if (g && !g.locked && g.q && g.q.input === 'tiles') {
+    if (e.key === 'Backspace') { e.preventDefault(); undoLetter(); return; }
+    if (e.key === 'Enter') { submitBuild(); return; }
+    if (/^[a-zA-Z]$/.test(e.key)) {
+      const ch = e.key.toLowerCase();
+      const tile = Array.from($('build-bank').children).find((b) => b.dataset.ch === ch);
+      if (tile) tile.click();
+      return;
+    }
+  }
+
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= 9) {
     const btn = $('choices').children[n - 1];
     if (btn && !btn.disabled) btn.click();
-  } else if (e.key === 'Enter' && !$('next-btn').classList.contains('hidden')) {
-    nextQuestion();
   }
 });
 

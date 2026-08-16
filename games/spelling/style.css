@@ -133,6 +133,111 @@
   max-width: 100%;
 }
 
+/* ------------------------------ versus (1v1) ------------------------------ */
+
+.vs-names { display: flex; align-items: center; gap: 10px; }
+.vs-names input { flex: 1; min-width: 0; padding: 12px 14px; border-radius: var(--r-md); font-size: 15px; }
+.vs-v { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--ink-3); flex: none; }
+
+#hud-score .vs-on { color: var(--p1); font-weight: 600; }
+#hud-score .vs-sep { opacity: .4; }
+
+/* Opaque on purpose: it covers the card so the last word can't be read off. */
+.handoff {
+  position: fixed;
+  inset: 0;
+  /* Above the fx-dock (z-index 60), which is appended at runtime and would
+     otherwise sit on top of the cover — a stray tap on "next game" mid-match
+     would walk both players out of it. */
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--paper);
+}
+.handoff.hidden { display: none; }
+.handoff-card {
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--card-bg);
+  padding: 34px 28px;
+  box-shadow: var(--shadow);
+  animation: rise .3s var(--ease) both;
+}
+.handoff-icon { font-size: 34px; }
+.handoff-card h2 {
+  font-family: var(--serif);
+  font-size: 30px;
+  letter-spacing: -.02em;
+  margin: 10px 0 8px;
+}
+.handoff-card p { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; margin-bottom: 22px; }
+.handoff-card button { width: 100%; }
+
+.versus-note { margin-top: 14px; font-size: 12.5px; line-height: 1.55; color: var(--ink-3); }
+
+/* ------------------------------ letter tiles ------------------------------ */
+
+/* The answer grows as it is built rather than sitting in a row of slots: an
+   empty slot per letter would announce the word's length, and length is
+   exactly what the doubling traps turn on. */
+.build-slots {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+  font-family: var(--mono);
+  font-size: 20px;
+  letter-spacing: .12em;
+  overflow-wrap: anywhere;
+  border-bottom: 2px solid var(--rule);
+  transition: border-color .2s var(--ease), color .2s var(--ease);
+}
+.build-slots.empty::before {
+  content: attr(data-placeholder);
+  font-size: 13px;
+  letter-spacing: .04em;
+  color: var(--ink-3);
+}
+.build-slots.good { color: var(--good); border-bottom-color: var(--good); }
+.build-slots.bad { color: var(--bad); border-bottom-color: var(--bad); }
+
+.build-bank {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.build-bank .tile {
+  width: 46px;
+  height: 50px;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: 19px;
+  font-weight: 500;
+  text-transform: lowercase;
+  border-radius: var(--r-sm);
+}
+/* Tiles are reusable, so the only feedback a tap needs is that it registered —
+   double letters mean tapping the same tile twice in a row, and without this
+   the second tap looks like nothing happened. */
+.build-bank .tile.hit { animation: tile-hit .22s var(--ease); }
+@keyframes tile-hit {
+  0% { transform: scale(1); }
+  40% { transform: scale(.9); border-color: var(--p1); }
+  100% { transform: scale(1); }
+}
+.build-bank .tile:disabled { opacity: .3; }
+
+.build-actions { display: flex; gap: 8px; justify-content: center; }
+.build-actions button { padding: 12px 26px; }
+
 #feedback { min-height: 26px; }
 #feedback em { font-style: normal; text-decoration: line-through; opacity: .7; }
 #feedback b { font-family: var(--mono); font-size: .95em; letter-spacing: .02em; }
@@ -245,6 +350,12 @@
   #choices button { min-height: 54px; font-size: 14.5px; }
   #type-form { flex-direction: column; }
   #type-input { width: 100%; }
+  /* Tiles keep a thumb-sized target but shrink enough that a long word's bank
+     still fits three rows rather than pushing the actions off-screen. */
+  .build-bank { gap: 6px; }
+  .build-bank .tile { width: 42px; height: 46px; font-size: 17px; }
+  .build-slots { font-size: 18px; letter-spacing: .08em; }
+  .build-actions button { flex: 1; padding: 13px 12px; }
   #sentence { font-size: 15px; }
   .blank { width: 4.4em; }
 }

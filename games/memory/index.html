@@ -48,6 +48,19 @@
       <h2>Difficulty</h2>
       <div class="opt-grid" id="difficulty-options"></div>
 
+      <div id="versus-block" class="hidden">
+        <h2>Format</h2>
+        <div class="opt-grid" id="vsformat-options"></div>
+        <p id="vsformat-blurb" class="kind-blurb"></p>
+
+        <h2>Players</h2>
+        <div class="vs-names">
+          <input id="p1-name" maxlength="12" autocomplete="off" placeholder="Player 1">
+          <span class="vs-v">vs</span>
+          <input id="p2-name" maxlength="12" autocomplete="off" placeholder="Player 2">
+        </div>
+      </div>
+
       <div id="setup-hint" class="setup-hint"></div>
       <button id="start-btn" class="primary big">Start</button>
       <button id="how-btn" class="ghost big">📘 How memory actually works</button>
@@ -105,6 +118,17 @@
       <div id="pairs-note" class="pairs-note"></div>
     </div>
   </section>
+
+  <!-- Opaque cover between versus turns: the outgoing player's sequence must
+       not still be on screen when the device changes hands. -->
+  <div id="handoff" class="handoff hidden">
+    <div class="handoff-card">
+      <div class="handoff-icon">🤝</div>
+      <h2 id="handoff-title"></h2>
+      <p id="handoff-sub"></p>
+      <button id="handoff-go" class="primary big">Ready</button>
+    </div>
+  </div>
 
   <!-- ============================ Results ============================ -->
   <section id="screen-results" class="screen">
