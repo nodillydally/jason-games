@@ -622,3 +622,70 @@
   #choices button .key { display: none; }
   #choices button { padding-left: 18px; }
 }
+
+/* ------------------------------ versus (1v1) ------------------------------ */
+/* Deliberately the same shapes Mapmaster uses. Versus is one mode that happens
+   to live in several games, and it should feel like the same mode in each. */
+
+#versus-block { margin-top: 26px; }
+
+.vs-blurb {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  margin: 12px 2px 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--rule);
+}
+
+.vs-names { display: flex; align-items: center; gap: 10px; }
+.vs-names input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  font-size: 15px;
+}
+.vs-v {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink-3);
+  flex: none;
+}
+
+/* The pass-the-device curtain: opaque on purpose — it covers the board so the
+   last answer can't be read off the screen. */
+.handoff {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--paper);
+}
+.handoff.hidden { display: none; }
+.handoff-card {
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--card-bg);
+  padding: 34px 28px;
+  box-shadow: var(--shadow);
+  animation: rise .3s var(--ease) both;
+}
+.handoff-icon { font-size: 34px; }
+.handoff-card h2 {
+  font-family: var(--serif);
+  font-size: 30px;
+  letter-spacing: -.02em;
+  margin: 10px 0 8px;
+}
+.handoff-card p { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; margin-bottom: 22px; }
+.handoff-card button { width: 100%; }
+
+/* The turn clock borrows Blitz's slot; red when it's nearly gone. */
+#hud-clock.urgent { color: var(--bad); }
