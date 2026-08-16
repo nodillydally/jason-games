@@ -1,8 +1,13 @@
 /* words.js — the Spelling word list.
  *
- * Every word carries the four things the game needs to ask about it without
- * ever saying it out loud: what it means, a sentence with the word cut out,
- * which trap it belongs to, and how hard it is.
+ * The game SAYS the word — that is the prompt. Everything here is what a bee
+ * lets you ask the judge for on top of it: what it means, a sentence with the
+ * word cut out, which trap it belongs to, and how hard it is.
+ *
+ * `def` and `sent` are held back until asked, with one exception: sound alone
+ * cannot ask for a homophone, so the `homophones` category always shows its
+ * sentence. Write those sentences so they actually disambiguate — "the new
+ * rule had no ___ on the queue" only works if it cannot take `affect`.
  *
  * `cat` is the TRAP, not the topic — words are grouped by the mistake they
  * invite (a doubled letter, a silent letter, an -ible that wants to be -able),

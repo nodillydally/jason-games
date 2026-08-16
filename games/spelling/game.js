@@ -298,6 +298,74 @@ function choicesFor(entry, n) {
   return shuffle([entry.w, ...wrong.slice(0, n - 1)]);
 }
 
+/* -------------------------------- the voice -------------------------------
+ *
+ * A spelling test says the word. This one used to describe it instead, which
+ * quietly made it a vocabulary test: fail to retrieve "chaos" from "complete
+ * disorder" and you never got as far as spelling anything. Never SHOWING the
+ * word is right — show it and you are copying. Never SAYING it was the error.
+ *
+ * speechSynthesis is the whole implementation: built into every browser, free,
+ * no network, no key, no build step. It fits the same constraints as the rest
+ * of the repo, which is why there is no audio pipeline here.
+ *
+ * Voices are not guaranteed — headless browsers ship none, and some Linux
+ * builds ship none either. When there is no voice the game falls back to the
+ * old definition-led prompt rather than silently asking you to spell a word it
+ * never told you.
+ */
+const Voice = (() => {
+  const synth = window.speechSynthesis;
+  let voice = null;
+
+  function pick() {
+    if (!synth) return null;
+    const all = synth.getVoices().filter((v) => /^en/i.test(v.lang));
+    if (!all.length) return null;
+    // Local voices only. A remote voice needs a network round trip mid-question
+    // and can simply fail to arrive, which reads as a broken game.
+    const local = all.filter((v) => v.localService);
+    const pool = local.length ? local : all;
+    // Prefer the accent Jason actually hears words in.
+    return pool.find((v) => /en[-_]CA/i.test(v.lang))
+      || pool.find((v) => /en[-_]US/i.test(v.lang))
+      || pool.find((v) => /en[-_]GB/i.test(v.lang))
+      || pool[0];
+  }
+
+  // getVoices() is empty until the list loads, and the event fires once.
+  if (synth) {
+    voice = pick();
+    synth.addEventListener('voiceschanged', () => { voice = pick(); });
+  }
+
+  return {
+    get available() { return Boolean(synth && voice); },
+    // Re-checked at call time: the list can arrive after boot.
+    refresh() { if (synth && !voice) voice = pick(); return this.available; },
+    // Wrapped because this is the one part of the game that depends on the
+    // host OS. Voices can vanish after a sleep/resume, and assigning one has
+    // browser-specific ways of failing. Speaking is called from inside
+    // question setup, so an exception here would take the whole question down
+    // — losing the audio is survivable, losing the question is not.
+    say(word, { slow = false } = {}) {
+      if (!synth || !voice) return false;
+      try {
+        synth.cancel();               // never let two words overlap
+        const u = new SpeechSynthesisUtterance(word);
+        try { u.voice = voice; u.lang = voice.lang; } catch { /* default voice */ }
+        // Under the default rate the shorter words go by too fast to catch the
+        // vowel, and the vowel is often the whole question.
+        u.rate = slow ? 0.55 : 0.85;
+        u.pitch = 1;
+        synth.speak(u);
+        return true;
+      } catch { return false; }
+    },
+    stop() { try { if (synth) synth.cancel(); } catch { /* nothing to stop */ } },
+  };
+})();
+
 /* ------------------------------ letter bank ------------------------------ */
 
 // One tile per LETTER, and tiles are reusable — tap c twice for "accommodate".
@@ -736,6 +804,7 @@ function nextQuestion() {
   // The blank is the whole question, so it gets drawn rather than typed: a run
   // of underscores in a serif face is indistinguishable from a rule.
   $('sentence').innerHTML = esc(entry.sent).replace('___', '<span class="blank"></span>');
+  mountPrompt(entry);
 
   $('feedback').textContent = '';
   $('feedback').className = '';
@@ -775,6 +844,55 @@ function nextQuestion() {
   paintHud();
   placeCompanion();
   poseAll('run');
+}
+
+/* -------------------------------- the prompt ------------------------------- */
+
+// Sound alone cannot ask for a homophone. "Principle" and "principal" are the
+// same noise, so speaking one is not a question — it is two questions at once.
+// A real bee resolves this the same way: the judge gives the sentence. So for
+// that category the sentence is not something you ask for, it is part of the
+// prompt, and the word is still spoken alongside it.
+const needsContext = (entry) => entry.cat === 'homophones' || Boolean(entry.near);
+
+function mountPrompt(entry) {
+  const voiced = Voice.refresh();
+  const mustShow = needsContext(entry);
+
+  g.q.voiced = voiced;
+  g.q.asked = { def: false, sent: false };
+
+  $('say-block').classList.toggle('hidden', !voiced);
+  $('say-label').textContent = 'Hear the word';
+  $('say-slow').disabled = false;
+
+  // No voice on this device: fall back to the definition as the headline
+  // rather than asking for a word the game never said.
+  $('definition').classList.toggle('hidden', voiced);
+  $('definition').classList.toggle('headline', !voiced);
+  $('sentence').classList.toggle('hidden', voiced && !mustShow);
+
+  $('judge-row').classList.toggle('hidden', !voiced);
+  $('ask-def').classList.toggle('hidden', !voiced);
+  // Already on screen — offering to reveal it again would be a dead control.
+  $('ask-sent').classList.toggle('hidden', !voiced || mustShow);
+  $('ask-def').disabled = false;
+  $('ask-sent').disabled = false;
+
+  if (voiced) sayWord();
+}
+
+function sayWord(slow = false) {
+  if (!g || !g.q || !g.q.voiced) return;
+  Voice.say(g.q.entry.w, { slow });
+  $('say-label').textContent = 'Hear it again';
+}
+
+function askJudge(which) {
+  if (!g || !g.q || g.locked) return;
+  g.q.asked[which] = true;
+  $(which === 'def' ? 'definition' : 'sentence').classList.remove('hidden');
+  $(which === 'def' ? 'ask-def' : 'ask-sent').disabled = true;
 }
 
 /* ------------------------------ tile input ------------------------------- */
@@ -998,6 +1116,15 @@ function answer(given, btn) {
   } else {
     $('type-input').disabled = true;
   }
+
+  // Whatever was held back during the question comes out now. Getting one
+  // wrong and still not being told what the word meant would make the miss
+  // teach nothing.
+  Voice.stop();
+  $('definition').classList.remove('hidden');
+  $('sentence').classList.remove('hidden');
+  $('judge-row').classList.add('hidden');
+  $('say-block').classList.add('hidden');
 
   const fb = $('feedback');
   fb.className = won ? 'good' : 'bad';
@@ -1254,6 +1381,10 @@ $('type-form').addEventListener('submit', (e) => {
 
 $('build-undo').addEventListener('click', undoLetter);
 $('build-submit').addEventListener('click', submitBuild);
+$('say-btn').addEventListener('click', () => sayWord(false));
+$('say-slow').addEventListener('click', () => sayWord(true));
+$('ask-def').addEventListener('click', () => askJudge('def'));
+$('ask-sent').addEventListener('click', () => askJudge('sent'));
 
 document.addEventListener('keydown', (e) => {
   if (!screens.game.classList.contains('active')) return;
@@ -1262,6 +1393,14 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (e.key === 'Enter' && !$('next-btn').classList.contains('hidden')) { nextQuestion(); return; }
+
+  // Space repeats the word — the one control you reach for most, and the only
+  // one worth a key of its own. Not while typing, where space is a character.
+  if (e.key === ' ' && g && !g.locked && g.q && g.q.voiced && e.target !== $('type-input')) {
+    e.preventDefault();
+    sayWord(e.shiftKey);
+    return;
+  }
 
   // A keyboard, where there is one, drives the tiles directly — typing the
   // letter takes the leftmost tile bearing it. The bank is still the limit, so

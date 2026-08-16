@@ -91,8 +91,22 @@
         <span id="tier-tag" class="tier-tag"></span>
       </div>
 
-      <p id="definition"></p>
-      <p id="sentence"></p>
+      <!-- The word is SPOKEN, never shown. Everything below the say button is
+           what a real bee lets you ask the judge for. -->
+      <div id="say-block">
+        <button id="say-btn" type="button" class="say-btn" aria-label="Hear the word">
+          <span class="say-icon">🔊</span><span id="say-label">Hear the word</span>
+        </button>
+        <button id="say-slow" type="button" class="say-slow">Slower</button>
+      </div>
+
+      <div id="judge-row" class="judge-row">
+        <button id="ask-def" type="button">Definition</button>
+        <button id="ask-sent" type="button">In a sentence</button>
+      </div>
+
+      <p id="definition" class="hidden"></p>
+      <p id="sentence" class="hidden"></p>
 
       <div id="choices"></div>
 

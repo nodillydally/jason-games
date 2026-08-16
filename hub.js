@@ -40,7 +40,7 @@
      { g: 'elements', mode: 'Decks', why: 'Science day — spaced repetition on the fundamentals.' },
      { g: 'numbers', mode: 'Blitz', why: 'Volume day — as many as the clock allows.' }],
     [{ g: 'reader', mode: 'Book passages', why: 'Friday is books — one signature passage, kept for good.' }],
-    [{ g: 'spelling', mode: 'Classic', why: 'Language day — spell from the meaning, and learn the trap behind it.' },
+    [{ g: 'spelling', mode: 'Classic', why: 'Language day — hear the word, spell it, and learn the trap behind it.' },
      { g: 'chronicle', mode: 'Sequence', why: 'Order four events — the drill that builds the actual timeline.' },
      { g: 'mapmaster', mode: 'Find it', why: 'The reverse drill — recall is stronger than recognition.' }],
     [{ g: 'reader', mode: 'Timed read', why: 'Whole-page reading under a clock — closest to real reading.' }],

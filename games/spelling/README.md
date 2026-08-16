@@ -1,8 +1,7 @@
 # 🔤 Spelling
 
-Spell the word from its meaning. The word is never shown and never spoken —
-you get a definition and a sentence with the word cut out, and you supply the
-letters.
+The word is **spoken**, never shown. You supply the letters. Ask for the
+definition or a sentence exactly like you would at a real bee.
 
 **No build step, no server, no dependencies.** Open `index.html` in a browser
 and play, or serve the repo root and visit `/games/spelling/`.
@@ -13,15 +12,46 @@ A spelling game has three ways to ask a question, and two of them don't test
 spelling:
 
 - **Show the word, ask you to retype it.** That's a copying test.
-- **Say the word aloud, ask you to type it.** That's the classic bee, but on
-  the web it means the Web Speech API — a different voice per browser, silent
-  on any device with no voices installed, and useless on a bus. It also tests
-  listening as much as spelling.
-- **Give the meaning, ask for the word.** Nothing to copy, nothing to mishear,
-  and it exercises retrieval and orthography together — which is what actually
-  happens when you're writing.
+- **Give the meaning, ask for the word.** This is what the game did first, and
+  it was wrong. It tests vocabulary before it tests spelling: fail to retrieve
+  *chaos* from "complete disorder and confusion" and you never reach the part
+  where letters matter. A player who knows perfectly well how to spell *chaos*
+  still loses the point. That is a vocabulary game wearing a spelling game's
+  name.
+- **Say the word aloud, ask for the letters.** The classic bee, and the only
+  one that isolates spelling — you already know which word is wanted, so the
+  only question left is how it's written.
 
-The third one is the game.
+The third one is the game. Never *showing* the word was always right; never
+*saying* it was the mistake.
+
+### The voice
+
+`speechSynthesis`, and nothing else. Built into every browser, free, no
+network, no key, no build step — the same constraints the rest of the repo
+holds to, which is why there's no audio pipeline in here.
+
+It is the one part of the game that depends on the host OS, so it's treated as
+unreliable on purpose:
+
+- **No voices installed** (some Linux builds, locked-down browsers) falls back
+  to the old definition-led prompt rather than asking for a word it never said.
+- **Speaking is wrapped in a `try`.** It's called from inside question setup,
+  and voices can vanish after a sleep/resume. Losing the audio is survivable;
+  losing the question is not.
+- Local voices are preferred over remote ones — a remote voice needs a network
+  round trip mid-question and can simply fail to arrive.
+
+### Sound-alikes are the exception
+
+Speaking a homophone isn't a question, it's two questions at once: *principle*
+and *principal* are the same noise. A real bee resolves this the same way the
+game does — the judge gives the sentence. So for that category the sentence
+isn't something you ask for, it's part of the prompt, and the word is still
+spoken alongside it.
+
+Everywhere else, both clues stay hidden until you ask. Asking is free and
+always allowed; the clock is the only cost.
 
 ## Traps, not topics
 

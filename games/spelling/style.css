@@ -57,13 +57,84 @@
   white-space: nowrap;
 }
 
-/* The definition is the question, so it gets the serif and the size. */
+/* -------------------------------- the say -------------------------------- */
+
+/* The word is spoken, so the button that speaks it IS the question — it gets
+   the weight the definition used to have. */
+#say-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+#say-block.hidden { display: none; }
+
+.say-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 32px;
+  font-family: var(--serif);
+  font-size: clamp(19px, 4.6vw, 24px);
+  letter-spacing: -.01em;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--p1);
+  color: var(--p1);
+  background: transparent;
+}
+.say-btn .say-icon { font-size: 1.1em; line-height: 1; }
+.say-btn:hover { background: color-mix(in srgb, var(--p1) 10%, transparent); }
+
+.say-slow {
+  padding: 7px 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* What a real bee lets you ask the judge for. Deliberately quiet: asking is
+   free and always allowed, but it should not look like the main event. */
+.judge-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.judge-row.hidden { display: none; }
+.judge-row button {
+  padding: 8px 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.judge-row button:disabled { opacity: .3; }
+
+/* Asked for, or shown because sound alone could not have asked the question. */
+#definition, #sentence { animation: fade-up .22s var(--ease) both; }
+#definition.hidden, #sentence.hidden { display: none; }
+
 #definition {
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 44ch;
+  margin: 0 auto 14px;
+}
+/* No voice on this device — the definition carries the question again. */
+#definition.headline {
   font-family: var(--serif);
   font-size: clamp(24px, 6.2vw, 33px);
   line-height: 1.22;
   letter-spacing: -.015em;
+  color: var(--ink);
   margin: 0 0 20px;
+  max-width: none;
 }
 
 /* The sentence is evidence, not the question — smaller, and set in the sans so
