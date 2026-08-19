@@ -64,7 +64,10 @@ const MARK_GLYPH = {
 const load = () => {
   try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
 };
-const profile = Object.assign({ reviewed: 0, correct: 0, sessions: 0, lastPlayed: null }, load());
+// xp is here because the hub sums it across every game's profile for the
+// combined level. Without it Marginalia would be the one game that never moves
+// that number. Same 10-per-correct rate it reports to Sync.
+const profile = Object.assign({ reviewed: 0, correct: 0, sessions: 0, xp: 0, lastPlayed: null }, load());
 const saveProfile = () => {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(profile)); } catch {}
 };
@@ -225,7 +228,7 @@ async function submit(blank) {
     score: verdict.score, book: current.book,
   });
   profile.reviewed++;
-  if (verdict.correct) profile.correct++;
+  if (verdict.correct) { profile.correct++; profile.xp += 10; }
   saveProfile();
 
   paintVerdict();
