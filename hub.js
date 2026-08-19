@@ -25,6 +25,7 @@
     memory: { name: 'Memory', href: 'games/memory/', icon: '🧠', store: 'memory.profile.v1' },
     // elements:  { name: 'Elements',  href: 'games/elements/',  icon: '🧪' },  // science
     briefing: { name: 'Briefing', href: 'games/briefing/', icon: '📰', store: 'briefing.profile.v1' },
+    marginalia: { name: 'Marginalia', href: 'games/marginalia/', icon: '✍️', store: 'marginalia.profile.v1' },
   };
 
   // Mon..Sun. Each slot lists candidates in priority order, each carrying its
@@ -197,12 +198,28 @@
         <span class="d-go">${done ? doneLabel : 'Play →'}</span>
       </a>`;
 
+    // Marginalia is spaced repetition on real book notes, so it isn't in the
+    // rotation — it appears on the days it has cards, like the Brief appears
+    // every day. The count comes from the cache the game leaves behind, because
+    // this page has no session to ask the API with. A stale cache is treated as
+    // no cards rather than shown as a number that might be days old.
+    const dueCache = read('marginalia.due.v1');
+    const dueFresh = dueCache && dueCache.on === new Date().toISOString().slice(0, 10);
+    const margDue = dueFresh ? Number(dueCache.due) || 0 : 0;
+    const margDone = playedToday().includes('marginalia');
+    const margRow = (margDue > 0 || margDone)
+      ? duty('marginalia', GAMES.marginalia, 'Marginalia',
+          margDone ? 'Reviewed today.' : `${margDue} card${margDue === 1 ? '' : 's'} due from what you marked.`,
+          margDone, 'Done ✓')
+      : '';
+
     host.innerHTML = `
       <div class="today-label">${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][dayIdx]}${bothDone ? ' — day complete' : ''}</div>
       ${duty('briefing', GAMES.briefing, 'The Brief',
         briefDone ? 'Done for today.' : briefStarted ? 'Started — finish one take and it counts.' : 'Recall yesterday · keep today · graded.',
         briefDone, 'Done ✓')}
       ${duty(pick.key, pick.game, `${pick.game.name} · ${pick.mode}`, pick.why, gameDone, 'Played ✓')}
+      ${margRow}
       <div class="week-strip">${strip}</div>`;
 
     renderQuickPlay();

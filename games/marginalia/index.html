@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#F6EFE2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Marginalia — What You Marked, Remembered</title>
+  <link rel="stylesheet" href="../../lib/theme.css">
+  <script src="../../lib/theme.js"></script>
+  <link rel="stylesheet" href="../../lib/sync.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✍️</text></svg>">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================= Menu ============================= -->
+  <section id="screen-menu" class="screen active">
+    <a class="hub-link" href="../../">← All games</a>
+
+    <header class="title">
+      <h1>✍️ <em>Marginalia</em></h1>
+      <p>The passages you marked by hand, given back to you until you own them.</p>
+    </header>
+
+    <div class="card" id="due-card">
+      <div class="due-head">
+        <div>
+          <b id="due-count">—</b>
+          <span id="due-label">checking what's due</span>
+        </div>
+        <button id="start-btn" class="primary big" disabled>Review</button>
+      </div>
+      <div class="lib-stats" id="lib-stats"></div>
+      <p class="books" id="books"></p>
+    </div>
+
+    <div class="card legend">
+      <h2>How your marks are read</h2>
+      <ul>
+        <li><span class="mk">“quotes”</span> a line worth keeping <i>→ fill the gaps</i></li>
+        <li><span class="mk">[bracket]</span> a passage to revisit <i>→ say what it argued</i></li>
+        <li><span class="mk">underline</span> emphasis <i>→ fill the gaps</i></li>
+        <li><span class="mk">⭕ circled</span> a key term <i>→ define it</i></li>
+      </ul>
+      <p class="hint">Snap a marked page at the Reading bot on Telegram and it lands here.</p>
+    </div>
+
+    <div id="account-card"></div>
+  </section>
+
+  <!-- ============================ Review ============================ -->
+  <section id="screen-review" class="screen">
+    <div class="run-bar">
+      <span id="run-progress">1 / 1</span>
+      <div class="run-track"><div id="run-fill"></div></div>
+      <button id="quit-btn" class="ghost">Stop</button>
+    </div>
+
+    <div class="card prompt-card">
+      <div class="src" id="card-src"></div>
+      <div class="ask" id="card-ask"></div>
+      <div class="prompt" id="card-prompt"></div>
+
+      <input id="answer-line" class="answer" autocomplete="off" autocapitalize="off"
+             spellcheck="false" placeholder="the missing words">
+      <textarea id="answer-box" class="answer" rows="5"
+                placeholder="from memory — the claim, not the wording"></textarea>
+
+      <div class="row">
+        <button id="submit-btn" class="primary big">Check</button>
+        <button id="blank-btn" class="ghost">Forgot it</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ Verdict =========================== -->
+  <section id="screen-verdict" class="screen">
+    <div class="card verdict-card">
+      <div class="verdict-head" id="verdict-head"></div>
+      <p class="feedback" id="verdict-feedback"></p>
+
+      <div class="actual">
+        <h2 id="actual-label">On the page</h2>
+        <blockquote id="actual-text"></blockquote>
+        <p class="src" id="actual-src"></p>
+        <p class="own-note" id="own-note"></p>
+      </div>
+
+      <div class="row">
+        <button id="next-btn" class="primary big">Next</button>
+        <button id="archive-btn" class="ghost" title="Drop this card — a bad read off the photo">Bad read</button>
+      </div>
+      <p class="hint" id="sched-hint"></p>
+    </div>
+  </section>
+
+  <!-- ============================= Done ============================= -->
+  <section id="screen-done" class="screen">
+    <header class="title">
+      <h1 id="done-title">Done</h1>
+      <p id="done-sub"></p>
+    </header>
+    <div class="card">
+      <div class="tiles" id="done-tiles"></div>
+      <div class="row">
+        <button id="again-btn" class="primary big">More cards</button>
+        <a class="hub-link inline" href="../../">All games</a>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="../../lib/auth.js"></script>
+<script src="../../lib/sync.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
