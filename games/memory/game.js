@@ -300,6 +300,10 @@ function startGame() {
     eloMoves: {},
     dead: false,
     phase: 'idle',
+    // The first sequence waits for a tap. Every later one is already reached by
+    // pressing Next (or a versus handoff), which is a confirmation in itself —
+    // gating those too would be a second click for nothing.
+    gateReady: mode !== 'pairs',
     startedAt: Date.now(),
     vs: versus ? {
       format: sel.vsFormat,
@@ -460,13 +464,10 @@ function nextTrial() {
   }
   g.seq = buildSequence(g.kind, g.span);
   g.entered = [];
-  g.phase = 'show';
-  g.shownAt = Date.now();
+  g.phase = 'armed';
 
   const kind = KIND_BY_ID[g.kind];
   $('kind-tag').textContent = `${kind.icon} ${kind.label}${g.reverse ? ' · backwards' : ''}`;
-  $('phase-tag').textContent = 'remember';
-  $('phase-tag').className = 'phase-tag showing';
   $('feedback').textContent = '';
   $('feedback').className = '';
   $('next-btn').classList.add('hidden');
@@ -478,6 +479,38 @@ function nextTrial() {
   $('hud-span').textContent = `span ${g.span}`;
   paintHud();
 
+  if (g.gateReady) armReady(); else beginShow();
+}
+
+/* --------------------------------- the gate ---------------------------------
+ *
+ * A span trial punishes the first half-second harder than any other, so it must
+ * not begin while the player's eyes are somewhere else. The gate holds the
+ * sequence until they say they are looking at it.
+ */
+
+const KIND_NOUN = { digits: 'digits', letters: 'letters', words: 'words', grid: 'cells' };
+
+function armReady() {
+  g.gateReady = false;
+  const noun = KIND_NOUN[g.kind] || 'items';
+  $('phase-tag').textContent = 'ready?';
+  $('phase-tag').className = 'phase-tag ready';
+  $('show').classList.add('hidden');
+  $('ready-note').textContent =
+    `${g.span} ${noun}, one at a time${g.reverse ? ', to be given back backwards' : ''}.`;
+  $('ready-gate').classList.remove('hidden');
+  $('timer-fill').style.width = '0%';
+}
+
+function beginShow() {
+  if (!g || g.phase === 'show') return;
+  $('ready-gate').classList.add('hidden');
+  $('show').classList.remove('hidden');
+  $('phase-tag').textContent = 'remember';
+  $('phase-tag').className = 'phase-tag showing';
+  g.phase = 'show';
+  g.shownAt = Date.now();
   playSequence();
 }
 
@@ -1089,6 +1122,7 @@ function renderHow(topicId = 'limit') {
 /* --------------------------------- wiring --------------------------------- */
 
 $('start-btn').addEventListener('click', startGame);
+$('ready-btn').addEventListener('click', beginShow);
 $('quit-btn').addEventListener('click', () => endGame(true));
 $('next-btn').addEventListener('click', nextTrial);
 $('again-btn').addEventListener('click', startGame);
@@ -1110,6 +1144,11 @@ document.addEventListener('keydown', (e) => {
   if (!screens.game.classList.contains('active')) return;
   if (!g) return;
 
+  if (g.phase === 'armed' && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    beginShow();
+    return;
+  }
   if (g.phase === 'graded' && (e.key === 'Enter' || e.key === ' ')) {
     if (!$('next-btn').classList.contains('hidden')) { e.preventDefault(); nextTrial(); }
     return;

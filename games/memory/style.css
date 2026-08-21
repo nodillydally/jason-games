@@ -59,6 +59,33 @@
 }
 .phase-tag.showing { color: var(--a2); }
 .phase-tag.recalling { color: var(--p1); }
+.phase-tag.ready { color: var(--ink-3); }
+
+/* The gate stands in for the sequence stage, so it carries the same height —
+   the card must not resize at the moment the first item appears. */
+.ready-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 168px;
+  margin-bottom: 18px;
+}
+.ready-gate p {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--ink-2);
+}
+
+.ready-hint {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
 
 /* The stage holds its height whether an item is on screen or not — a box that
    collapses between flashes makes the whole card jump, which is exactly the
@@ -400,6 +427,8 @@
 @media (max-width: 560px) {
   .question-card { padding: 24px 16px 20px; }
   .show { min-height: 132px; }
+  .ready-gate { min-height: 132px; gap: 6px; }
+  .ready-gate p { font-size: 18px; }
   .pad-digits, .pad-letters { grid-template-columns: repeat(5, 1fr); }
   .pad-words { grid-template-columns: repeat(2, 1fr); }
   .pad .key { min-height: 46px; font-size: 15px; }

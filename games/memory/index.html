@@ -93,6 +93,15 @@
       <!-- The sequence, while it is on screen. -->
       <div id="show" class="show"></div>
 
+      <!-- Nothing flashes until you say go. The first sequence of a round used
+           to start the instant Start was pressed, while you were still looking
+           at the setup card — a place lost before the round began. -->
+      <div id="ready-gate" class="ready-gate hidden">
+        <p id="ready-note"></p>
+        <button id="ready-btn" class="primary big">Show me</button>
+        <span class="ready-hint">or press space</span>
+      </div>
+
       <!-- What you have entered so far, during recall. -->
       <div id="slots" class="slots hidden"></div>
 
